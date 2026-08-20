@@ -1,0 +1,26 @@
+{
+  "name": "@netify/ai",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.11.1",
+    "@netify/config": "1.0.0",
+    "@netify/types": "1.0.0",
+    "@netify/validation": "1.0.0",
+    "openai": "^4.47.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@netify/tsconfig": "1.0.0",
+    "@types/node": "^20.12.11",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.4.5"
+  }
+}

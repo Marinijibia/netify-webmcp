@@ -1,0 +1,37 @@
+{
+  "name": "netify-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Netify — AI Collections + Business Memory for African SMEs",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rimraf node_modules",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "db:generate": "prisma generate --schema=packages/database/prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema=packages/database/prisma/schema.prisma",
+    "db:push": "prisma db push --schema=packages/database/prisma/schema.prisma",
+    "db:seed": "ts-node -r dotenv/config packages/database/src/seed.ts",
+    "db:studio": "prisma studio --schema=packages/database/prisma/schema.prisma",
+    "docker:up": "docker compose -f infrastructure/docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f infrastructure/docker/docker-compose.yml down",
+    "web:dev": "yarn --cwd apps/web dev",
+    "admin:dev": "yarn --cwd apps/admin dev",
+    "api:dev": "yarn --cwd apps/api dev",
+    "mobile:dev": "npm --prefix Netify run start"
+  },
+  "devDependencies": {
+    "prettier": "^3.2.5",
+    "rimraf": "^5.0.5",
+    "turbo": "^1.13.0",
+    "typescript": "^5.4.5"
+  },
+  "packageManager": "yarn@1.22.22"
+}
