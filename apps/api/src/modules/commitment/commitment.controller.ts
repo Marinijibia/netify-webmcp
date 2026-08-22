@@ -15,20 +15,109 @@ import { TenantGuard } from '../../common/guards/tenant.guard';
 import { CurrentUser, AuthenticatedUserContext } from '../../common/decorators/current-user.decorator';
 import {
   createCommitmentSchema,
-  updateCommitmentStatusSchema,
+  cancelCommitmentSchema,
   commitmentQuerySchema,
   CreateCommitmentInput,
-  UpdateCommitmentStatusInput,
+  CancelCommitmentInput,
   CommitmentQueryInput,
 } from '@netify/validation';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 
-@Controller('commitments')
+@Controller()
 @UseGuards(JwtAuthGuard, TenantGuard)
 export class CommitmentController {
   constructor(private readonly commitmentService: CommitmentService) {}
 
-  @Get()
+  @Post('receivables/:id/commitments')
+  @UsePipes(new ZodValidationPipe(createCommitmentSchema))
+  async createForReceivable(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Param('id') receivableId: string,
+    @Body() body: CreateCommitmentInput
+  ) {
+    const data = await this.commitmentService.create(user.organizationId, user.userId, {
+      ...body,
+      receivableId,
+    });
+    return {
+      success: true,
+      data,
+      message: 'Payment commitment recorded',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('receivables/:id/commitments')
+  async listForReceivable(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Param('id') receivableId: string,
+    @Query(new ZodValidationPipe(commitmentQuerySchema)) query: CommitmentQueryInput
+  ) {
+    const data = await this.commitmentService.list(user.organizationId, {
+      ...query,
+      receivableId,
+    });
+    return {
+      success: true,
+      data: data.items,
+      pagination: data.pagination,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('customers/:id/commitments')
+  async listForCustomer(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Param('id') customerId: string,
+    @Query(new ZodValidationPipe(commitmentQuerySchema)) query: CommitmentQueryInput
+  ) {
+    const data = await this.commitmentService.list(user.organizationId, {
+      ...query,
+      customerId,
+    });
+    return {
+      success: true,
+      data: data.items,
+      pagination: data.pagination,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('commitments/today')
+  async listToday(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Query(new ZodValidationPipe(commitmentQuerySchema)) query: CommitmentQueryInput
+  ) {
+    const data = await this.commitmentService.list(user.organizationId, {
+      ...query,
+      timeframe: 'TODAY',
+    });
+    return {
+      success: true,
+      data: data.items,
+      pagination: data.pagination,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('commitments/missed')
+  async listMissed(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Query(new ZodValidationPipe(commitmentQuerySchema)) query: CommitmentQueryInput
+  ) {
+    const data = await this.commitmentService.list(user.organizationId, {
+      ...query,
+      timeframe: 'MISSED',
+    });
+    return {
+      success: true,
+      data: data.items,
+      pagination: data.pagination,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('commitments')
   async list(
     @CurrentUser() user: AuthenticatedUserContext,
     @Query(new ZodValidationPipe(commitmentQuerySchema)) query: CommitmentQueryInput
@@ -42,7 +131,7 @@ export class CommitmentController {
     };
   }
 
-  @Get(':id')
+  @Get('commitments/:id')
   async getById(
     @CurrentUser() user: AuthenticatedUserContext,
     @Param('id') id: string
@@ -55,13 +144,13 @@ export class CommitmentController {
     };
   }
 
-  @Post()
+  @Post('commitments')
   @UsePipes(new ZodValidationPipe(createCommitmentSchema))
   async create(
     @CurrentUser() user: AuthenticatedUserContext,
     @Body() body: CreateCommitmentInput
   ) {
-    const data = await this.commitmentService.create(user.organizationId, body);
+    const data = await this.commitmentService.create(user.organizationId, user.userId, body);
     return {
       success: true,
       data,
@@ -70,18 +159,18 @@ export class CommitmentController {
     };
   }
 
-  @Patch(':id/status')
-  @UsePipes(new ZodValidationPipe(updateCommitmentStatusSchema))
-  async updateStatus(
+  @Patch('commitments/:id/cancel')
+  @UsePipes(new ZodValidationPipe(cancelCommitmentSchema))
+  async cancel(
     @CurrentUser() user: AuthenticatedUserContext,
     @Param('id') id: string,
-    @Body() body: UpdateCommitmentStatusInput
+    @Body() body: CancelCommitmentInput
   ) {
-    const data = await this.commitmentService.updateStatus(user.organizationId, id, body);
+    const data = await this.commitmentService.cancel(user.organizationId, id, body);
     return {
       success: true,
       data,
-      message: 'Commitment status updated',
+      message: 'Payment commitment cancelled',
       timestamp: new Date().toISOString(),
     };
   }

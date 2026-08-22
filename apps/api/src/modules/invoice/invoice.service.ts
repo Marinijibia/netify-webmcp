@@ -77,7 +77,7 @@ export class InvoiceService {
         customer: true,
         items: true,
         payments: {
-          orderBy: { paymentDate: 'desc' },
+          orderBy: { paidAt: 'desc' },
         },
         commitments: {
           orderBy: { promisedDate: 'desc' },

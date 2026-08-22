@@ -2,6 +2,8 @@ export * from './auth.schema';
 export * from './organization.schema';
 export * from './customer.schema';
 export * from './invoice.schema';
+export * from './receivable.schema';
 export * from './payment.schema';
+export * from './collection-activity.schema';
 export * from './commitment.schema';
 export * from './ai.schema';

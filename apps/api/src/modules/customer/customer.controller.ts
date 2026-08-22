@@ -2,7 +2,7 @@ import {
   Controller,
   Get,
   Post,
-  Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -17,9 +17,13 @@ import { CurrentUser, AuthenticatedUserContext } from '../../common/decorators/c
 import {
   createCustomerSchema,
   updateCustomerSchema,
+  createCustomerContactSchema,
+  updateCustomerContactSchema,
   customerQuerySchema,
   CreateCustomerInput,
   UpdateCustomerInput,
+  CreateCustomerContactInput,
+  UpdateCustomerContactInput,
   CustomerQueryInput,
 } from '@netify/validation';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -71,7 +75,7 @@ export class CustomerController {
     };
   }
 
-  @Put(':id')
+  @Patch(':id')
   @UsePipes(new ZodValidationPipe(updateCustomerSchema))
   async update(
     @CurrentUser() user: AuthenticatedUserContext,
@@ -87,15 +91,85 @@ export class CustomerController {
     };
   }
 
-  @Delete(':id')
-  async delete(
+  @Patch(':id/archive')
+  async archive(
     @CurrentUser() user: AuthenticatedUserContext,
     @Param('id') id: string
   ) {
-    await this.customerService.delete(user.organizationId, id);
+    const data = await this.customerService.archive(user.organizationId, id);
     return {
       success: true,
-      message: 'Customer deleted successfully',
+      data,
+      message: 'Customer archived successfully',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get(':id/contacts')
+  async getContacts(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Param('id') id: string
+  ) {
+    const data = await this.customerService.getContacts(user.organizationId, id);
+    return {
+      success: true,
+      data,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Post(':id/contacts')
+  @UsePipes(new ZodValidationPipe(createCustomerContactSchema))
+  async addContact(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Param('id') id: string,
+    @Body() body: CreateCustomerContactInput
+  ) {
+    const data = await this.customerService.addContact(user.organizationId, id, body);
+    return {
+      success: true,
+      data,
+      message: 'Contact added successfully',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Patch(':id/contacts/:contactId')
+  @UsePipes(new ZodValidationPipe(updateCustomerContactSchema))
+  async updateContact(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Param('id') id: string,
+    @Param('contactId') contactId: string,
+    @Body() body: UpdateCustomerContactInput
+  ) {
+    const data = await this.customerService.updateContact(
+      user.organizationId,
+      id,
+      contactId,
+      body
+    );
+    return {
+      success: true,
+      data,
+      message: 'Contact updated successfully',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Delete(':id/contacts/:contactId')
+  async deleteContact(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Param('id') id: string,
+    @Param('contactId') contactId: string
+  ) {
+    const result = await this.customerService.deleteContact(
+      user.organizationId,
+      id,
+      contactId
+    );
+    return {
+      success: true,
+      message: result.message,
       timestamp: new Date().toISOString(),
     };
   }

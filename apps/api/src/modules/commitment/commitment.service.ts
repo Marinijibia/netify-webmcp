@@ -1,49 +1,251 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { prisma, CommitmentStatus, BusinessEventType } from '@netify/database';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import {
+  prisma,
+  Prisma,
+  CommitmentStatus,
+} from '@netify/database';
 import {
   CreateCommitmentInput,
-  UpdateCommitmentStatusInput,
+  CancelCommitmentInput,
   CommitmentQueryInput,
 } from '@netify/validation';
 
 @Injectable()
 export class CommitmentService {
+  /**
+   * Helper: Get current local calendar date string (YYYY-MM-DD) for an organization's timezone.
+   */
+  private getLocalBusinessDate(timezone: string = 'Africa/Lagos', date: Date = new Date()): string {
+    try {
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+      return formatter.format(date); // Returns YYYY-MM-DD
+    } catch {
+      return date.toISOString().split('T')[0];
+    }
+  }
+
+  /**
+   * Record a new Payment Commitment.
+   */
+  async create(
+    organizationId: string,
+    createdByUserId: string,
+    input: CreateCommitmentInput
+  ) {
+    // 1. Verify organization exists and retrieve timezone
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+    });
+    if (!org) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    // 2. Verify performing user is an active member
+    const membership = await prisma.membership.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId,
+          userId: createdByUserId,
+        },
+      },
+    });
+    if (!membership || membership.status !== 'ACTIVE') {
+      throw new BadRequestException('User is not an active member of this organization');
+    }
+
+    // 3. Verify receivable belongs to this organization
+    const receivable = await prisma.receivable.findFirst({
+      where: {
+        id: input.receivableId,
+        organizationId,
+      },
+      include: {
+        payments: {
+          where: { status: 'CONFIRMED' },
+        },
+      },
+    });
+    if (!receivable) {
+      throw new NotFoundException('Receivable not found in this organization');
+    }
+
+    if (receivable.status === 'CANCELLED') {
+      throw new BadRequestException('Cannot create a commitment on a cancelled receivable');
+    }
+
+    if (receivable.status === 'PAID') {
+      throw new BadRequestException('Cannot create a commitment on a fully paid receivable');
+    }
+
+    // 4. Verify customer ownership and alignment
+    if (input.customerId && input.customerId !== receivable.customerId) {
+      throw new BadRequestException(
+        'Customer ID does not match the debtor on this receivable'
+      );
+    }
+    const customerId = receivable.customerId;
+
+    // 5. Currency invariant check
+    if (input.currency && input.currency.toUpperCase() !== receivable.currency.toUpperCase()) {
+      throw new BadRequestException(
+        `Commitment currency (${input.currency}) must match receivable currency (${receivable.currency})`
+      );
+    }
+
+    // 6. Balance verification
+    const totalPaid = receivable.payments.reduce(
+      (sum, p) => sum.add(p.amount),
+      new Prisma.Decimal(0)
+    );
+    const remainingBalance = receivable.originalAmount.sub(totalPaid);
+
+    const commAmount = new Prisma.Decimal(input.amount.toString());
+    if (commAmount.lte(0)) {
+      throw new BadRequestException('Commitment amount must be greater than zero');
+    }
+    if (commAmount.greaterThan(remainingBalance)) {
+      throw new BadRequestException(
+        `Commitment amount (${receivable.currency} ${commAmount}) cannot exceed remaining balance (${receivable.currency} ${remainingBalance})`
+      );
+    }
+
+    // 7. Verify sourceActivity if provided
+    if (input.sourceActivityId) {
+      const activity = await prisma.collectionActivity.findFirst({
+        where: {
+          id: input.sourceActivityId,
+          organizationId,
+          customerId,
+          receivableId: receivable.id,
+        },
+      });
+      if (!activity) {
+        throw new BadRequestException(
+          'Source activity does not exist or does not belong to this customer and receivable'
+        );
+      }
+    }
+
+    const commitment = await prisma.paymentCommitment.create({
+      data: {
+        organizationId,
+        customerId,
+        receivableId: receivable.id,
+        createdByUserId,
+        amount: commAmount,
+        currency: receivable.currency,
+        promisedFor: new Date(input.promisedFor),
+        status: CommitmentStatus.PENDING,
+        sourceActivityId: input.sourceActivityId || null,
+        notes: input.notes || null,
+      },
+      include: {
+        customer: { select: { id: true, name: true, phone: true, email: true } },
+        receivable: {
+          select: {
+            id: true,
+            reference: true,
+            description: true,
+            originalAmount: true,
+            currency: true,
+            status: true,
+          },
+        },
+        createdByUser: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        sourceActivity: true,
+      },
+    });
+
+    return this.enrichCommitment(commitment, org.timezone);
+  }
+
+  /**
+   * List payment commitments with operational timeframe filters.
+   */
   async list(organizationId: string, query: CommitmentQueryInput) {
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+    });
+    if (!org) {
+      throw new NotFoundException('Organization not found');
+    }
+
     const page = query.page || 1;
     const pageSize = query.pageSize || 20;
     const skip = (page - 1) * pageSize;
 
-    const where: any = { organizationId };
+    const where: Prisma.PaymentCommitmentWhereInput = {
+      organizationId,
+    };
 
+    if (query.receivableId) where.receivableId = query.receivableId;
     if (query.customerId) where.customerId = query.customerId;
     if (query.status) where.status = query.status;
 
-    if (query.dueThisWeek) {
-      const now = new Date();
-      const endOfWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-      where.promisedDate = {
-        gte: now,
-        lte: endOfWeek,
-      };
-      where.status = CommitmentStatus.PENDING;
-    }
-
-    const [totalCount, commitments] = await Promise.all([
-      prisma.commitment.count({ where }),
-      prisma.commitment.findMany({
+    const [totalCount, items] = await Promise.all([
+      prisma.paymentCommitment.count({ where }),
+      prisma.paymentCommitment.findMany({
         where,
         skip,
         take: pageSize,
-        orderBy: { promisedDate: 'asc' },
+        orderBy: { promisedFor: 'asc' },
         include: {
-          customer: { select: { id: true, name: true, phone: true } },
-          invoice: { select: { id: true, invoiceNumber: true, balance: true } },
+          customer: {
+            select: { id: true, name: true, phone: true, email: true },
+          },
+          receivable: {
+            select: {
+              id: true,
+              reference: true,
+              description: true,
+              originalAmount: true,
+              currency: true,
+              status: true,
+            },
+          },
+          createdByUser: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
+          sourceActivity: true,
         },
       }),
     ]);
 
+    let enrichedItems = items.map((item) => this.enrichCommitment(item, org.timezone));
+
+    // Timeframe filters
+    if (query.timeframe && query.timeframe !== 'ALL') {
+      const todayStr = this.getLocalBusinessDate(org.timezone);
+      if (query.timeframe === 'TODAY') {
+        enrichedItems = enrichedItems.filter((item) => {
+          const itemDateStr = this.getLocalBusinessDate(org.timezone, new Date(item.promisedFor));
+          return itemDateStr === todayStr && item.status !== CommitmentStatus.CANCELLED;
+        });
+      } else if (query.timeframe === 'UPCOMING') {
+        enrichedItems = enrichedItems.filter((item) => {
+          const itemDateStr = this.getLocalBusinessDate(org.timezone, new Date(item.promisedFor));
+          return itemDateStr > todayStr && item.status === CommitmentStatus.PENDING;
+        });
+      } else if (query.timeframe === 'MISSED') {
+        enrichedItems = enrichedItems.filter((item) => item.isMissed);
+      } else if (query.timeframe === 'FULFILLED') {
+        enrichedItems = enrichedItems.filter((item) => item.status === CommitmentStatus.FULFILLED);
+      }
+    }
+
     return {
-      items: commitments,
+      items: enrichedItems,
       pagination: {
         page,
         pageSize,
@@ -54,112 +256,211 @@ export class CommitmentService {
     };
   }
 
+  /**
+   * Get single commitment by ID.
+   */
   async getById(organizationId: string, id: string) {
-    const commitment = await prisma.commitment.findFirst({
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+    });
+    if (!org) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    const commitment = await prisma.paymentCommitment.findFirst({
       where: { id, organizationId },
       include: {
-        customer: true,
-        invoice: true,
+        customer: {
+          select: { id: true, name: true, phone: true, email: true },
+        },
+        receivable: {
+          select: {
+            id: true,
+            reference: true,
+            description: true,
+            originalAmount: true,
+            currency: true,
+            status: true,
+          },
+        },
+        createdByUser: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        sourceActivity: true,
       },
     });
 
     if (!commitment) {
-      throw new NotFoundException('Commitment not found');
+      throw new NotFoundException('Payment commitment not found');
     }
 
-    return commitment;
-  }
-
-  async create(organizationId: string, input: CreateCommitmentInput) {
-    const customer = await prisma.customer.findFirst({
-      where: { id: input.customerId, organizationId },
-    });
-
-    if (!customer) {
-      throw new NotFoundException('Customer not found');
-    }
-
-    const commitment = await prisma.commitment.create({
-      data: {
-        organizationId,
-        customerId: input.customerId,
-        invoiceId: input.invoiceId,
-        amount: input.amount,
-        currency: input.currency || customer.currency || 'NGN',
-        promisedDate: input.promisedDate,
-        description: input.description,
-        source: input.source,
-        sourceReference: input.sourceReference,
-        confidence: input.confidence,
-        status: input.status,
-        evidenceId: input.evidenceId,
-      },
-    });
-
-    // Record business event
-    await prisma.businessEvent.create({
-      data: {
-        organizationId,
-        customerId: input.customerId,
-        eventType: BusinessEventType.COMMITMENT_CREATED,
-        summary: `Commitment: ${customer.name} promised ${commitment.currency} ${commitment.amount.toLocaleString()} on ${new Date(commitment.promisedDate).toLocaleDateString()}`,
-        payload: {
-          commitmentId: commitment.id,
-          amount: commitment.amount,
-          promisedDate: commitment.promisedDate,
-          source: commitment.source,
-        },
-      },
-    });
-
-    return commitment;
-  }
-
-  async updateStatus(organizationId: string, id: string, input: UpdateCommitmentStatusInput) {
-    const existing = await this.getById(organizationId, id);
-
-    const updated = await prisma.commitment.update({
-      where: { id },
-      data: { status: input.status },
-    });
-
-    // Log state change event
-    let eventType: BusinessEventType = BusinessEventType.COMMITMENT_CREATED;
-    if (input.status === CommitmentStatus.FULFILLED) {
-      eventType = BusinessEventType.COMMITMENT_FULFILLED;
-    } else if (input.status === CommitmentStatus.MISSED) {
-      eventType = BusinessEventType.COMMITMENT_MISSED;
-    }
-
-    await prisma.businessEvent.create({
-      data: {
-        organizationId,
-        customerId: existing.customerId,
-        eventType,
-        summary: `Commitment status updated to ${input.status} for ${existing.customer?.name}`,
-        payload: { commitmentId: id, status: input.status, notes: input.notes },
-      },
-    });
-
-    return updated;
+    return this.enrichCommitment(commitment, org.timezone);
   }
 
   /**
-   * Evaluates pending commitments and marks overdue ones as MISSED.
+   * Cancel a commitment with reason notes (preserving history).
    */
-  async evaluatePendingCommitments(organizationId: string) {
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const missed = await prisma.commitment.updateMany({
-      where: {
-        organizationId,
-        status: CommitmentStatus.PENDING,
-        promisedDate: { lt: yesterday },
-      },
+  async cancel(
+    organizationId: string,
+    id: string,
+    input: CancelCommitmentInput
+  ) {
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+    });
+    if (!org) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    const commitment = await prisma.paymentCommitment.findFirst({
+      where: { id, organizationId },
+    });
+
+    if (!commitment) {
+      throw new NotFoundException('Payment commitment not found');
+    }
+
+    if (commitment.status === CommitmentStatus.FULFILLED) {
+      throw new BadRequestException('Cannot cancel an already fulfilled commitment');
+    }
+
+    const updated = await prisma.paymentCommitment.update({
+      where: { id },
       data: {
-        status: CommitmentStatus.MISSED,
+        status: CommitmentStatus.CANCELLED,
+        notes: input.notes
+          ? commitment.notes
+            ? `${commitment.notes}\n[Cancelled]: ${input.notes}`
+            : `[Cancelled]: ${input.notes}`
+          : commitment.notes,
+      },
+      include: {
+        customer: {
+          select: { id: true, name: true, phone: true, email: true },
+        },
+        receivable: {
+          select: {
+            id: true,
+            reference: true,
+            description: true,
+            originalAmount: true,
+            currency: true,
+            status: true,
+          },
+        },
+        createdByUser: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        sourceActivity: true,
       },
     });
 
-    return missed;
+    return this.enrichCommitment(updated, org.timezone);
+  }
+
+  /**
+   * Authoritative Engine: Evaluates and updates commitment fulfillment states against confirmed payments.
+   */
+  async evaluateCommitmentsForPayment(
+    organizationId: string,
+    receivableId: string,
+    txClient?: Prisma.TransactionClient
+  ) {
+    const db = txClient || prisma;
+
+    const org = await db.organization.findUnique({
+      where: { id: organizationId },
+    });
+    const timezone = org?.timezone || 'Africa/Lagos';
+    const todayStr = this.getLocalBusinessDate(timezone);
+
+    // 1. Fetch confirmed payments for this receivable
+    const confirmedPayments = await db.payment.findMany({
+      where: {
+        organizationId,
+        receivableId,
+        status: 'CONFIRMED',
+      },
+      orderBy: { paidAt: 'asc' },
+    });
+
+    const totalConfirmedPaid = confirmedPayments.reduce(
+      (sum, p) => sum.add(p.amount),
+      new Prisma.Decimal(0)
+    );
+
+    // 2. Fetch all non-cancelled commitments for this receivable
+    const commitments = await db.paymentCommitment.findMany({
+      where: {
+        organizationId,
+        receivableId,
+        status: {
+          not: CommitmentStatus.CANCELLED,
+        },
+      },
+      orderBy: { promisedFor: 'asc' },
+    });
+
+    // 3. Dynamically evaluate commitment fulfillment from total confirmed payments
+    let availablePaid = new Prisma.Decimal(totalConfirmedPaid.toString());
+
+    for (const comm of commitments) {
+      let newStatus: CommitmentStatus = CommitmentStatus.PENDING;
+      const commPromiseDateStr = this.getLocalBusinessDate(timezone, new Date(comm.promisedFor));
+      const isPastPromiseDate = commPromiseDateStr < todayStr;
+
+      if (availablePaid.gte(comm.amount)) {
+        newStatus = CommitmentStatus.FULFILLED;
+        availablePaid = availablePaid.sub(comm.amount);
+      } else if (availablePaid.greaterThan(0)) {
+        newStatus = CommitmentStatus.PARTIALLY_FULFILLED;
+        availablePaid = new Prisma.Decimal(0);
+      } else if (isPastPromiseDate) {
+        newStatus = CommitmentStatus.MISSED;
+      } else {
+        newStatus = CommitmentStatus.PENDING;
+      }
+
+      if (comm.status !== newStatus) {
+        await db.paymentCommitment.update({
+          where: { id: comm.id },
+          data: { status: newStatus },
+        });
+      }
+    }
+  }
+
+  /**
+   * Helper: Enrich commitment model with derived status and stringified decimals.
+   */
+  private enrichCommitment(commitment: any, timezone: string = 'Africa/Lagos') {
+    const todayStr = this.getLocalBusinessDate(timezone);
+    const promisedStr = this.getLocalBusinessDate(timezone, new Date(commitment.promisedFor));
+    const isPastPromiseDate = promisedStr < todayStr;
+
+    const isMissed =
+      commitment.status === CommitmentStatus.MISSED ||
+      (isPastPromiseDate &&
+        (commitment.status === CommitmentStatus.PENDING ||
+          commitment.status === CommitmentStatus.PARTIALLY_FULFILLED));
+
+    let daysOverdue = 0;
+    if (isPastPromiseDate && commitment.status !== CommitmentStatus.FULFILLED && commitment.status !== CommitmentStatus.CANCELLED) {
+      const diffMs = new Date(todayStr).getTime() - new Date(promisedStr).getTime();
+      daysOverdue = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+    }
+
+    return {
+      ...commitment,
+      amount: commitment.amount.toString(),
+      isMissed,
+      daysOverdue,
+      receivable: commitment.receivable
+        ? {
+            ...commitment.receivable,
+            originalAmount: commitment.receivable.originalAmount.toString(),
+          }
+        : undefined,
+    };
   }
 }

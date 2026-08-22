@@ -2,6 +2,8 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Param,
   Body,
   Query,
   UseGuards,
@@ -38,6 +40,19 @@ export class PaymentController {
     };
   }
 
+  @Get(':id')
+  async getById(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Param('id') id: string
+  ) {
+    const data = await this.paymentService.getById(user.organizationId, id);
+    return {
+      success: true,
+      data,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   @Post()
   @UsePipes(new ZodValidationPipe(createPaymentSchema))
   async create(
@@ -49,6 +64,20 @@ export class PaymentController {
       success: true,
       data,
       message: 'Payment recorded successfully',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Patch(':id/reverse')
+  async reverse(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Param('id') id: string
+  ) {
+    const data = await this.paymentService.reversePayment(user.organizationId, id);
+    return {
+      success: true,
+      data,
+      message: 'Payment reversed successfully',
       timestamp: new Date().toISOString(),
     };
   }

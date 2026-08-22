@@ -57,7 +57,38 @@ enum SecurityEventType {
 enum CustomerStatus {
   ACTIVE
   INACTIVE
+  ARCHIVED
   BLOCKED
+}
+
+enum ContactType {
+  PHONE
+  EMAIL
+  WHATSAPP
+  OTHER
+}
+
+enum ReceivableSource {
+  MANUAL
+  INVOICE
+  CREDIT_SALE
+  OTHER
+}
+
+enum ReceivableStatus {
+  OPEN
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  DISPUTED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  REVERSED
 }
 
 enum InvoiceStatus {
@@ -70,17 +101,50 @@ enum InvoiceStatus {
 }
 
 enum PaymentMethod {
-  BANK_TRANSFER
-  POS
   CASH
-  CARD
+  BANK_TRANSFER
   MOBILE_MONEY
+  CARD
+  POS
   OTHER
 }
 
 enum TransactionType {
   DEBIT
   CREDIT
+}
+
+enum ActivityType {
+  CALL
+  WHATSAPP
+  SMS
+  EMAIL
+  IN_PERSON
+  PAYMENT_REMINDER
+  FOLLOW_UP
+  OTHER
+}
+
+enum CollectionChannel {
+  PHONE
+  WHATSAPP
+  SMS
+  EMAIL
+  IN_PERSON
+  OTHER
+}
+
+enum ActivityOutcome {
+  NO_RESPONSE
+  CONTACTED
+  PROMISED_PAYMENT
+  PARTIAL_PAYMENT
+  FULL_PAYMENT
+  DISPUTE
+  REQUESTED_EXTENSION
+  WRONG_CONTACT
+  CUSTOMER_UNAVAILABLE
+  OTHER
 }
 
 enum CommitmentStatus {
@@ -199,23 +263,26 @@ model Organization {
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
-  memberships     Membership[]
-  customers       Customer[]
-  invoices        Invoice[]
-  payments        Payment[]
-  transactions    Transaction[]
-  commitments     Commitment[]
-  conversations   Conversation[]
-  documents       Document[]
-  businessEvents  BusinessEvent[]
-  riskAssessments RiskAssessment[]
-  aiInsights      AIInsight[]
-  aiActions       AIAction[]
-  memoryItems     MemoryItem[]
-  notifications   Notification[]
-  subscriptions   Subscription[]
-  entitlements    Entitlement[]
-  auditLogs       AuditLog[]
+  memberships          Membership[]
+  customers            Customer[]
+  receivables          Receivable[]
+  collectionActivities CollectionActivity[]
+  paymentCommitments   PaymentCommitment[]
+  invoices             Invoice[]
+  payments             Payment[]
+  transactions         Transaction[]
+  commitments          Commitment[]
+  conversations        Conversation[]
+  documents            Document[]
+  businessEvents       BusinessEvent[]
+  riskAssessments      RiskAssessment[]
+  aiInsights           AIInsight[]
+  aiActions            AIAction[]
+  memoryItems          MemoryItem[]
+  notifications        Notification[]
+  subscriptions        Subscription[]
+  entitlements         Entitlement[]
+  auditLogs            AuditLog[]
 
   @@map("organizations")
 }
@@ -246,6 +313,8 @@ model User {
   trustedDevices          TrustedDevice[]
   passkeyCredentials      PasskeyCredential[]
   securityEvents          SecurityEvent[]
+  performedActivities     CollectionActivity[]
+  createdCommitments      PaymentCommitment[]
   notifications           Notification[]
   auditLogs               AuditLog[]
 
@@ -266,8 +335,6 @@ model Membership {
 
   @@unique([organizationId, userId])
   @@index([organizationId])
-  @@index([userId])
-  @@index([organizationId, status])
   @@map("memberships")
 }
 
@@ -278,7 +345,7 @@ model Customer {
   phone          String?
   email          String?
   address        String?
-  country        String         @default("Nigeria")
+  country        String         @default("NG")
   currency       String         @default("NGN")
   status         CustomerStatus @default(ACTIVE)
   notes          String?
@@ -287,23 +354,76 @@ model Customer {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  invoices        Invoice[]
-  payments        Payment[]
-  transactions    Transaction[]
-  commitments     Commitment[]
-  conversations   Conversation[]
-  documents       Document[]
-  businessEvents  BusinessEvent[]
-  riskAssessments RiskAssessment[]
-  aiInsights      AIInsight[]
-  aiActions       AIAction[]
-  memoryItems     MemoryItem[]
+  organization         Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contacts             CustomerContact[]
+  receivables          Receivable[]
+  collectionActivities CollectionActivity[]
+  paymentCommitments   PaymentCommitment[]
+  invoices             Invoice[]
+  payments             Payment[]
+  transactions         Transaction[]
+  commitments          Commitment[]
+  conversations        Conversation[]
+  documents            Document[]
+  businessEvents       BusinessEvent[]
+  riskAssessments      RiskAssessment[]
+  aiInsights           AIInsight[]
+  aiActions            AIAction[]
+  memoryItems          MemoryItem[]
 
   @@index([organizationId])
   @@index([organizationId, status])
   @@index([organizationId, name])
+  @@index([organizationId, createdAt])
   @@map("customers")
+}
+
+model CustomerContact {
+  id         String      @id @default(uuid())
+  customerId String
+  type       ContactType @default(PHONE)
+  value      String
+  label      String?
+  isPrimary  Boolean     @default(false)
+  isVerified Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([customerId, type, isPrimary])
+  @@map("customer_contacts")
+}
+
+model Receivable {
+  id             String           @id @default(uuid())
+  organizationId String
+  customerId     String
+  reference      String?
+  description    String?
+  originalAmount Decimal          @db.Decimal(18, 2)
+  currency       String
+  issuedAt       DateTime         @default(now())
+  dueDate        DateTime
+  source         ReceivableSource @default(MANUAL)
+  status         ReceivableStatus @default(OPEN)
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization         Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer             Customer             @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  payments             Payment[]
+  collectionActivities CollectionActivity[]
+  paymentCommitments   PaymentCommitment[]
+
+  @@index([organizationId])
+  @@index([organizationId, customerId])
+  @@index([organizationId, status])
+  @@index([organizationId, dueDate])
+  @@index([organizationId, createdAt])
+  @@map("receivables")
 }
 
 model Invoice {
@@ -358,12 +478,15 @@ model Payment {
   id             String        @id @default(uuid())
   organizationId String
   customerId     String
+  receivableId   String?
   invoiceId      String?
-  amount         Float
+  amount         Decimal       @db.Decimal(18, 2)
   currency       String        @default("NGN")
-  paymentDate    DateTime
-  paymentMethod  PaymentMethod @default(BANK_TRANSFER)
+  paidAt         DateTime      @default(now())
+  method         PaymentMethod @default(BANK_TRANSFER)
   reference      String?
+  status         PaymentStatus @default(CONFIRMED)
+  idempotencyKey String?       @unique
   notes          String?
   source         String?
   createdAt      DateTime      @default(now())
@@ -371,10 +494,14 @@ model Payment {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  receivable   Receivable?  @relation(fields: [receivableId], references: [id], onDelete: Cascade)
   invoice      Invoice?     @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
 
+  @@index([organizationId])
   @@index([organizationId, customerId])
-  @@index([organizationId, paymentDate])
+  @@index([organizationId, receivableId])
+  @@index([organizationId, status])
+  @@index([organizationId, paidAt])
   @@map("payments")
 }
 
@@ -398,6 +525,63 @@ model Transaction {
   @@index([organizationId, customerId])
   @@index([organizationId, date])
   @@map("transactions")
+}
+
+model CollectionActivity {
+  id                String            @id @default(uuid())
+  organizationId    String
+  customerId        String
+  receivableId      String
+  performedByUserId String
+  type              ActivityType
+  channel           CollectionChannel
+  outcome           ActivityOutcome
+  occurredAt        DateTime          @default(now())
+  notes             String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  organization    Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer        Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  receivable      Receivable          @relation(fields: [receivableId], references: [id], onDelete: Cascade)
+  performedByUser User                @relation(fields: [performedByUserId], references: [id], onDelete: Cascade)
+  commitments     PaymentCommitment[]
+
+  @@index([organizationId])
+  @@index([organizationId, customerId])
+  @@index([organizationId, receivableId])
+  @@index([organizationId, occurredAt])
+  @@index([organizationId, type])
+  @@map("collection_activities")
+}
+
+model PaymentCommitment {
+  id               String           @id @default(uuid())
+  organizationId   String
+  customerId       String
+  receivableId     String
+  createdByUserId  String
+  amount           Decimal          @db.Decimal(18, 2)
+  currency         String           @default("NGN")
+  promisedFor      DateTime
+  status           CommitmentStatus @default(PENDING)
+  sourceActivityId String?
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer       Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  receivable     Receivable          @relation(fields: [receivableId], references: [id], onDelete: Cascade)
+  createdByUser  User                @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+  sourceActivity CollectionActivity? @relation(fields: [sourceActivityId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([organizationId, customerId])
+  @@index([organizationId, receivableId])
+  @@index([organizationId, status])
+  @@index([organizationId, promisedFor])
+  @@map("payment_commitments")
 }
 
 model Commitment {

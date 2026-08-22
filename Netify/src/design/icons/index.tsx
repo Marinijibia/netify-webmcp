@@ -114,3 +114,78 @@ export function FingerprintIcon({ size = 24, color }: IconProps) {
   const { tokens } = useTheme();
   return <Ionicons name="finger-print-outline" size={size} color={color || tokens.accent} />;
 }
+
+export function UsersIcon({ size = 20, color }: IconProps) {
+  const { tokens } = useTheme();
+  return <Feather name="users" size={size} color={color || tokens.primary} />;
+}
+
+export function PlusIcon({ size = 20, color }: IconProps) {
+  const { tokens } = useTheme();
+  return <Feather name="plus" size={size} color={color || tokens.textPrimary} />;
+}
+
+export function SearchIcon({ size = 20, color }: IconProps) {
+  const { tokens } = useTheme();
+  return <Feather name="search" size={size} color={color || tokens.textSecondary} />;
+}
+
+export function PhoneIcon({ size = 20, color }: IconProps) {
+  const { tokens } = useTheme();
+  return <Feather name="phone" size={size} color={color || tokens.primary} />;
+}
+
+export function TrashIcon({ size = 20, color }: IconProps) {
+  const { tokens } = useTheme();
+  return <Feather name="trash-2" size={size} color={color || tokens.danger} />;
+}
+
+export function EditIcon({ size = 20, color }: IconProps) {
+  const { tokens } = useTheme();
+  return <Feather name="edit-3" size={size} color={color || tokens.primary} />;
+}
+
+export function DollarSignIcon({ size = 20, color }: IconProps) {
+  const { tokens } = useTheme();
+  return <Feather name="dollar-sign" size={size} color={color || tokens.primary} />;
+}
+
+export function CalendarIcon({ size = 20, color }: IconProps) {
+  const { tokens } = useTheme();
+  return <Feather name="calendar" size={size} color={color || tokens.textSecondary} />;
+}
+
+export function FileTextIcon({ size = 20, color }: IconProps) {
+  const { tokens } = useTheme();
+  return <Feather name="file-text" size={size} color={color || tokens.primary} />;
+}
+
+export function CreditCardIcon({ size = 20, color }: IconProps) {
+  const { tokens } = useTheme();
+  return <Feather name="credit-card" size={size} color={color || tokens.primary} />;
+}
+
+export function RotateCcwIcon({ size = 20, color }: IconProps) {
+  const { tokens } = useTheme();
+  return <Feather name="rotate-ccw" size={size} color={color || tokens.warning} />;
+}
+
+export function ActivityIcon({ size = 20, color }: IconProps) {
+  const { tokens } = useTheme();
+  return <Feather name="activity" size={size} color={color || tokens.primary} />;
+}
+
+export function MessageSquareIcon({ size = 20, color }: IconProps) {
+  const { tokens } = useTheme();
+  return <Feather name="message-square" size={size} color={color || tokens.primary} />;
+}
+
+export function ClockIcon({ size = 20, color }: IconProps) {
+  const { tokens } = useTheme();
+  return <Feather name="clock" size={size} color={color || tokens.textSecondary} />;
+}
+
+export function TrendingUpIcon({ size = 20, color }: IconProps) {
+  const { tokens } = useTheme();
+  return <Feather name="trending-up" size={size} color={color || tokens.accent} />;
+}

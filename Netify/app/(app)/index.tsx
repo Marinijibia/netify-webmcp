@@ -64,6 +64,96 @@ export default function AppHomeScreen() {
         </Text>
       </Card>
 
+      {/* Receivables & Financial Ledger Quick Link */}
+      <TouchableOpacity
+        activeOpacity={0.75}
+        onPress={() => router.push('/(app)/receivables' as any)}
+        style={{
+          backgroundColor: isDark ? tokens.surface : '#FFFFFF',
+          borderColor: tokens.border,
+          borderWidth: 1,
+        }}
+        className="rounded-2xl p-4 mb-3 flex-row items-center justify-between"
+      >
+        <View className="flex-row items-center">
+          <View
+            style={{ backgroundColor: tokens.primarySoft }}
+            className="w-9 h-9 rounded-xl items-center justify-center mr-3"
+          >
+            <BuildingIcon size={18} color={tokens.primary} />
+          </View>
+          <View>
+            <Text style={{ color: tokens.textPrimary }} className="text-sm font-bold">
+              Receivables & Payments
+            </Text>
+            <Text style={{ color: tokens.textSecondary }} className="text-xs mt-0.5">
+              Authoritative debtor balances, debts & payments
+            </Text>
+          </View>
+        </View>
+        <ChevronRightIcon size={18} color={tokens.textMuted} />
+      </TouchableOpacity>
+
+      {/* Payment Promises Quick Link */}
+      <TouchableOpacity
+        activeOpacity={0.75}
+        onPress={() => router.push('/(app)/commitments' as any)}
+        style={{
+          backgroundColor: isDark ? tokens.surface : '#FFFFFF',
+          borderColor: tokens.border,
+          borderWidth: 1,
+        }}
+        className="rounded-2xl p-4 mb-3 flex-row items-center justify-between"
+      >
+        <View className="flex-row items-center">
+          <View
+            style={{ backgroundColor: tokens.accentSoft }}
+            className="w-9 h-9 rounded-xl items-center justify-center mr-3"
+          >
+            <ShieldIcon size={18} color={tokens.accent} />
+          </View>
+          <View>
+            <Text style={{ color: tokens.textPrimary }} className="text-sm font-bold">
+              Payment Promises
+            </Text>
+            <Text style={{ color: tokens.textSecondary }} className="text-xs mt-0.5">
+              Today's, upcoming & missed customer commitments
+            </Text>
+          </View>
+        </View>
+        <ChevronRightIcon size={18} color={tokens.textMuted} />
+      </TouchableOpacity>
+
+      {/* Customers Management Quick Link */}
+      <TouchableOpacity
+        activeOpacity={0.75}
+        onPress={() => router.push('/(app)/customers' as any)}
+        style={{
+          backgroundColor: isDark ? tokens.surface : '#FFFFFF',
+          borderColor: tokens.border,
+          borderWidth: 1,
+        }}
+        className="rounded-2xl p-4 mb-3 flex-row items-center justify-between"
+      >
+        <View className="flex-row items-center">
+          <View
+            style={{ backgroundColor: tokens.primarySoft }}
+            className="w-9 h-9 rounded-xl items-center justify-center mr-3"
+          >
+            <BuildingIcon size={18} color={tokens.primary} />
+          </View>
+          <View>
+            <Text style={{ color: tokens.textPrimary }} className="text-sm font-bold">
+              Customers & Contacts
+            </Text>
+            <Text style={{ color: tokens.textSecondary }} className="text-xs mt-0.5">
+              Client directory, phone numbers & contacts
+            </Text>
+          </View>
+        </View>
+        <ChevronRightIcon size={18} color={tokens.textMuted} />
+      </TouchableOpacity>
+
       {/* Security Quick Link */}
       <TouchableOpacity
         activeOpacity={0.75}

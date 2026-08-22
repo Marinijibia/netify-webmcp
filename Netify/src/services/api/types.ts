@@ -3,6 +3,18 @@ export interface ApiResponse<T = unknown> {
   data: T;
   message?: string;
   timestamp?: string;
+  pagination?: {
+    page: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
+  error?: {
+    message: string;
+    statusCode?: number;
+    errorCode?: string;
+  };
 }
 
 export interface ApiErrorResponse {

@@ -27,7 +27,7 @@ export class RiskService {
   }
 
   async evaluateCustomerRisk(organizationId: string, customerId: string): Promise<CustomerRiskDetail> {
-    const customer = await prisma.customer.findFirst({
+    const customer: any = await prisma.customer.findFirst({
       where: { id: customerId, organizationId },
       include: {
         invoices: {
@@ -35,7 +35,7 @@ export class RiskService {
           include: { items: true },
         },
         payments: {
-          orderBy: { paymentDate: 'desc' },
+          orderBy: { paidAt: 'desc' },
         },
         commitments: {
           orderBy: { promisedDate: 'desc' },
@@ -48,22 +48,22 @@ export class RiskService {
     }
 
     // 1. Gather Deterministic Signals
-    const totalOutstanding = customer.invoices.reduce((sum, inv) => sum + inv.balance, 0);
-    const totalPaidHistorical = customer.payments.reduce((sum, p) => sum + p.amount, 0);
+    const totalOutstanding = (customer.invoices || []).reduce((sum: number, inv: any) => sum + inv.balance, 0);
+    const totalPaidHistorical = (customer.payments || []).reduce((sum: number, p: any) => sum + Number(p.amount), 0);
 
-    const overdueInvoices = customer.invoices.filter((inv) => {
+    const overdueInvoices = (customer.invoices || []).filter((inv: any) => {
       const days = DeterministicInvoiceService.calculateDaysOverdue(inv.dueDate);
       return days > 0 && inv.balance > 0;
     });
 
-    const oldestOverdueDays = overdueInvoices.reduce((max, inv) => {
+    const oldestOverdueDays = overdueInvoices.reduce((max: number, inv: any) => {
       const days = DeterministicInvoiceService.calculateDaysOverdue(inv.dueDate);
       return Math.max(max, days);
     }, 0);
 
-    const pendingCommitments = customer.commitments.filter((c) => c.status === 'PENDING');
-    const missedCommitments = customer.commitments.filter((c) => c.status === 'MISSED');
-    const fulfilledCommitments = customer.commitments.filter((c) => c.status === 'FULFILLED');
+    const pendingCommitments = (customer.commitments || []).filter((c: any) => c.status === 'PENDING');
+    const missedCommitments = (customer.commitments || []).filter((c: any) => c.status === 'MISSED');
+    const fulfilledCommitments = (customer.commitments || []).filter((c: any) => c.status === 'FULFILLED');
     const totalResolvedCommitments = missedCommitments.length + fulfilledCommitments.length;
     const commitmentFulfillmentRate =
       totalResolvedCommitments > 0
@@ -71,8 +71,8 @@ export class RiskService {
         : 100;
 
     const daysSinceLastPayment =
-      customer.payments.length > 0
-        ? Math.floor((Date.now() - new Date(customer.payments[0].paymentDate).getTime()) / (1000 * 60 * 60 * 24))
+      (customer.payments || []).length > 0
+        ? Math.floor((Date.now() - new Date(customer.payments[0].paidAt).getTime()) / (1000 * 60 * 60 * 24))
         : null;
 
     const signals: DeterministicRiskSignals = {
@@ -83,7 +83,7 @@ export class RiskService {
       totalPaidHistorical,
       oldestOverdueDays,
       overdueInvoicesCount: overdueInvoices.length,
-      totalInvoicesCount: customer.invoices.length,
+      totalInvoicesCount: (customer.invoices || []).length,
       pendingCommitmentsCount: pendingCommitments.length,
       missedCommitmentsCount: missedCommitments.length,
       fulfilledCommitmentsCount: fulfilledCommitments.length,
@@ -102,7 +102,7 @@ export class RiskService {
     // 3. Assemble Concrete Verifiable Evidence
     const evidence: RiskEvidenceItem[] = [];
 
-    overdueInvoices.forEach((inv) => {
+    overdueInvoices.forEach((inv: any) => {
       const days = DeterministicInvoiceService.calculateDaysOverdue(inv.dueDate);
       evidence.push({
         id: inv.id,
@@ -116,7 +116,7 @@ export class RiskService {
       });
     });
 
-    missedCommitments.forEach((comm) => {
+    missedCommitments.forEach((comm: any) => {
       evidence.push({
         id: comm.id,
         type: 'COMMITMENT',
@@ -130,16 +130,16 @@ export class RiskService {
       });
     });
 
-    if (customer.payments.length > 0) {
+    if ((customer.payments || []).length > 0) {
       const p = customer.payments[0];
       evidence.push({
         id: p.id,
         type: 'PAYMENT',
         title: `Last Payment Received (${daysSinceLastPayment} days ago)`,
-        description: `${p.currency} ${p.amount.toLocaleString()} via ${p.paymentMethod}`,
-        amount: p.amount,
+        description: `${p.currency} ${Number(p.amount).toLocaleString()} via ${p.method || p.paymentMethod}`,
+        amount: Number(p.amount),
         currency: p.currency,
-        date: new Date(p.paymentDate).toISOString().split('T')[0],
+        date: new Date(p.paidAt).toISOString().split('T')[0],
       });
     }
 

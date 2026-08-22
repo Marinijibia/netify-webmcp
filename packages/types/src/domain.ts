@@ -3,6 +3,13 @@ import {
   OrganizationStatus,
   MembershipStatus,
   CustomerStatus,
+  ContactType,
+  ReceivableSource,
+  ReceivableStatus,
+  PaymentStatus,
+  ActivityType,
+  CollectionChannel,
+  ActivityOutcome,
   InvoiceStatus,
   PaymentMethod,
   TransactionType,
@@ -57,6 +64,15 @@ export interface Membership extends BaseEntity {
   organization?: Organization;
 }
 
+export interface CustomerContact extends BaseEntity {
+  customerId: string;
+  type: ContactType;
+  value: string;
+  label?: string;
+  isPrimary: boolean;
+  isVerified: boolean;
+}
+
 export interface Customer extends BaseEntity {
   organizationId: string;
   name: string;
@@ -70,6 +86,7 @@ export interface Customer extends BaseEntity {
   tags?: string[];
   creditPeriodDays?: number;
   metadata?: Record<string, any>;
+  contacts?: CustomerContact[];
 
   // Calculated properties (from deterministic queries)
   totalOutstanding?: number;
@@ -77,6 +94,28 @@ export interface Customer extends BaseEntity {
   overdueInvoicesCount?: number;
   activeCommitmentsCount?: number;
   latestRiskAssessment?: RiskAssessment;
+}
+
+export interface Receivable extends BaseEntity {
+  organizationId: string;
+  customerId: string;
+  customer?: Customer;
+  reference?: string;
+  description?: string;
+  originalAmount: number | string;
+  currency: string;
+  issuedAt: Date | string;
+  dueDate: Date | string;
+  source: ReceivableSource;
+  status: ReceivableStatus;
+  notes?: string;
+  payments?: Payment[];
+
+  // Derived Authoritative State
+  amountPaid?: number | string;
+  balance?: number | string;
+  isOverdue?: boolean;
+  daysOverdue?: number;
 }
 
 export interface InvoiceItem extends BaseEntity {
@@ -111,13 +150,19 @@ export interface Payment extends BaseEntity {
   organizationId: string;
   customerId: string;
   customer?: Customer;
+  receivableId?: string;
+  receivable?: Receivable;
   invoiceId?: string;
   invoice?: Invoice;
-  amount: number;
+  amount: number | string;
   currency: string;
-  paymentDate: Date | string;
-  paymentMethod: PaymentMethod;
+  paidAt: Date | string;
+  paymentDate?: Date | string;
+  method: PaymentMethod;
+  paymentMethod?: PaymentMethod;
+  status: PaymentStatus;
   reference?: string;
+  idempotencyKey?: string;
   notes?: string;
   source?: string;
 }
@@ -134,6 +179,45 @@ export interface Transaction extends BaseEntity {
   referenceId?: string;
   description: string;
   date: Date | string;
+}
+
+export interface CollectionActivity extends BaseEntity {
+  organizationId: string;
+  customerId: string;
+  customer?: Customer;
+  receivableId: string;
+  receivable?: Receivable;
+  performedByUserId: string;
+  performedByUser?: User;
+  type: ActivityType;
+  channel: CollectionChannel;
+  outcome: ActivityOutcome;
+  occurredAt: Date | string;
+  notes?: string;
+  commitments?: PaymentCommitment[];
+}
+
+export interface PaymentCommitment extends BaseEntity {
+  organizationId: string;
+  customerId: string;
+  customer?: Customer;
+  receivableId: string;
+  receivable?: Receivable;
+  createdByUserId: string;
+  createdByUser?: User;
+  amount: number | string;
+  currency: string;
+  promisedFor: Date | string;
+  status: CommitmentStatus;
+  sourceActivityId?: string;
+  sourceActivity?: CollectionActivity;
+  notes?: string;
+
+  // Derived state
+  isMissed?: boolean;
+  daysOverdue?: number;
+  amountFulfilled?: number | string;
+  remainingCommittedAmount?: number | string;
 }
 
 export interface Commitment extends BaseEntity {

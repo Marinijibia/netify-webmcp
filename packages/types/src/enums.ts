@@ -22,7 +22,38 @@ export enum MembershipStatus {
 export enum CustomerStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
+  ARCHIVED = 'ARCHIVED',
   BLOCKED = 'BLOCKED',
+}
+
+export enum ContactType {
+  PHONE = 'PHONE',
+  EMAIL = 'EMAIL',
+  WHATSAPP = 'WHATSAPP',
+  OTHER = 'OTHER',
+}
+
+export enum ReceivableSource {
+  MANUAL = 'MANUAL',
+  INVOICE = 'INVOICE',
+  CREDIT_SALE = 'CREDIT_SALE',
+  OTHER = 'OTHER',
+}
+
+export enum ReceivableStatus {
+  OPEN = 'OPEN',
+  PARTIALLY_PAID = 'PARTIALLY_PAID',
+  PAID = 'PAID',
+  OVERDUE = 'OVERDUE',
+  DISPUTED = 'DISPUTED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum PaymentStatus {
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
+  FAILED = 'FAILED',
+  REVERSED = 'REVERSED',
 }
 
 export enum InvoiceStatus {
@@ -35,17 +66,50 @@ export enum InvoiceStatus {
 }
 
 export enum PaymentMethod {
-  BANK_TRANSFER = 'BANK_TRANSFER',
-  POS = 'POS',
   CASH = 'CASH',
-  CARD = 'CARD',
+  BANK_TRANSFER = 'BANK_TRANSFER',
   MOBILE_MONEY = 'MOBILE_MONEY',
+  CARD = 'CARD',
+  POS = 'POS',
   OTHER = 'OTHER',
 }
 
 export enum TransactionType {
   DEBIT = 'DEBIT',
   CREDIT = 'CREDIT',
+}
+
+export enum ActivityType {
+  CALL = 'CALL',
+  WHATSAPP = 'WHATSAPP',
+  SMS = 'SMS',
+  EMAIL = 'EMAIL',
+  IN_PERSON = 'IN_PERSON',
+  PAYMENT_REMINDER = 'PAYMENT_REMINDER',
+  FOLLOW_UP = 'FOLLOW_UP',
+  OTHER = 'OTHER',
+}
+
+export enum CollectionChannel {
+  PHONE = 'PHONE',
+  WHATSAPP = 'WHATSAPP',
+  SMS = 'SMS',
+  EMAIL = 'EMAIL',
+  IN_PERSON = 'IN_PERSON',
+  OTHER = 'OTHER',
+}
+
+export enum ActivityOutcome {
+  NO_RESPONSE = 'NO_RESPONSE',
+  CONTACTED = 'CONTACTED',
+  PROMISED_PAYMENT = 'PROMISED_PAYMENT',
+  PARTIAL_PAYMENT = 'PARTIAL_PAYMENT',
+  FULL_PAYMENT = 'FULL_PAYMENT',
+  DISPUTE = 'DISPUTE',
+  REQUESTED_EXTENSION = 'REQUESTED_EXTENSION',
+  WRONG_CONTACT = 'WRONG_CONTACT',
+  CUSTOMER_UNAVAILABLE = 'CUSTOMER_UNAVAILABLE',
+  OTHER = 'OTHER',
 }
 
 export enum CommitmentStatus {

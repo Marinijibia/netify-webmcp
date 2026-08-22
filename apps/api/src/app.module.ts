@@ -7,8 +7,10 @@ import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { OrganizationModule } from './modules/organization/organization.module';
 import { CustomerModule } from './modules/customer/customer.module';
+import { ReceivableModule } from './modules/receivable/receivable.module';
 import { InvoiceModule } from './modules/invoice/invoice.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { CollectionActivityModule } from './modules/collection-activity/collection-activity.module';
 import { CommitmentModule } from './modules/commitment/commitment.module';
 import { RiskModule } from './modules/risk/risk.module';
 import { CollectionsModule } from './modules/collections/collections.module';
@@ -46,8 +48,10 @@ import { SubscriptionModule } from './modules/subscription/subscription.module';
     AuthModule,
     OrganizationModule,
     CustomerModule,
+    ReceivableModule,
     InvoiceModule,
     PaymentModule,
+    CollectionActivityModule,
     CommitmentModule,
     RiskModule,
     CollectionsModule,
