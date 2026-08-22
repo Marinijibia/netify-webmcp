@@ -1,58 +1,28 @@
-import React, { useEffect } from 'react';
-import { View, Text } from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React from 'react';
+import { Redirect } from 'expo-router';
 import { useAuthStore } from '@/store/auth-store';
-import { LoadingSpinner } from '@/components/feedback/loading-spinner';
-import { Button } from '@/components/ui/button';
 
-export default function EntryScreen() {
-  const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuthStore();
-
-  useEffect(() => {
-    if (!isLoading) {
-      if (isAuthenticated) {
-        router.replace('/(app)/index');
-      } else {
-        router.replace('/(auth)/login');
-      }
-    }
-  }, [isAuthenticated, isLoading, router]);
+export default function IndexScreen() {
+  const { isAuthenticated, isLoading, user, organization } = useAuthStore();
 
   if (isLoading) {
-    return (
-      <SafeAreaView className="flex-1 bg-slate-950 items-center justify-center p-6">
-        <View className="w-14 h-14 bg-emerald-500 rounded-2xl items-center justify-center mb-6 shadow-lg shadow-emerald-500/20">
-          <Text className="text-slate-950 text-2xl font-black">N</Text>
-        </View>
-        <LoadingSpinner size="large" />
-      </SafeAreaView>
-    );
+    return null;
   }
 
-  return (
-    <SafeAreaView className="flex-1 bg-slate-950 items-center justify-center p-6">
-      <View className="w-14 h-14 bg-emerald-500 rounded-2xl items-center justify-center mb-6 shadow-lg shadow-emerald-500/20">
-        <Text className="text-slate-950 text-2xl font-black">N</Text>
-      </View>
-      <Text className="text-2xl font-black text-white mb-2">Netify Mobile</Text>
-      <Text className="text-xs text-slate-400 text-center mb-8 px-6">
-        AI Collections + Business Memory for African SMEs
-      </Text>
+  if (!isAuthenticated || !user) {
+    return <Redirect href="/(auth)/login" />;
+  }
 
-      <View className="w-full max-w-xs gap-3">
-        <Button
-          label="Sign In"
-          onPress={() => router.push('/(auth)/login')}
-          variant="primary"
-        />
-        <Button
-          label="Register Business"
-          onPress={() => router.push('/(auth)/register')}
-          variant="secondary"
-        />
-      </View>
-    </SafeAreaView>
-  );
+  if (!user.isEmailVerified) {
+    return <Redirect href="/(auth)/verify-email" />;
+  }
+
+  if (!user.onboardingCompleted) {
+    if (!organization) {
+      return <Redirect href={'/(onboarding)/create-organization' as any} />;
+    }
+    return <Redirect href="/(onboarding)" />;
+  }
+
+  return <Redirect href="/(app)" />;
 }

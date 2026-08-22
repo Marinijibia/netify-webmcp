@@ -1,17 +1,19 @@
+import { NETIFY_NAVY, NETIFY_TEAL, NETIFY_SLATE, SEMANTIC_COLORS, THEME_TOKENS } from '@/design/tokens';
+
 export const COLORS = {
-  primary: '#10b981', // Emerald 500
-  primaryDark: '#059669', // Emerald 600
-  background: '#020617', // Slate 950
-  surface: '#0f172a', // Slate 900
-  surfaceBorder: '#1e293b', // Slate 800
-  surfaceHover: '#334155', // Slate 700
-  text: '#f8fafc', // Slate 50
-  textMuted: '#94a3b8', // Slate 400
-  textSubtle: '#64748b', // Slate 500
-  danger: '#ef4444', // Red 500
-  warning: '#f59e0b', // Amber 500
-  success: '#10b981', // Emerald 500
-  info: '#3b82f6', // Blue 500
+  primary: THEME_TOKENS.primary,
+  primaryDark: THEME_TOKENS.primaryPressed,
+  background: THEME_TOKENS.background,
+  surface: THEME_TOKENS.surface,
+  surfaceBorder: THEME_TOKENS.border,
+  surfaceHover: THEME_TOKENS.borderStrong,
+  text: THEME_TOKENS.textPrimary,
+  textMuted: THEME_TOKENS.textSecondary,
+  textSubtle: THEME_TOKENS.textMuted,
+  danger: THEME_TOKENS.danger,
+  warning: THEME_TOKENS.warning,
+  success: THEME_TOKENS.success,
+  info: THEME_TOKENS.info,
 } as const;
 
 export const SPACING = {

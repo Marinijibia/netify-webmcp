@@ -4,15 +4,35 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
+import * as SplashScreen from 'expo-splash-screen';
 import { queryClient } from '@/lib/query-client';
 import { useAuthStore } from '@/store/auth-store';
+import { useTheme } from '@/design/theme';
+
+// Keep native splash screen locked until initial auth state and theme are fully resolved
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const initializeAuth = useAuthStore((state) => state.initializeAuth);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const { isDark, tokens, initializeTheme } = useTheme();
 
   useEffect(() => {
-    initializeAuth();
-  }, [initializeAuth]);
+    async function prepare() {
+      try {
+        await Promise.all([initializeTheme(), initializeAuth()]);
+      } catch (err) {
+        console.warn('Initialization error:', err);
+      }
+    }
+    prepare();
+  }, [initializeTheme, initializeAuth]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [isLoading]);
 
   return (
     <SafeAreaProvider>
@@ -20,7 +40,8 @@ export default function RootLayout() {
         <Stack
           screenOptions={{
             headerShown: false,
-            contentStyle: { backgroundColor: '#020617' },
+            contentStyle: { backgroundColor: tokens.background },
+            animation: 'none',
           }}
         >
           <Stack.Screen name="index" />
@@ -28,7 +49,7 @@ export default function RootLayout() {
           <Stack.Screen name="(onboarding)" />
           <Stack.Screen name="(app)" />
         </Stack>
-        <StatusBar style="light" />
+        <StatusBar style={isDark ? 'light' : 'dark'} />
       </QueryClientProvider>
     </SafeAreaProvider>
   );

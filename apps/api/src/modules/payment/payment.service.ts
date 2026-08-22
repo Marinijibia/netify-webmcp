@@ -68,31 +68,33 @@ export class PaymentService {
         },
       });
 
-      // 2. If applied to an Invoice, update invoice paid amount, balance & status
+      // 2. If applied to an Invoice, verify invoice ownership and update paid amount, balance & status
       if (input.invoiceId) {
         const invoice = await tx.invoice.findFirst({
-          where: { id: input.invoiceId, organizationId },
+          where: { id: input.invoiceId, organizationId, customerId: input.customerId },
         });
 
-        if (invoice) {
-          const newPaidAmount = invoice.paidAmount + input.amount;
-          const newBalance = DeterministicInvoiceService.calculateBalance(invoice.total, newPaidAmount);
-          const newStatus = DeterministicInvoiceService.determineStatus(
-            invoice.total,
-            newPaidAmount,
-            invoice.dueDate,
-            invoice.status
-          );
-
-          await tx.invoice.update({
-            where: { id: invoice.id },
-            data: {
-              paidAmount: newPaidAmount,
-              balance: newBalance,
-              status: newStatus,
-            },
-          });
+        if (!invoice) {
+          throw new NotFoundException('Invoice not found or does not belong to this customer');
         }
+
+        const newPaidAmount = invoice.paidAmount + input.amount;
+        const newBalance = DeterministicInvoiceService.calculateBalance(invoice.total, newPaidAmount);
+        const newStatus = DeterministicInvoiceService.determineStatus(
+          invoice.total,
+          newPaidAmount,
+          invoice.dueDate,
+          invoice.status
+        );
+
+        await tx.invoice.update({
+          where: { id: invoice.id },
+          data: {
+            paidAmount: newPaidAmount,
+            balance: newBalance,
+            status: newStatus,
+          },
+        });
       }
 
       // 3. Create Transaction Ledger Entry

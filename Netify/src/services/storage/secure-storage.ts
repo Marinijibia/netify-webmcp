@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 const STORAGE_KEYS = {
   ACCESS_TOKEN: 'netify_access_token',
   REFRESH_TOKEN: 'netify_refresh_token',
+  BIOMETRIC_REFRESH_TOKEN: 'netify_biometric_refresh_token',
   ACTIVE_ORG_ID: 'netify_active_org_id',
 } as const;
 
@@ -63,6 +64,19 @@ export class SecureStorageService {
 
   static async setRefreshToken(token: string): Promise<void> {
     return this.setItem(STORAGE_KEYS.REFRESH_TOKEN, token);
+  }
+
+  // Biometric Token Helpers
+  static async getBiometricRefreshToken(): Promise<string | null> {
+    return this.getItem(STORAGE_KEYS.BIOMETRIC_REFRESH_TOKEN);
+  }
+
+  static async setBiometricRefreshToken(token: string): Promise<void> {
+    return this.setItem(STORAGE_KEYS.BIOMETRIC_REFRESH_TOKEN, token);
+  }
+
+  static async clearBiometricRefreshToken(): Promise<void> {
+    return this.removeItem(STORAGE_KEYS.BIOMETRIC_REFRESH_TOKEN);
   }
 
   static async clearAuthTokens(): Promise<void> {

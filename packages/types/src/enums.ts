@@ -1,8 +1,22 @@
 export enum UserRole {
   OWNER = 'OWNER',
+  MEMBER = 'MEMBER',
   ADMIN = 'ADMIN',
   MANAGER = 'MANAGER',
   STAFF = 'STAFF',
+}
+
+export enum OrganizationStatus {
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED',
+  ARCHIVED = 'ARCHIVED',
+}
+
+export enum MembershipStatus {
+  ACTIVE = 'ACTIVE',
+  INVITED = 'INVITED',
+  SUSPENDED = 'SUSPENDED',
+  REMOVED = 'REMOVED',
 }
 
 export enum CustomerStatus {

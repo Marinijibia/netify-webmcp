@@ -1,4 +1,5 @@
 export * from './auth.schema';
+export * from './organization.schema';
 export * from './customer.schema';
 export * from './invoice.schema';
 export * from './payment.schema';

@@ -1,12 +1,13 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Button } from '@/design/components/Button';
+import { AlertCircleIcon } from '@/design/icons';
 
 export interface ErrorStateProps {
   title?: string;
   message: string;
   onRetry?: () => void;
+  retryLabel?: string;
   className?: string;
 }
 
@@ -14,27 +15,29 @@ export function ErrorState({
   title = 'Something went wrong',
   message,
   onRetry,
-  className,
+  retryLabel = 'Try Again',
+  className = '',
 }: ErrorStateProps) {
   return (
-    <View className={cn('items-center justify-center p-8 text-center', className)}>
-      <View className="w-12 h-12 rounded-2xl bg-red-950/40 border border-red-900/60 items-center justify-center mb-4">
-        <Text className="text-xl text-red-400 font-bold">!</Text>
+    <View className={`items-center justify-center p-6 text-center ${className}`}>
+      <View className="h-16 w-16 rounded-2xl bg-red-950/40 border border-red-500/30 items-center justify-center mb-4">
+        <AlertCircleIcon size={32} color="#ef4444" />
       </View>
 
-      <Text className="text-base font-bold text-slate-100 text-center mb-1.5">
+      <Text className="text-base font-bold text-slate-100 text-center mb-1">
         {title}
       </Text>
-      <Text className="text-xs text-slate-400 text-center max-w-[280px] leading-5 mb-6">
+
+      <Text className="text-xs text-slate-400 text-center leading-5 max-w-[280px] mb-5">
         {message}
       </Text>
 
       {onRetry ? (
         <Button
-          label="Try Again"
-          onPress={onRetry}
+          label={retryLabel}
           variant="secondary"
           size="sm"
+          onPress={onRetry}
         />
       ) : null}
     </View>

@@ -5,7 +5,6 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
-import cors from 'cors';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -13,12 +12,10 @@ async function bootstrap() {
 
   // Security and Middleware
   app.use(helmet());
-  app.use(
-    cors({
-      origin: true,
-      credentials: true,
-    })
-  );
+  app.enableCors({
+    origin: true,
+    credentials: true,
+  });
 
   // Global prefixes and interceptors
   app.setGlobalPrefix('api/v1');
@@ -43,8 +40,8 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 4000;
-  await app.listen(port);
-  logger.log(`🚀 Netify API is running on: http://localhost:${port}/api/v1`);
+  await app.listen(port, '0.0.0.0');
+  logger.log(`🚀 Netify API is running on: http://0.0.0.0:${port}/api/v1 (Local: http://localhost:${port}/api/v1)`);
   logger.log(`📖 Swagger API Docs available at: http://localhost:${port}/api/docs`);
 }
 

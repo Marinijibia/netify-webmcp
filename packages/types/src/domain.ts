@@ -1,5 +1,7 @@
 import {
   UserRole,
+  OrganizationStatus,
+  MembershipStatus,
   CustomerStatus,
   InvoiceStatus,
   PaymentMethod,
@@ -28,8 +30,11 @@ export interface BaseEntity {
 export interface Organization extends BaseEntity {
   name: string;
   slug: string;
+  businessType: string;
   currency: string;
   country: string;
+  timezone: string;
+  status: OrganizationStatus;
   logoUrl?: string;
   settings?: Record<string, any>;
 }
@@ -47,6 +52,7 @@ export interface Membership extends BaseEntity {
   organizationId: string;
   userId: string;
   role: UserRole;
+  status: MembershipStatus;
   user?: User;
   organization?: Organization;
 }
@@ -62,6 +68,7 @@ export interface Customer extends BaseEntity {
   status: CustomerStatus;
   notes?: string;
   tags?: string[];
+  creditPeriodDays?: number;
   metadata?: Record<string, any>;
 
   // Calculated properties (from deterministic queries)

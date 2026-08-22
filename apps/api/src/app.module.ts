@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { EmailModule } from './modules/email/email.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { OrganizationModule } from './modules/organization/organization.module';
@@ -21,6 +24,24 @@ import { SubscriptionModule } from './modules/subscription/subscription.module';
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
     }),
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000,
+        limit: 10, // 10 reqs per second
+      },
+      {
+        name: 'medium',
+        ttl: 10000,
+        limit: 40, // 40 reqs per 10 seconds
+      },
+      {
+        name: 'long',
+        ttl: 60000,
+        limit: 120, // 120 reqs per minute
+      },
+    ]),
+    EmailModule,
     HealthModule,
     AuthModule,
     OrganizationModule,
@@ -35,6 +56,12 @@ import { SubscriptionModule } from './modules/subscription/subscription.module';
     DocumentModule,
     NotificationModule,
     SubscriptionModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

@@ -29,12 +29,15 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
       error = res.error || exception.name;
       details = res.details || (typeof res === 'object' && res.errors ? res.errors : undefined);
     } else if (exception instanceof Error) {
-      message = exception.message;
+      // For unhandled exceptions, sanitize response message to avoid leaking internals
+      message = process.env.NODE_ENV === 'development' 
+        ? exception.message 
+        : 'An unexpected internal server error occurred.';
       error = exception.name;
     }
 
     this.logger.error(
-      `[${request.method} ${request.url}] Status: ${status} Error: ${error} Message: ${message}`,
+      `[${request.method} ${request.url}] Status: ${status} Error: ${error} Message: ${exception instanceof Error ? exception.message : message}`,
       exception instanceof Error ? exception.stack : undefined
     );
 

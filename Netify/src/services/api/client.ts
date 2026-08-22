@@ -14,13 +14,18 @@ import type { ApiResponse, RequestOptions } from './types';
 export class ApiClient {
   private readonly baseUrl: string;
   private readonly defaultTimeoutMs: number;
+  private refreshPromise: Promise<string | null> | null = null;
 
   constructor(baseUrl = env.apiUrl, defaultTimeoutMs = 15000) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
     this.defaultTimeoutMs = defaultTimeoutMs;
   }
 
-  async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+  async request<T>(
+    endpoint: string,
+    options: RequestOptions = {},
+    isRetry = false
+  ): Promise<ApiResponse<T>> {
     const {
       params,
       body,
@@ -59,17 +64,45 @@ export class ApiClient {
 
       clearTimeout(timeoutId);
 
+      // Handle 401 Token Expiration with Automatic Silent Refresh
+      if (
+        response.status === 401 &&
+        requiresAuth &&
+        !isRetry &&
+        !endpoint.includes('/auth/login') &&
+        !endpoint.includes('/auth/refresh')
+      ) {
+        const newAccessToken = await this.performTokenRefresh();
+        if (newAccessToken) {
+          // Retry the original request with the fresh token
+          return this.request<T>(endpoint, options, true);
+        }
+      }
+
       if (!response.ok) {
         await this.handleErrorResponse(response);
       }
 
       // Handle 204 No Content
       if (response.status === 204) {
-        return undefined as T;
+        return {
+          success: true,
+          data: undefined as unknown as T,
+          timestamp: new Date().toISOString(),
+        };
       }
 
       const json = await response.json();
-      return (json.data !== undefined ? json.data : json) as T;
+      if (json.success !== undefined) {
+        return json as ApiResponse<T>;
+      }
+
+      return {
+        success: true,
+        data: json,
+        message: json.message,
+        timestamp: json.timestamp || new Date().toISOString(),
+      };
     } catch (error: unknown) {
       clearTimeout(timeoutId);
 
@@ -78,35 +111,101 @@ export class ApiClient {
       }
 
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new TimeoutError(`Request to ${endpoint} timed out after ${timeoutMs}ms`);
+        throw new TimeoutError('The request timed out. Please check your connection and try again.');
       }
 
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new NetworkError('Unable to connect to the Netify server.');
+      // Handle all React Native and browser fetch network failures
+      if (
+        (error instanceof TypeError && (
+          error.message.includes('fetch') ||
+          error.message.includes('Network request failed') ||
+          error.message.includes('Failed to fetch')
+        )) ||
+        (error instanceof Error && (
+          error.message.includes('Network request failed') ||
+          error.message.includes('Failed to fetch') ||
+          error.message.includes('network error') ||
+          error.message.includes('ECONNREFUSED') ||
+          error.message.includes('ENOTFOUND') ||
+          error.message.includes('ETIMEDOUT')
+        ))
+      ) {
+        throw new NetworkError('Unable to connect to Netify. Please check your internet connection and try again.');
       }
 
       throw error;
     }
   }
 
+  private async performTokenRefresh(): Promise<string | null> {
+    // If a refresh is already in progress, wait for it
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    this.refreshPromise = (async () => {
+      try {
+        const refreshToken = await SecureStorageService.getRefreshToken();
+        if (!refreshToken) {
+          await SecureStorageService.clearAuthTokens();
+          return null;
+        }
+
+        const refreshUrl = `${this.baseUrl}/auth/refresh`;
+        const res = await fetch(refreshUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({ refreshToken }),
+        });
+
+        if (!res.ok) {
+          await SecureStorageService.clearAuthTokens();
+          return null;
+        }
+
+        const data = await res.json();
+        const tokens = data.data || data;
+
+        if (tokens.accessToken && tokens.refreshToken) {
+          await SecureStorageService.setAccessToken(tokens.accessToken);
+          await SecureStorageService.setRefreshToken(tokens.refreshToken);
+          return tokens.accessToken as string;
+        }
+
+        await SecureStorageService.clearAuthTokens();
+        return null;
+      } catch {
+        await SecureStorageService.clearAuthTokens();
+        return null;
+      } finally {
+        this.refreshPromise = null;
+      }
+    })();
+
+    return this.refreshPromise;
+  }
+
   // HTTP Helper Methods
-  get<T>(endpoint: string, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<T> {
+  get<T>(endpoint: string, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { ...options, method: 'GET' });
   }
 
-  post<T>(endpoint: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<T> {
+  post<T>(endpoint: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { ...options, method: 'POST', body });
   }
 
-  put<T>(endpoint: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<T> {
+  put<T>(endpoint: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { ...options, method: 'PUT', body });
   }
 
-  patch<T>(endpoint: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<T> {
+  patch<T>(endpoint: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { ...options, method: 'PATCH', body });
   }
 
-  delete<T>(endpoint: string, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<T> {
+  delete<T>(endpoint: string, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' });
   }
 

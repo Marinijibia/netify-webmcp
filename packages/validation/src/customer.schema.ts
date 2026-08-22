@@ -9,6 +9,7 @@ export const createCustomerSchema = z.object({
   country: z.string().default('Nigeria'),
   currency: z.string().min(3).max(3).default('NGN'),
   status: z.nativeEnum(CustomerStatus).default(CustomerStatus.ACTIVE),
+  creditPeriodDays: z.number().int().min(0, 'Credit period must be 0 or more days').max(365).optional(),
   notes: z.string().optional(),
   tags: z.array(z.string()).optional().default([]),
   metadata: z.record(z.any()).optional(),
