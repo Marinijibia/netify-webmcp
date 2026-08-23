@@ -38,6 +38,11 @@ import {
   commitmentsApi,
   PaymentCommitmentItem,
 } from '../../../../src/services/api/commitments';
+import {
+  businessEventsApi,
+  BusinessEventItem,
+} from '../../../../src/services/api/business-events';
+import { TimelineEventCard } from '../../../../src/design/components/TimelineEventCard';
 
 export default function ReceivableDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -47,6 +52,7 @@ export default function ReceivableDetailScreen() {
   const [receivable, setReceivable] = useState<ReceivableItem | null>(null);
   const [activities, setActivities] = useState<CollectionActivityItem[]>([]);
   const [commitments, setCommitments] = useState<PaymentCommitmentItem[]>([]);
+  const [timelineEvents, setTimelineEvents] = useState<BusinessEventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,10 +62,11 @@ export default function ReceivableDetailScreen() {
     if (!id) return;
     try {
       setError(null);
-      const [recRes, actRes, commRes] = await Promise.all([
+      const [recRes, actRes, commRes, timelineRes] = await Promise.all([
         receivablesApi.getById(id),
         collectionActivitiesApi.getReceivableActivities(id).catch(() => ({ success: false, data: [] as CollectionActivityItem[] })),
         commitmentsApi.getReceivableCommitments(id).catch(() => ({ success: false, data: [] as PaymentCommitmentItem[] })),
+        businessEventsApi.getReceivableTimeline(id).catch(() => ({ success: false, data: [] as BusinessEventItem[] })),
       ]);
 
       if (recRes.data) {
@@ -73,6 +80,9 @@ export default function ReceivableDetailScreen() {
       }
       if (commRes.data) {
         setCommitments(commRes.data);
+      }
+      if (timelineRes.success && timelineRes.data) {
+        setTimelineEvents(timelineRes.data);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load receivable');
@@ -526,6 +536,37 @@ export default function ReceivableDetailScreen() {
                 </TouchableOpacity>
               );
             })
+          )}
+        </View>
+
+        {/* Case Evidence Timeline (Domain 05) */}
+        <View className="mb-6">
+          <View className="flex-row items-center justify-between mb-3">
+            <View className="flex-row items-center">
+              <ActivityIcon size={16} color={tokens.primary} />
+              <Text style={{ color: tokens.textPrimary }} className="text-base font-bold ml-2">
+                Case History & Evidence ({timelineEvents.length})
+              </Text>
+            </View>
+            <Text style={{ color: tokens.textSecondary }} className="text-xs font-semibold">
+              Immutable Stream
+            </Text>
+          </View>
+
+          {timelineEvents.length === 0 ? (
+            <Card className="p-4 items-center">
+              <Text style={{ color: tokens.textSecondary }} className="text-xs">
+                No business events recorded for this receivable yet.
+              </Text>
+            </Card>
+          ) : (
+            timelineEvents.map((evt, idx) => (
+              <TimelineEventCard
+                key={evt.id}
+                event={evt}
+                isLast={idx === timelineEvents.length - 1}
+              />
+            ))
           )}
         </View>
 

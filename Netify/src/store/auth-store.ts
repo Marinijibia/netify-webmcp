@@ -14,6 +14,9 @@ export interface OrganizationInfo {
 interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
+  isLocked: boolean;
+  autoLockTimeoutMs: number;
+  lastActiveTimestamp: number;
   isBiometricsEnabled: boolean;
   isFaceIdEnabled: boolean;
   isFingerprintEnabled: boolean;
@@ -28,6 +31,11 @@ interface AuthState {
   setBiometricsEnabled: (enabled: boolean) => Promise<void>;
   setFaceIdEnabled: (enabled: boolean) => Promise<void>;
   setFingerprintEnabled: (enabled: boolean) => Promise<void>;
+  setLocked: (locked: boolean) => void;
+  setAutoLockTimeout: (ms: number) => Promise<void>;
+  recordActiveTimestamp: () => void;
+  unlockWithBiometrics: () => Promise<boolean>;
+  unlockWithPassword: (password: string) => Promise<boolean>;
   loginWithFaceScan: () => Promise<boolean>;
   loginWithFingerprint: () => Promise<boolean>;
   loginWithBiometrics: (mode?: 'FACE_ID' | 'FINGERPRINT') => Promise<boolean>;
@@ -40,6 +48,9 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isLoading: true,
+  isLocked: false,
+  autoLockTimeoutMs: 300000, // 5 minutes default
+  lastActiveTimestamp: Date.now(),
   isBiometricsEnabled: false,
   isFaceIdEnabled: false,
   isFingerprintEnabled: false,
@@ -138,6 +149,51 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
   },
 
+  setLocked: (locked: boolean) => {
+    set({ isLocked: locked, lastActiveTimestamp: Date.now() });
+  },
+
+  setAutoLockTimeout: async (ms: number) => {
+    await SecureStorageService.setAutoLockTimeout(ms);
+    set({ autoLockTimeoutMs: ms });
+  },
+
+  recordActiveTimestamp: () => {
+    set({ lastActiveTimestamp: Date.now() });
+  },
+
+  unlockWithBiometrics: async (): Promise<boolean> => {
+    const success = await get().loginWithFaceScan();
+    if (success) {
+      set({ isLocked: false, lastActiveTimestamp: Date.now() });
+    }
+    return success;
+  },
+
+  unlockWithPassword: async (password: string): Promise<boolean> => {
+    const user = get().user;
+    const savedEmail = await BiometricService.getRememberedEmail();
+    const email = user?.email || savedEmail;
+    if (!email) return false;
+
+    try {
+      const response = await authApi.login({
+        email,
+        password,
+      });
+
+      if (response.success && response.data) {
+        await SecureStorageService.setBiometricVaultCredentials(email, password);
+        await get().setAuthSession(response.data);
+        set({ isLocked: false, lastActiveTimestamp: Date.now() });
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  },
+
   /**
    * Completes sign in after biometric scan (Face ID or Fingerprint)
    */
@@ -148,10 +204,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const biometricRefreshToken = await SecureStorageService.getBiometricRefreshToken();
 
       const activeRefreshToken = refreshToken || biometricRefreshToken;
-
-      if (!activeRefreshToken && !accessToken) {
-        return false;
-      }
 
       // 1. Try getMe with existing access token
       if (accessToken) {
@@ -216,7 +268,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             }
           }
         } catch {
-          // Refresh token revoked or expired
+          // Refresh token revoked or expired, fallback to biometric vault credentials
+        }
+      }
+
+      // 3. Fallback to Hardware Secure Biometric Vault Credentials
+      const vaultCreds = await SecureStorageService.getBiometricVaultCredentials();
+      if (vaultCreds && vaultCreds.email && vaultCreds.pass) {
+        try {
+          const loginRes = await authApi.login({
+            email: vaultCreds.email,
+            password: vaultCreds.pass,
+          });
+
+          if (loginRes.success && loginRes.data) {
+            await get().setAuthSession(loginRes.data);
+            return true;
+          }
+        } catch {
+          // Vault credentials expired or changed
         }
       }
 
@@ -258,8 +328,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Ignore network errors during logout
     } finally {
       await SecureStorageService.clearAuthTokens();
+      // Keep biometric vault credentials if user enabled biometrics on this device
+      const caps = await BiometricService.getCapabilities();
+      if (!caps.isAnyEnabled) {
+        await SecureStorageService.clearBiometricVaultCredentials();
+        await SecureStorageService.clearBiometricRefreshToken();
+      }
+
+      try {
+        const { useBillingStore } = require('./billing-store');
+        await useBillingStore.getState().resetBilling();
+      } catch {}
+
       set({
         isAuthenticated: false,
+        isLocked: false,
         user: null,
         organization: null,
         role: null,
@@ -275,9 +358,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Ignore network errors during logout
     } finally {
       await SecureStorageService.clearAuthTokens();
+      await SecureStorageService.clearBiometricVaultCredentials();
       await SecureStorageService.clearBiometricRefreshToken();
+
+      try {
+        const { useBillingStore } = require('./billing-store');
+        await useBillingStore.getState().resetBilling();
+      } catch {}
+
       set({
         isAuthenticated: false,
+        isLocked: false,
         user: null,
         organization: null,
         role: null,
@@ -315,9 +406,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initializeAuth: async () => {
     set({ isLoading: true });
     try {
-      // Check full biometrics capabilities
-      const caps = await BiometricService.getCapabilities();
-      const bioName = await BiometricService.getBiometricTypeName();
+      // Check full biometrics capabilities & auto lock timeout
+      const [caps, bioName, autoLockTimeout] = await Promise.all([
+        BiometricService.getCapabilities(),
+        BiometricService.getBiometricTypeName(),
+        SecureStorageService.getAutoLockTimeout(),
+      ]);
 
       set({
         isBiometricsEnabled: caps.isAnyEnabled,
@@ -325,6 +419,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isFingerprintEnabled: caps.isFingerprintEnabled,
         biometricCapabilities: caps,
         biometricTypeName: bioName,
+        autoLockTimeoutMs: autoLockTimeout,
+        isLocked: false,
+        lastActiveTimestamp: Date.now(),
       });
 
       const accessToken = await SecureStorageService.getAccessToken();

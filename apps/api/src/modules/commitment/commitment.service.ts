@@ -7,15 +7,21 @@ import {
   prisma,
   Prisma,
   CommitmentStatus,
+  BusinessEventType,
+  ActorType,
+  EventSource,
 } from '@netify/database';
 import {
   CreateCommitmentInput,
   CancelCommitmentInput,
   CommitmentQueryInput,
 } from '@netify/validation';
+import { BusinessEventService } from '../business-event/business-event.service';
 
 @Injectable()
 export class CommitmentService {
+  constructor(private readonly businessEventService: BusinessEventService) {}
+
   /**
    * Helper: Get current local calendar date string (YYYY-MM-DD) for an organization's timezone.
    */
@@ -135,39 +141,62 @@ export class CommitmentService {
       }
     }
 
-    const commitment = await prisma.paymentCommitment.create({
-      data: {
-        organizationId,
-        customerId,
-        receivableId: receivable.id,
-        createdByUserId,
-        amount: commAmount,
-        currency: receivable.currency,
-        promisedFor: new Date(input.promisedFor),
-        status: CommitmentStatus.PENDING,
-        sourceActivityId: input.sourceActivityId || null,
-        notes: input.notes || null,
-      },
-      include: {
-        customer: { select: { id: true, name: true, phone: true, email: true } },
-        receivable: {
-          select: {
-            id: true,
-            reference: true,
-            description: true,
-            originalAmount: true,
-            currency: true,
-            status: true,
+    return await prisma.$transaction(async (tx) => {
+      const commitment = await tx.paymentCommitment.create({
+        data: {
+          organizationId,
+          customerId,
+          receivableId: receivable.id,
+          createdByUserId,
+          amount: commAmount,
+          currency: receivable.currency,
+          promisedFor: new Date(input.promisedFor),
+          status: CommitmentStatus.PENDING,
+          sourceActivityId: input.sourceActivityId || null,
+          notes: input.notes || null,
+        },
+        include: {
+          customer: { select: { id: true, name: true, phone: true, email: true } },
+          receivable: {
+            select: {
+              id: true,
+              reference: true,
+              description: true,
+              originalAmount: true,
+              currency: true,
+              status: true,
+            },
           },
+          createdByUser: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
+          sourceActivity: true,
         },
-        createdByUser: {
-          select: { id: true, firstName: true, lastName: true, email: true },
-        },
-        sourceActivity: true,
-      },
-    });
+      });
 
-    return this.enrichCommitment(commitment, org.timezone);
+      // Record canonical PAYMENT_COMMITMENT_CREATED Business Event
+      await this.businessEventService.recordEvent(tx, {
+        organizationId,
+        customerId: commitment.customerId,
+        receivableId: commitment.receivableId,
+        collectionActivityId: commitment.sourceActivityId || null,
+        paymentCommitmentId: commitment.id,
+        type: BusinessEventType.PAYMENT_COMMITMENT_CREATED,
+        occurredAt: commitment.createdAt,
+        actorType: ActorType.USER,
+        actorUserId: createdByUserId,
+        source: EventSource.USER_ACTION,
+        data: {
+          amount: commitment.amount.toString(),
+          currency: commitment.currency,
+          promisedFor: commitment.promisedFor.toISOString(),
+          sourceActivityId: commitment.sourceActivityId,
+        },
+        version: 1,
+      });
+
+      return this.enrichCommitment(commitment, org.timezone);
+    });
   }
 
   /**
@@ -181,8 +210,8 @@ export class CommitmentService {
       throw new NotFoundException('Organization not found');
     }
 
-    const page = query.page || 1;
-    const pageSize = query.pageSize || 20;
+    const page = Math.max(1, Number(query.page) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(query.pageSize) || 20));
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.PaymentCommitmentWhereInput = {
@@ -303,7 +332,8 @@ export class CommitmentService {
   async cancel(
     organizationId: string,
     id: string,
-    input: CancelCommitmentInput
+    input: CancelCommitmentInput,
+    actorUserId?: string | null
   ) {
     const org = await prisma.organization.findUnique({
       where: { id: organizationId },
@@ -312,50 +342,71 @@ export class CommitmentService {
       throw new NotFoundException('Organization not found');
     }
 
-    const commitment = await prisma.paymentCommitment.findFirst({
-      where: { id, organizationId },
-    });
+    return await prisma.$transaction(async (tx) => {
+      const commitment = await tx.paymentCommitment.findFirst({
+        where: { id, organizationId },
+      });
 
-    if (!commitment) {
-      throw new NotFoundException('Payment commitment not found');
-    }
+      if (!commitment) {
+        throw new NotFoundException('Payment commitment not found');
+      }
 
-    if (commitment.status === CommitmentStatus.FULFILLED) {
-      throw new BadRequestException('Cannot cancel an already fulfilled commitment');
-    }
+      if (commitment.status === CommitmentStatus.FULFILLED) {
+        throw new BadRequestException('Cannot cancel an already fulfilled commitment');
+      }
 
-    const updated = await prisma.paymentCommitment.update({
-      where: { id },
-      data: {
-        status: CommitmentStatus.CANCELLED,
-        notes: input.notes
-          ? commitment.notes
-            ? `${commitment.notes}\n[Cancelled]: ${input.notes}`
-            : `[Cancelled]: ${input.notes}`
-          : commitment.notes,
-      },
-      include: {
-        customer: {
-          select: { id: true, name: true, phone: true, email: true },
+      const updated = await tx.paymentCommitment.update({
+        where: { id },
+        data: {
+          status: CommitmentStatus.CANCELLED,
+          notes: input.notes
+            ? commitment.notes
+              ? `${commitment.notes}\n[Cancelled]: ${input.notes}`
+              : `[Cancelled]: ${input.notes}`
+            : commitment.notes,
         },
-        receivable: {
-          select: {
-            id: true,
-            reference: true,
-            description: true,
-            originalAmount: true,
-            currency: true,
-            status: true,
+        include: {
+          customer: {
+            select: { id: true, name: true, phone: true, email: true },
           },
+          receivable: {
+            select: {
+              id: true,
+              reference: true,
+              description: true,
+              originalAmount: true,
+              currency: true,
+              status: true,
+            },
+          },
+          createdByUser: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
+          sourceActivity: true,
         },
-        createdByUser: {
-          select: { id: true, firstName: true, lastName: true, email: true },
-        },
-        sourceActivity: true,
-      },
-    });
+      });
 
-    return this.enrichCommitment(updated, org.timezone);
+      // Record canonical PAYMENT_COMMITMENT_CANCELLED Business Event
+      await this.businessEventService.recordEvent(tx, {
+        organizationId,
+        customerId: updated.customerId,
+        receivableId: updated.receivableId,
+        paymentCommitmentId: updated.id,
+        type: BusinessEventType.PAYMENT_COMMITMENT_CANCELLED,
+        occurredAt: new Date(),
+        actorType: actorUserId ? ActorType.USER : ActorType.SYSTEM,
+        actorUserId: actorUserId || null,
+        source: EventSource.USER_ACTION,
+        data: {
+          amount: updated.amount.toString(),
+          currency: updated.currency,
+          reason: input.notes || null,
+        },
+        version: 1,
+      });
+
+      return this.enrichCommitment(updated, org.timezone);
+    });
   }
 
   /**
@@ -364,7 +415,10 @@ export class CommitmentService {
   async evaluateCommitmentsForPayment(
     organizationId: string,
     receivableId: string,
-    txClient?: Prisma.TransactionClient
+    txClient?: Prisma.TransactionClient,
+    correlationId?: string | null,
+    paymentId?: string | null,
+    actorUserId?: string | null
   ) {
     const db = txClient || prisma;
 
@@ -426,6 +480,69 @@ export class CommitmentService {
           where: { id: comm.id },
           data: { status: newStatus },
         });
+
+        // Emit corresponding Business Events for state transition
+        if (newStatus === CommitmentStatus.FULFILLED) {
+          await this.businessEventService.recordEvent(db as any, {
+            organizationId,
+            customerId: comm.customerId,
+            receivableId: comm.receivableId,
+            paymentId: paymentId || null,
+            paymentCommitmentId: comm.id,
+            type: BusinessEventType.PAYMENT_COMMITMENT_FULFILLED,
+            occurredAt: new Date(),
+            actorType: actorUserId ? ActorType.USER : ActorType.SYSTEM,
+            actorUserId: actorUserId || null,
+            source: EventSource.PAYMENT_PROCESS,
+            data: {
+              amount: comm.amount.toString(),
+              currency: comm.currency,
+              promisedFor: comm.promisedFor.toISOString(),
+            },
+            correlationId: correlationId || null,
+            causationId: paymentId || null,
+            version: 1,
+          });
+        } else if (newStatus === CommitmentStatus.PARTIALLY_FULFILLED) {
+          await this.businessEventService.recordEvent(db as any, {
+            organizationId,
+            customerId: comm.customerId,
+            receivableId: comm.receivableId,
+            paymentId: paymentId || null,
+            paymentCommitmentId: comm.id,
+            type: BusinessEventType.PAYMENT_COMMITMENT_PARTIALLY_FULFILLED,
+            occurredAt: new Date(),
+            actorType: actorUserId ? ActorType.USER : ActorType.SYSTEM,
+            actorUserId: actorUserId || null,
+            source: EventSource.PAYMENT_PROCESS,
+            data: {
+              amount: comm.amount.toString(),
+              currency: comm.currency,
+              promisedFor: comm.promisedFor.toISOString(),
+            },
+            correlationId: correlationId || null,
+            causationId: paymentId || null,
+            version: 1,
+          });
+        } else if (newStatus === CommitmentStatus.MISSED) {
+          await this.businessEventService.recordEvent(db as any, {
+            organizationId,
+            customerId: comm.customerId,
+            receivableId: comm.receivableId,
+            paymentCommitmentId: comm.id,
+            type: BusinessEventType.PAYMENT_COMMITMENT_MISSED,
+            occurredAt: new Date(comm.promisedFor),
+            actorType: ActorType.SYSTEM,
+            actorUserId: null,
+            source: EventSource.SCHEDULED_PROCESS,
+            data: {
+              amount: comm.amount.toString(),
+              currency: comm.currency,
+              promisedFor: comm.promisedFor.toISOString(),
+            },
+            version: 1,
+          });
+        }
       }
     }
   }

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PaymentService } from './payment.service';
 import { CommitmentService } from '../commitment/commitment.service';
+import { BusinessEventService } from '../business-event/business-event.service';
 import { prisma, Prisma, PaymentStatus, ReceivableStatus } from '@netify/database';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 
@@ -42,6 +43,20 @@ jest.mock('@netify/database', () => {
       DISPUTED: 'DISPUTED',
       CANCELLED: 'CANCELLED',
     },
+    BusinessEventType: {
+      PAYMENT_CONFIRMED: 'PAYMENT_CONFIRMED',
+      PAYMENT_REVERSED: 'PAYMENT_REVERSED',
+      RECEIVABLE_PAID: 'RECEIVABLE_PAID',
+      RECEIVABLE_PARTIALLY_PAID: 'RECEIVABLE_PARTIALLY_PAID',
+    },
+    ActorType: {
+      USER: 'USER',
+      SYSTEM: 'SYSTEM',
+    },
+    EventSource: {
+      PAYMENT_PROCESS: 'PAYMENT_PROCESS',
+      USER_ACTION: 'USER_ACTION',
+    },
   };
 });
 
@@ -71,6 +86,12 @@ describe('PaymentService (Domain Design 03 Test Suite)', () => {
           provide: CommitmentService,
           useValue: {
             evaluateCommitmentsForPayment: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+        {
+          provide: BusinessEventService,
+          useValue: {
+            recordEvent: jest.fn().mockResolvedValue({ id: 'evt-pay-mock' }),
           },
         },
       ],

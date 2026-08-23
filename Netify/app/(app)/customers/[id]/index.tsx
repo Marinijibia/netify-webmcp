@@ -12,7 +12,16 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@/design/theme';
-import { Input, Button, Card, Badge, Alert } from '@/design/components';
+import {
+  Input,
+  Button,
+  Card,
+  Badge,
+  Alert,
+  TimelineEventCard,
+  MemoryCard,
+  CustomerIntelligenceView,
+} from '@/design/components';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -23,12 +32,21 @@ import {
   PlusIcon,
   AlertCircleIcon,
   BuildingIcon,
+  ActivityIcon,
 } from '@/design/icons';
 import {
   customersApi,
   CustomerItem,
   CustomerContactItem,
 } from '@/services/api/customers';
+import {
+  businessEventsApi,
+  BusinessEventItem,
+} from '@/services/api/business-events';
+import {
+  businessMemoryApi,
+  BusinessMemoryItem,
+} from '@/services/api/business-memory';
 
 export default function CustomerDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -36,6 +54,8 @@ export default function CustomerDetailScreen() {
   const { tokens, isDark } = useTheme();
 
   const [customer, setCustomer] = useState<CustomerItem | null>(null);
+  const [timelineEvents, setTimelineEvents] = useState<BusinessEventItem[]>([]);
+  const [memories, setMemories] = useState<BusinessMemoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -55,12 +75,24 @@ export default function CustomerDetailScreen() {
       setLoading(true);
       setErrorMessage(null);
 
-      const response = await customersApi.getById(id);
+      const [custResponse, timelineResponse, memoriesResponse] = await Promise.all([
+        customersApi.getById(id),
+        businessEventsApi.getCustomerTimeline(id).catch(() => ({ success: false, data: [] as BusinessEventItem[] })),
+        businessMemoryApi.getCustomerMemories(id).catch(() => ({ success: false, data: [] as BusinessMemoryItem[] })),
+      ]);
 
-      if (response.success && response.data) {
-        setCustomer(response.data);
+      if (custResponse.success && custResponse.data) {
+        setCustomer(custResponse.data);
       } else {
-        setErrorMessage(response.error?.message || 'Failed to fetch customer profile');
+        setErrorMessage(custResponse.error?.message || 'Failed to fetch customer profile');
+      }
+
+      if (timelineResponse.success && timelineResponse.data) {
+        setTimelineEvents(timelineResponse.data);
+      }
+
+      if (memoriesResponse.success && memoriesResponse.data) {
+        setMemories(memoriesResponse.data);
       }
     } catch (err: any) {
       setErrorMessage(err?.message || 'An unexpected error occurred');
@@ -395,6 +427,117 @@ export default function CustomerDetailScreen() {
             </TouchableOpacity>
           </Card>
 
+          {/* AI Intelligence & Collection Copilot (Domain 07) */}
+          <Card
+            style={{
+              backgroundColor: isDark ? tokens.surface : '#FFFFFF',
+              borderColor: tokens.border,
+              borderWidth: 1,
+            }}
+            className="p-4 mb-4"
+          >
+            <View className="flex-row items-center justify-between mb-3">
+              <View className="flex-row items-center">
+                <Text style={{ color: tokens.textPrimary }} className="text-sm font-bold uppercase tracking-wider">
+                  AI Collection Copilot
+                </Text>
+              </View>
+              <Badge label="COPILOT ACTIVE" variant="primary" size="sm" />
+            </View>
+
+            <CustomerIntelligenceView
+              customerId={id!}
+              customerName={customer.name}
+              phone={customer.contacts?.find((c) => c.type === 'PHONE' || c.type === 'WHATSAPP')?.value}
+              currency={customer.currency}
+              totalOutstanding={0}
+            />
+          </Card>
+
+          {/* Business Memory (Domain 06) */}
+          <Card
+            style={{
+              backgroundColor: isDark ? tokens.surface : '#FFFFFF',
+              borderColor: tokens.border,
+              borderWidth: 1,
+            }}
+            className="p-4 mb-4"
+          >
+            <View className="flex-row items-center justify-between mb-3">
+              <View className="flex-row items-center">
+                <Text style={{ color: tokens.textPrimary }} className="text-sm font-bold uppercase tracking-wider">
+                  Business Memory ({memories.length})
+                </Text>
+              </View>
+              <Text style={{ color: tokens.textSecondary }} className="text-xs font-semibold">
+                Behavioral Knowledge
+              </Text>
+            </View>
+
+            {memories.length === 0 ? (
+              <View
+                style={{
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+                  borderRadius: 10,
+                  padding: 14,
+                  borderWidth: 1,
+                  borderColor: tokens.border,
+                }}
+              >
+                <Text style={{ color: tokens.textPrimary, fontSize: 13, fontWeight: '700', marginBottom: 4 }}>
+                  Not enough history yet
+                </Text>
+                <Text style={{ color: tokens.textSecondary, fontSize: 12, lineHeight: 17 }}>
+                  Netify requires at least two completed commitments or interactions before deriving behavioral patterns.
+                </Text>
+              </View>
+            ) : (
+              memories.map((mem) => (
+                <MemoryCard
+                  key={mem.id}
+                  memory={mem}
+                  customerId={id}
+                />
+              ))
+            )}
+          </Card>
+
+          {/* Activity & Evidence Timeline (Domain 05) */}
+          <Card
+            style={{
+              backgroundColor: isDark ? tokens.surface : '#FFFFFF',
+              borderColor: tokens.border,
+              borderWidth: 1,
+            }}
+            className="p-4 mb-4"
+          >
+            <View className="flex-row items-center justify-between mb-4">
+              <View className="flex-row items-center">
+                <ActivityIcon size={16} color={tokens.primary} />
+                <Text style={{ color: tokens.textPrimary }} className="text-sm font-bold uppercase tracking-wider ml-2">
+                  Activity Timeline ({timelineEvents.length})
+                </Text>
+              </View>
+              <Text style={{ color: tokens.textSecondary }} className="text-xs font-semibold">
+                Evidence Stream
+              </Text>
+            </View>
+
+            {timelineEvents.length === 0 ? (
+              <Text style={{ color: tokens.textMuted }} className="text-xs italic py-2">
+                No business events recorded for this customer yet.
+              </Text>
+            ) : (
+              timelineEvents.map((evt, idx) => (
+                <TimelineEventCard
+                  key={evt.id}
+                  event={evt}
+                  isLast={idx === timelineEvents.length - 1}
+                />
+              ))
+            )}
+          </Card>
+
           {/* Internal Business Notes */}
           <Card
             style={{
@@ -490,7 +633,13 @@ export default function CustomerDetailScreen() {
 
             <Input
               label="Contact Value *"
-              placeholder={contactType === 'EMAIL' ? 'name@domain.com' : '+234...'}
+              placeholder={
+                contactType === 'EMAIL'
+                  ? 'e.g. accounts@netify-client.ng'
+                  : contactType === 'WHATSAPP'
+                  ? 'e.g. +234 812 345 6789 (WhatsApp)'
+                  : 'e.g. +234 802 345 6789 (Direct phone)'
+              }
               value={contactValue}
               onChangeText={setContactValue}
               autoCapitalize="none"
@@ -500,7 +649,7 @@ export default function CustomerDetailScreen() {
 
             <Input
               label="Label / Department"
-              placeholder="e.g. Accounts, Mobile, Warehouse"
+              placeholder="e.g. Netify Collections Lead, Accounts Payable, Storefront Manager"
               value={contactLabel}
               onChangeText={setContactLabel}
               className="mb-3"

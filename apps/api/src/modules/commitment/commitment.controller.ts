@@ -166,7 +166,7 @@ export class CommitmentController {
     @Param('id') id: string,
     @Body() body: CancelCommitmentInput
   ) {
-    const data = await this.commitmentService.cancel(user.organizationId, id, body);
+    const data = await this.commitmentService.cancel(user.organizationId, id, body, user.userId);
     return {
       success: true,
       data,

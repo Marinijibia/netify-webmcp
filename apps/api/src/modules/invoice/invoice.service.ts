@@ -10,8 +10,8 @@ import { DeterministicInvoiceService } from './deterministic-invoice.service';
 @Injectable()
 export class InvoiceService {
   async list(organizationId: string, query: InvoiceQueryInput) {
-    const page = query.page || 1;
-    const pageSize = query.pageSize || 20;
+    const page = Math.max(1, Number(query.page) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(query.pageSize) || 20));
     const skip = (page - 1) * pageSize;
 
     const where: any = { organizationId };
@@ -151,9 +151,9 @@ export class InvoiceService {
       data: {
         organizationId,
         customerId: customer.id,
-        eventType: BusinessEventType.INVOICE_CREATED,
-        summary: `Invoice ${invoice.invoiceNumber} created for ${customer.name} (${invoice.currency} ${invoice.total})`,
-        payload: { invoiceId: invoice.id, total: invoice.total, dueDate: invoice.dueDate },
+        type: BusinessEventType.INVOICE_CREATED,
+        occurredAt: invoice.issueDate || invoice.createdAt,
+        data: { invoiceId: invoice.id, total: invoice.total, dueDate: invoice.dueDate },
       },
     });
 

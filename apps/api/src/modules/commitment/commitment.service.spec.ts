@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommitmentService } from './commitment.service';
+import { BusinessEventService } from '../business-event/business-event.service';
 import {
   prisma,
   Prisma,
@@ -78,7 +79,15 @@ describe('CommitmentService (Domain Design 04 Test Suite)', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CommitmentService],
+      providers: [
+        CommitmentService,
+        {
+          provide: BusinessEventService,
+          useValue: {
+            recordEvent: jest.fn().mockResolvedValue({ id: 'evt-comm-mock' }),
+          },
+        },
+      ],
     }).compile();
 
     service = module.get<CommitmentService>(CommitmentService);

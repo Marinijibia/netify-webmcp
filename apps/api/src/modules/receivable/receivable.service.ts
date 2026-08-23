@@ -3,12 +3,21 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { prisma, Prisma, ReceivableSource, ReceivableStatus } from '@netify/database';
+import {
+  prisma,
+  Prisma,
+  ReceivableSource,
+  ReceivableStatus,
+  BusinessEventType,
+  ActorType,
+  EventSource,
+} from '@netify/database';
 import {
   CreateReceivableInput,
   UpdateReceivableInput,
   ReceivableQueryInput,
 } from '@netify/validation';
+import { BusinessEventService } from '../business-event/business-event.service';
 
 export function isPastDueDate(dueDate: Date | string, timezone: string = 'UTC'): boolean {
   try {
@@ -47,6 +56,8 @@ export function getDaysOverdue(dueDate: Date | string, timezone: string = 'UTC')
 
 @Injectable()
 export class ReceivableService {
+  constructor(private readonly businessEventService: BusinessEventService) {}
+
   /**
    * Derive authoritative financial balance, overdue status, and days overdue.
    */
@@ -81,7 +92,11 @@ export class ReceivableService {
     };
   }
 
-  async create(organizationId: string, input: CreateReceivableInput) {
+  async create(
+    organizationId: string,
+    input: CreateReceivableInput,
+    actorUserId?: string | null
+  ) {
     const org = await prisma.organization.findUnique({
       where: { id: organizationId },
       select: { id: true, currency: true, timezone: true },
@@ -112,25 +127,49 @@ export class ReceivableService {
 
     const decimalAmount = new Prisma.Decimal(numAmount.toFixed(2));
 
-    const receivable = await prisma.receivable.create({
-      data: {
-        organizationId,
-        customerId: input.customerId,
-        reference: input.reference?.trim() || null,
-        description: input.description?.trim() || null,
-        originalAmount: decimalAmount,
-        currency: org.currency,
-        issuedAt: input.issuedAt ? new Date(input.issuedAt) : new Date(),
-        dueDate: new Date(input.dueDate),
-        source: input.source || ReceivableSource.MANUAL,
-        status: ReceivableStatus.OPEN,
-        notes: input.notes?.trim() || null,
-      },
-      include: {
-        customer: {
-          select: { id: true, name: true, phone: true, email: true },
+    const receivable = await prisma.$transaction(async (tx) => {
+      const rec = await tx.receivable.create({
+        data: {
+          organizationId,
+          customerId: input.customerId,
+          reference: input.reference?.trim() || null,
+          description: input.description?.trim() || null,
+          originalAmount: decimalAmount,
+          currency: org.currency,
+          issuedAt: input.issuedAt ? new Date(input.issuedAt) : new Date(),
+          dueDate: new Date(input.dueDate),
+          source: input.source || ReceivableSource.MANUAL,
+          status: ReceivableStatus.OPEN,
+          notes: input.notes?.trim() || null,
         },
-      },
+        include: {
+          customer: {
+            select: { id: true, name: true, phone: true, email: true },
+          },
+        },
+      });
+
+      // Record canonical RECEIVABLE_CREATED Business Event within same transaction
+      await this.businessEventService.recordEvent(tx, {
+        organizationId,
+        customerId: rec.customerId,
+        receivableId: rec.id,
+        type: BusinessEventType.RECEIVABLE_CREATED,
+        occurredAt: rec.issuedAt,
+        actorType: actorUserId ? ActorType.USER : ActorType.SYSTEM,
+        actorUserId: actorUserId || null,
+        source: EventSource.USER_ACTION,
+        data: {
+          reference: rec.reference,
+          description: rec.description,
+          originalAmount: rec.originalAmount.toString(),
+          currency: rec.currency,
+          dueDate: rec.dueDate.toISOString(),
+        },
+        version: 1,
+      });
+
+      return rec;
     });
 
     return this.deriveFinancialState(receivable, [], org.timezone);
@@ -143,8 +182,8 @@ export class ReceivableService {
     });
     const timezone = org?.timezone || 'Africa/Lagos';
 
-    const page = query.page || 1;
-    const pageSize = query.pageSize || 20;
+    const page = Math.max(1, Number(query.page) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(query.pageSize) || 20));
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.ReceivableWhereInput = { organizationId };
@@ -284,7 +323,7 @@ export class ReceivableService {
     return this.deriveFinancialState(updated, updated.payments || [], org?.timezone || 'Africa/Lagos');
   }
 
-  async cancel(organizationId: string, id: string) {
+  async cancel(organizationId: string, id: string, actorUserId?: string | null) {
     return prisma.$transaction(async (tx) => {
       const receivable = await tx.receivable.findFirst({
         where: { id, organizationId },
@@ -314,6 +353,24 @@ export class ReceivableService {
         include: {
           customer: { select: { id: true, name: true, phone: true, email: true } },
         },
+      });
+
+      // Record canonical RECEIVABLE_CANCELLED Business Event
+      await this.businessEventService.recordEvent(tx, {
+        organizationId,
+        customerId: cancelled.customerId,
+        receivableId: cancelled.id,
+        type: BusinessEventType.RECEIVABLE_CANCELLED,
+        occurredAt: new Date(),
+        actorType: actorUserId ? ActorType.USER : ActorType.SYSTEM,
+        actorUserId: actorUserId || null,
+        source: EventSource.USER_ACTION,
+        data: {
+          reference: cancelled.reference,
+          originalAmount: cancelled.originalAmount.toString(),
+          currency: cancelled.currency,
+        },
+        version: 1,
       });
 
       return {

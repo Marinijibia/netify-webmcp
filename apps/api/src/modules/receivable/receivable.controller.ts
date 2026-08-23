@@ -10,6 +10,7 @@ import {
   UsePipes,
 } from '@nestjs/common';
 import { ReceivableService } from './receivable.service';
+import { BusinessEventService } from '../business-event/business-event.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { CurrentUser, AuthenticatedUserContext } from '../../common/decorators/current-user.decorator';
@@ -17,16 +18,21 @@ import {
   createReceivableSchema,
   updateReceivableSchema,
   receivableQuerySchema,
+  ReceivableTimelineQuerySchema,
   CreateReceivableInput,
   UpdateReceivableInput,
   ReceivableQueryInput,
+  ReceivableTimelineQueryInput,
 } from '@netify/validation';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 
 @Controller('receivables')
 @UseGuards(JwtAuthGuard, TenantGuard)
 export class ReceivableController {
-  constructor(private readonly receivableService: ReceivableService) {}
+  constructor(
+    private readonly receivableService: ReceivableService,
+    private readonly businessEventService: BusinessEventService
+  ) {}
 
   @Post()
   @UsePipes(new ZodValidationPipe(createReceivableSchema))
@@ -34,7 +40,7 @@ export class ReceivableController {
     @CurrentUser() user: AuthenticatedUserContext,
     @Body() body: CreateReceivableInput
   ) {
-    const data = await this.receivableService.create(user.organizationId, body);
+    const data = await this.receivableService.create(user.organizationId, body, user.userId);
     return {
       success: true,
       data,
@@ -66,6 +72,26 @@ export class ReceivableController {
     return {
       success: true,
       data,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get(':id/timeline')
+  async getTimeline(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Param('id') id: string,
+    @Query(new ZodValidationPipe(ReceivableTimelineQuerySchema)) query: ReceivableTimelineQueryInput
+  ) {
+    const data = await this.businessEventService.getReceivableTimeline(
+      user.organizationId,
+      id,
+      query
+    );
+    return {
+      success: true,
+      data: data.items,
+      receivable: data.receivable,
+      pagination: data.pagination,
       timestamp: new Date().toISOString(),
     };
   }

@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CollectionActivityService } from './collection-activity.service';
+import { BusinessEventService } from '../business-event/business-event.service';
 import { prisma, Prisma } from '@netify/database';
 import {
   ActivityType,
@@ -82,7 +83,15 @@ describe('CollectionActivityService (Domain Design 04 Test Suite)', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CollectionActivityService],
+      providers: [
+        CollectionActivityService,
+        {
+          provide: BusinessEventService,
+          useValue: {
+            recordEvent: jest.fn().mockResolvedValue({ id: 'evt-act-mock' }),
+          },
+        },
+      ],
     }).compile();
 
     service = module.get<CollectionActivityService>(CollectionActivityService);

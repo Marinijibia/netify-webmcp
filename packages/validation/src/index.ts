@@ -6,4 +6,7 @@ export * from './receivable.schema';
 export * from './payment.schema';
 export * from './collection-activity.schema';
 export * from './commitment.schema';
+export * from './business-event.schema';
+export * from './business-memory.schema';
 export * from './ai.schema';
+export * from './subscription.schema';

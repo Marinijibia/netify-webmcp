@@ -1,5 +1,12 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { prisma, CustomerStatus, ContactType } from '@netify/database';
+import {
+  prisma,
+  CustomerStatus,
+  ContactType,
+  BusinessEventType,
+  ActorType,
+  EventSource,
+} from '@netify/database';
 import {
   CreateCustomerInput,
   UpdateCustomerInput,
@@ -7,9 +14,12 @@ import {
   CreateCustomerContactInput,
   UpdateCustomerContactInput,
 } from '@netify/validation';
+import { BusinessEventService } from '../business-event/business-event.service';
 
 @Injectable()
 export class CustomerService {
+  constructor(private readonly businessEventService: BusinessEventService) {}
+
   /**
    * Retrieves a paginated list of customers for the organization with search and filtering.
    */
@@ -18,8 +28,8 @@ export class CustomerService {
       throw new BadRequestException('Organization ID is required');
     }
 
-    const page = Math.max(1, query.page || 1);
-    const pageSize = Math.min(100, Math.max(1, query.pageSize || 20));
+    const page = Math.max(1, Number(query.page) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(query.pageSize) || 20));
     const skip = (page - 1) * pageSize;
 
     const where: any = { organizationId };
@@ -98,7 +108,11 @@ export class CustomerService {
   /**
    * Atomically creates a Customer and any initial primary contacts.
    */
-  async create(organizationId: string, input: CreateCustomerInput) {
+  async create(
+    organizationId: string,
+    input: CreateCustomerInput,
+    actorUserId?: string | null
+  ) {
     if (!organizationId) {
       throw new BadRequestException('Organization ID is required');
     }
@@ -153,6 +167,23 @@ export class CustomerService {
           },
         });
       }
+
+      // Record canonical CUSTOMER_CREATED Business Event within same transaction
+      await this.businessEventService.recordEvent(tx, {
+        organizationId,
+        customerId: customer.id,
+        type: BusinessEventType.CUSTOMER_CREATED,
+        occurredAt: customer.createdAt,
+        actorType: actorUserId ? ActorType.USER : ActorType.SYSTEM,
+        actorUserId: actorUserId || null,
+        source: EventSource.USER_ACTION,
+        data: {
+          name: customer.name,
+          currency: customer.currency,
+          country: customer.country,
+        },
+        version: 1,
+      });
 
       return tx.customer.findUnique({
         where: { id: customer.id },

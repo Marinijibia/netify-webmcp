@@ -110,7 +110,7 @@ export default function CreateCustomerScreen() {
 
           <Input
             label="Customer / Business Name *"
-            placeholder="e.g. Dangote Cement Wholesale or Musa Garba"
+            placeholder="e.g. Netify Retail Outlets Ltd or Adebayo Agro Ventures"
             value={name}
             onChangeText={setName}
             leftIcon={<UserIcon size={18} color={tokens.textMuted} />}
@@ -119,7 +119,7 @@ export default function CreateCustomerScreen() {
 
           <Input
             label="Physical / Office Address"
-            placeholder="e.g. 14 Marina Road, Lagos"
+            placeholder="e.g. Suite 4B, Netify Commercial Hub, Victoria Island, Lagos"
             value={address}
             onChangeText={setAddress}
             className="mb-1"
@@ -141,7 +141,7 @@ export default function CreateCustomerScreen() {
 
           <Input
             label="Phone Number"
-            placeholder="e.g. +2348012345678 or 08012345678"
+            placeholder="e.g. +234 802 345 6789 (Direct business line)"
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
@@ -151,7 +151,7 @@ export default function CreateCustomerScreen() {
 
           <Input
             label="Email Address"
-            placeholder="e.g. accounts@client.ng"
+            placeholder="e.g. billing@netify-partner.com or finance@client.ng"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -176,7 +176,7 @@ export default function CreateCustomerScreen() {
 
           <Input
             label="Customer Notes & Terms"
-            placeholder="Add payment terms, customer context, or delivery preferences..."
+            placeholder="e.g. Netify Priority Tier: Net-14 payment terms, supplies wholesale grain, prefers WhatsApp payment reminders before due date..."
             value={notes}
             onChangeText={setNotes}
             multiline

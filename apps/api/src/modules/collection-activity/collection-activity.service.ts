@@ -1,5 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { prisma, Prisma } from '@netify/database';
+import {
+  prisma,
+  Prisma,
+  BusinessEventType,
+  ActorType,
+  EventSource,
+} from '@netify/database';
 import {
   ActivityType,
   CollectionChannel,
@@ -10,9 +16,12 @@ import {
   CreateCollectionActivityInput,
   ActivityQueryInput,
 } from '@netify/validation';
+import { BusinessEventService } from '../business-event/business-event.service';
 
 @Injectable()
 export class CollectionActivityService {
+  constructor(private readonly businessEventService: BusinessEventService) {}
+
   /**
    * Record a collection activity with optional inline payment commitment.
    */
@@ -56,6 +65,10 @@ export class CollectionActivityService {
     });
     if (!receivable) {
       throw new NotFoundException('Receivable not found in this organization');
+    }
+
+    if (receivable.status === 'CANCELLED') {
+      throw new BadRequestException('Cannot record collection activity for a cancelled receivable');
     }
 
     // 4. Verify customer ownership and consistency with receivable
@@ -106,7 +119,7 @@ export class CollectionActivityService {
       };
     }
 
-    // 6. Execute atomic transaction to save Activity and optional Commitment
+    // 6. Execute atomic transaction to save Activity, optional Commitment, and Business Events
     return await prisma.$transaction(async (tx) => {
       const activity = await tx.collectionActivity.create({
         data: {
@@ -120,6 +133,29 @@ export class CollectionActivityService {
           occurredAt: input.occurredAt ? new Date(input.occurredAt) : new Date(),
           notes: input.notes,
         },
+      });
+
+      const correlationId = 'corr_act_' + activity.id;
+
+      // Record canonical COLLECTION_ACTIVITY_RECORDED Business Event
+      await this.businessEventService.recordEvent(tx, {
+        organizationId,
+        customerId: activity.customerId,
+        receivableId: activity.receivableId,
+        collectionActivityId: activity.id,
+        type: BusinessEventType.COLLECTION_ACTIVITY_RECORDED,
+        occurredAt: activity.occurredAt,
+        actorType: ActorType.USER,
+        actorUserId: performedByUserId,
+        source: EventSource.COLLECTION_ACTIVITY,
+        data: {
+          type: activity.type,
+          channel: activity.channel,
+          outcome: activity.outcome,
+          notes: activity.notes,
+        },
+        correlationId,
+        version: 1,
       });
 
       let createdCommitment: any = null;
@@ -137,6 +173,29 @@ export class CollectionActivityService {
             sourceActivityId: activity.id,
             notes: commitmentData.notes,
           },
+        });
+
+        // Record canonical PAYMENT_COMMITMENT_CREATED Business Event
+        await this.businessEventService.recordEvent(tx, {
+          organizationId,
+          customerId: createdCommitment.customerId,
+          receivableId: createdCommitment.receivableId,
+          collectionActivityId: activity.id,
+          paymentCommitmentId: createdCommitment.id,
+          type: BusinessEventType.PAYMENT_COMMITMENT_CREATED,
+          occurredAt: createdCommitment.createdAt,
+          actorType: ActorType.USER,
+          actorUserId: performedByUserId,
+          source: EventSource.COLLECTION_ACTIVITY,
+          data: {
+            amount: createdCommitment.amount.toString(),
+            currency: createdCommitment.currency,
+            promisedFor: createdCommitment.promisedFor.toISOString(),
+            sourceActivityId: activity.id,
+          },
+          correlationId,
+          causationId: activity.id,
+          version: 1,
         });
       }
 
@@ -158,8 +217,8 @@ export class CollectionActivityService {
    * List collection activities with multi-field search and pagination.
    */
   async list(organizationId: string, query: ActivityQueryInput) {
-    const page = query.page || 1;
-    const pageSize = query.pageSize || 20;
+    const page = Math.max(1, Number(query.page) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(query.pageSize) || 20));
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.CollectionActivityWhereInput = {

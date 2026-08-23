@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReceivableService } from './receivable.service';
+import { BusinessEventService } from '../business-event/business-event.service';
 import { prisma, Prisma, ReceivableSource, ReceivableStatus } from '@netify/database';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 
@@ -42,6 +43,20 @@ jest.mock('@netify/database', () => {
       DISPUTED: 'DISPUTED',
       CANCELLED: 'CANCELLED',
     },
+    BusinessEventType: {
+      RECEIVABLE_CREATED: 'RECEIVABLE_CREATED',
+      RECEIVABLE_CANCELLED: 'RECEIVABLE_CANCELLED',
+      RECEIVABLE_PAID: 'RECEIVABLE_PAID',
+      RECEIVABLE_PARTIALLY_PAID: 'RECEIVABLE_PARTIALLY_PAID',
+    },
+    ActorType: {
+      USER: 'USER',
+      SYSTEM: 'SYSTEM',
+    },
+    EventSource: {
+      USER_ACTION: 'USER_ACTION',
+      SYSTEM: 'SYSTEM',
+    },
   };
 });
 
@@ -67,7 +82,16 @@ describe('ReceivableService (Domain Design 03 Test Suite)', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ReceivableService],
+      providers: [
+        ReceivableService,
+        {
+          provide: BusinessEventService,
+          useValue: {
+            recordEvent: jest.fn().mockResolvedValue({ id: 'evt-rec-mock' }),
+            getReceivableTimeline: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
     service = module.get<ReceivableService>(ReceivableService);

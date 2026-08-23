@@ -28,6 +28,7 @@ import { authApi } from '@/services/api/auth';
 import { NetworkError, TimeoutError, ValidationError } from '@/services/api/errors';
 import { useAuthStore } from '@/store/auth-store';
 import { BiometricService, DeviceBiometricCapabilities } from '@/services/biometrics/biometric.service';
+import { SecureStorageService } from '@/services/storage/secure-storage';
 import { useTheme } from '@/design/theme';
 
 const loginFormSchema = z.object({
@@ -143,6 +144,7 @@ export default function LoginScreen() {
       });
 
       if (response.success && response.data) {
+        await SecureStorageService.setBiometricVaultCredentials(values.email, values.password);
         await setAuthSession(response.data);
 
         // Check verification & onboarding status

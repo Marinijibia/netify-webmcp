@@ -4,6 +4,19 @@ export interface AIGenerateOptions {
   temperature?: number;
   maxTokens?: number;
   systemInstruction?: string;
+  timeoutMs?: number;
+}
+
+export interface AIExecutionMetrics {
+  model: string;
+  latencyMs: number;
+  inputTokens?: number;
+  outputTokens?: number;
+}
+
+export interface StructuredAIResult<T> {
+  data: T;
+  metrics: AIExecutionMetrics;
 }
 
 export interface AIProvider {
@@ -22,6 +35,15 @@ export interface AIProvider {
     schema: z.ZodType<T, any, any>,
     options?: AIGenerateOptions
   ): Promise<T>;
+
+  /**
+   * Generates strictly validated structured output matching a Zod schema with execution metrics.
+   */
+  structuredOutputWithMetrics<T>(
+    prompt: string,
+    schema: z.ZodType<T, any, any>,
+    options?: AIGenerateOptions
+  ): Promise<StructuredAIResult<T>>;
 
   /**
    * Generates dense vector embeddings for semantic business memory search.

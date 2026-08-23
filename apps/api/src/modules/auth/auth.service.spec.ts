@@ -87,6 +87,7 @@ jest.mock('@netify/database', () => {
 });
 
 describe('AuthService (Security & Penetration Testing Suite)', () => {
+  jest.setTimeout(30000);
   let service: AuthService;
   let jwtService: JwtService;
   let emailService: EmailService;

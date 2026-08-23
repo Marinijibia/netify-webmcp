@@ -8,11 +8,14 @@ import * as SplashScreen from 'expo-splash-screen';
 import { queryClient } from '@/lib/query-client';
 import { useAuthStore } from '@/store/auth-store';
 import { useTheme } from '@/design/theme';
+import { useAutoLock } from '@/hooks/useAutoLock';
+import { AppLockOverlay } from '@/design/components';
 
 // Keep native splash screen locked until initial auth state and theme are fully resolved
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
+  useAutoLock();
   const initializeAuth = useAuthStore((state) => state.initializeAuth);
   const isLoading = useAuthStore((state) => state.isLoading);
   const { isDark, tokens, initializeTheme } = useTheme();
@@ -49,6 +52,7 @@ export default function RootLayout() {
           <Stack.Screen name="(onboarding)" />
           <Stack.Screen name="(app)" />
         </Stack>
+        <AppLockOverlay />
         <StatusBar style={isDark ? 'light' : 'dark'} />
       </QueryClientProvider>
     </SafeAreaProvider>

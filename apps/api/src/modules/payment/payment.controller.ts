@@ -59,7 +59,7 @@ export class PaymentController {
     @CurrentUser() user: AuthenticatedUserContext,
     @Body() body: CreatePaymentInput
   ) {
-    const data = await this.paymentService.recordPayment(user.organizationId, body);
+    const data = await this.paymentService.recordPayment(user.organizationId, body, user.userId);
     return {
       success: true,
       data,
@@ -73,7 +73,7 @@ export class PaymentController {
     @CurrentUser() user: AuthenticatedUserContext,
     @Param('id') id: string
   ) {
-    const data = await this.paymentService.reversePayment(user.organizationId, id);
+    const data = await this.paymentService.reversePayment(user.organizationId, id, user.userId);
     return {
       success: true,
       data,

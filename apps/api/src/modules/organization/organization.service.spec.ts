@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { OrganizationService } from './organization.service';
+import { EntitlementService } from '../subscription/entitlement.service';
 import {
   prisma,
   UserRole,
@@ -90,7 +91,17 @@ describe('OrganizationService (Domain Design 01 Test Suite)', () => {
     jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [OrganizationService],
+      providers: [
+        OrganizationService,
+        {
+          provide: EntitlementService,
+          useValue: {
+            canCreateOrganization: jest.fn().mockResolvedValue({ allowed: true }),
+            getOrganizationPlan: jest.fn().mockResolvedValue({ plan: 'FREE', limits: { maxOrganizations: 1 } }),
+            canAccessFeature: jest.fn().mockResolvedValue(true),
+          },
+        },
+      ],
     }).compile();
 
     service = module.get<OrganizationService>(OrganizationService);

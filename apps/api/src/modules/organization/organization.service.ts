@@ -18,9 +18,12 @@ import {
   CreateOrganizationInput,
   UpdateOrganizationInput,
 } from '@netify/validation';
+import { EntitlementService } from '../subscription/entitlement.service';
 
 @Injectable()
 export class OrganizationService {
+  constructor(private readonly entitlementService: EntitlementService) {}
+
   /**
    * Atomically creates an Organization, its initial OWNER membership,
    * a default FREE subscription, and advances user onboarding.
@@ -37,6 +40,18 @@ export class OrganizationService {
 
     if (!user || user.status !== UserStatus.ACTIVE || !user.isActive) {
       throw new ForbiddenException('User account is not active or does not exist');
+    }
+
+    // Plan limit check: verify if user is allowed to create another organization
+    const orgLimitCheck = await this.entitlementService.canCreateOrganization(userId);
+    if (!orgLimitCheck.allowed) {
+      throw new ForbiddenException({
+        code: 'ORGANIZATION_LIMIT_REACHED',
+        message: `You have reached the maximum number of businesses (${orgLimitCheck.maxAllowed}) allowed on your current plan. Upgrade to Netify Business to add more businesses.`,
+        currentCount: orgLimitCheck.currentCount,
+        maxAllowed: orgLimitCheck.maxAllowed,
+        upgradeRequired: true,
+      });
     }
 
     const trimmedName = input.name.trim();

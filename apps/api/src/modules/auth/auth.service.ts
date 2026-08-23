@@ -1077,6 +1077,70 @@ export class AuthService {
     };
   }
 
+  /**
+   * Switches active organization context for the authenticated user and generates fresh JWT tokens.
+   */
+  async switchOrganization(
+    userId: string,
+    targetOrganizationId: string,
+    metadata: RequestMetadata = {}
+  ): Promise<AuthResponse> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user || user.status !== UserStatus.ACTIVE || !user.isActive) {
+      throw new UnauthorizedException('User account is inactive or not found');
+    }
+
+    // Verify active membership in target organization
+    const membership = await prisma.membership.findFirst({
+      where: {
+        userId,
+        organizationId: targetOrganizationId,
+        status: MembershipStatus.ACTIVE,
+      },
+      include: {
+        organization: true,
+      },
+    });
+
+    if (!membership) {
+      throw new ForbiddenException('You are not an active member of this organization');
+    }
+
+    const tokens = await this.generateAndStoreTokens(
+      {
+        userId: user.id,
+        email: user.email,
+        organizationId: membership.organization.id,
+        role: membership.role,
+      },
+      metadata
+    );
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        status: user.status || 'ACTIVE',
+        isEmailVerified: user.isEmailVerified,
+        onboardingCompleted: user.onboardingCompleted,
+        onboardingStep: user.onboardingStep,
+      },
+      organization: {
+        id: membership.organization.id,
+        name: membership.organization.name,
+        slug: membership.organization.slug,
+        currency: membership.organization.currency,
+      },
+      role: membership.role,
+      tokens,
+    };
+  }
+
   private async generateAndStoreTokens(
     payload: {
       userId: string;

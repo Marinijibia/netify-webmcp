@@ -19,6 +19,8 @@ import { AIModule } from './modules/ai/ai.module';
 import { DocumentModule } from './modules/document/document.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { SubscriptionModule } from './modules/subscription/subscription.module';
+import { BusinessEventModule } from './modules/business-event/business-event.module';
+import { BusinessMemoryModule } from './modules/business-memory/business-memory.module';
 
 @Module({
   imports: [
@@ -53,6 +55,8 @@ import { SubscriptionModule } from './modules/subscription/subscription.module';
     PaymentModule,
     CollectionActivityModule,
     CommitmentModule,
+    BusinessEventModule,
+    BusinessMemoryModule,
     RiskModule,
     CollectionsModule,
     MemoryModule,

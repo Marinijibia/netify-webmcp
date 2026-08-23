@@ -79,6 +79,38 @@ export class SecureStorageService {
     return this.removeItem(STORAGE_KEYS.BIOMETRIC_REFRESH_TOKEN);
   }
 
+  // Hardware Biometric Vault Credentials (Encrypted device storage for Face ID / Fingerprint fast login)
+  static async setBiometricVaultCredentials(email: string, pass: string): Promise<void> {
+    const data = JSON.stringify({ email: email.trim().toLowerCase(), pass });
+    return this.setItem('netify_biometric_vault_credentials', data);
+  }
+
+  static async getBiometricVaultCredentials(): Promise<{ email: string; pass: string } | null> {
+    const raw = await this.getItem('netify_biometric_vault_credentials');
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  static async clearBiometricVaultCredentials(): Promise<void> {
+    return this.removeItem('netify_biometric_vault_credentials');
+  }
+
+  // Auto-Lock Inactivity Timeout (Default: 5 minutes = 300,000 ms)
+  static async getAutoLockTimeout(): Promise<number> {
+    const raw = await this.getItem('netify_auto_lock_timeout');
+    if (!raw) return 300000; // 5 minutes default
+    const parsed = parseInt(raw, 10);
+    return isNaN(parsed) ? 300000 : parsed;
+  }
+
+  static async setAutoLockTimeout(timeoutMs: number): Promise<void> {
+    return this.setItem('netify_auto_lock_timeout', timeoutMs.toString());
+  }
+
   static async clearAuthTokens(): Promise<void> {
     await Promise.all([
       this.removeItem(STORAGE_KEYS.ACCESS_TOKEN),

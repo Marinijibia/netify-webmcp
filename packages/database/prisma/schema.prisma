@@ -207,6 +207,21 @@ enum DocumentStatus {
 enum BusinessEventType {
   CUSTOMER_CREATED
   CUSTOMER_UPDATED
+  RECEIVABLE_CREATED
+  RECEIVABLE_CANCELLED
+  RECEIVABLE_OVERDUE
+  RECEIVABLE_PAID
+  RECEIVABLE_PARTIALLY_PAID
+  PAYMENT_CREATED
+  PAYMENT_CONFIRMED
+  PAYMENT_FAILED
+  PAYMENT_REVERSED
+  COLLECTION_ACTIVITY_RECORDED
+  PAYMENT_COMMITMENT_CREATED
+  PAYMENT_COMMITMENT_FULFILLED
+  PAYMENT_COMMITMENT_PARTIALLY_FULFILLED
+  PAYMENT_COMMITMENT_MISSED
+  PAYMENT_COMMITMENT_CANCELLED
   INVOICE_CREATED
   INVOICE_OVERDUE
   INVOICE_PAID
@@ -219,6 +234,58 @@ enum BusinessEventType {
   CUSTOMER_REQUESTED_EXTENSION
   DOCUMENT_UPLOADED
   RISK_EVALUATED
+}
+
+enum ActorType {
+  USER
+  SYSTEM
+  CUSTOMER
+  PROVIDER
+}
+
+enum EventSource {
+  USER_ACTION
+  PAYMENT_PROCESS
+  COLLECTION_ACTIVITY
+  SCHEDULED_PROCESS
+  SYSTEM
+}
+
+enum MemoryCategory {
+  PAYMENT_BEHAVIOR
+  COLLECTION_BEHAVIOR
+  COMMITMENT_BEHAVIOR
+  RECEIVABLE_HISTORY
+  CUSTOMER_ACTIVITY
+  CUSTOMER_PREFERENCE
+  RELATIONSHIP_HISTORY
+}
+
+enum MemoryType {
+  PAYMENT_FREQUENCY
+  PAYMENT_TIMELINESS
+  PAYMENT_COMMITMENT_HISTORY
+  PAYMENT_COMMITMENT_FULFILLMENT_RATE
+  PAYMENT_COMMITMENT_MISSED_RATE
+  PARTIAL_PAYMENT_PATTERN
+  COLLECTION_RESPONSE_PATTERN
+  EXTENSION_PATTERN
+  DISPUTE_PATTERN
+  RECEIVABLE_OVERDUE_PATTERN
+  CUSTOMER_ACTIVITY_PATTERN
+}
+
+enum MemoryTimeWindow {
+  LAST_30_DAYS
+  LAST_90_DAYS
+  LAST_180_DAYS
+  ALL_TIME
+}
+
+enum MemoryStatus {
+  ACTIVE
+  SUPERSEDED
+  INVALIDATED
 }
 
 enum AIActionType {
@@ -239,14 +306,18 @@ enum AIActionStatus {
 enum SubscriptionPlan {
   FREE
   PRO
+  BUSINESS
+  ENTERPRISE
 }
 
 enum SubscriptionStatus {
   ACTIVE
   TRIALING
-  PAST_DUE
-  CANCELED
+  GRACE_PERIOD
+  BILLING_ISSUE
+  CANCELLED
   EXPIRED
+  INACTIVE
 }
 
 model Organization {
@@ -275,13 +346,18 @@ model Organization {
   conversations        Conversation[]
   documents            Document[]
   businessEvents       BusinessEvent[]
+  businessMemories     BusinessMemory[]
+  aiRequests           AIRequest[]
+  aiRecommendations    AIRecommendation[]
   riskAssessments      RiskAssessment[]
   aiInsights           AIInsight[]
   aiActions            AIAction[]
   memoryItems          MemoryItem[]
   notifications        Notification[]
   subscriptions        Subscription[]
+  subscriptionEvents   SubscriptionEvent[]
   entitlements         Entitlement[]
+  aiUsages             AIUsage[]
   auditLogs            AuditLog[]
 
   @@map("organizations")
@@ -315,7 +391,11 @@ model User {
   securityEvents          SecurityEvent[]
   performedActivities     CollectionActivity[]
   createdCommitments      PaymentCommitment[]
+  authoredBusinessEvents  BusinessEvent[]          @relation("AuthoredBusinessEvents")
+  aiRequests              AIRequest[]
+  aiRecommendations       AIRecommendation[]
   notifications           Notification[]
+  billedSubscriptions     Subscription[]           @relation("BilledSubscriptions")
   auditLogs               AuditLog[]
 
   @@map("users")
@@ -366,6 +446,8 @@ model Customer {
   conversations        Conversation[]
   documents            Document[]
   businessEvents       BusinessEvent[]
+  businessMemories     BusinessMemory[]
+  aiRecommendations    AIRecommendation[]
   riskAssessments      RiskAssessment[]
   aiInsights           AIInsight[]
   aiActions            AIAction[]
@@ -417,6 +499,9 @@ model Receivable {
   payments             Payment[]
   collectionActivities CollectionActivity[]
   paymentCommitments   PaymentCommitment[]
+  businessEvents       BusinessEvent[]
+  businessMemories     BusinessMemory[]
+  aiRecommendations    AIRecommendation[]
 
   @@index([organizationId])
   @@index([organizationId, customerId])
@@ -496,6 +581,7 @@ model Payment {
   customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
   receivable   Receivable?  @relation(fields: [receivableId], references: [id], onDelete: Cascade)
   invoice      Invoice?     @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  businessEvents BusinessEvent[]
 
   @@index([organizationId])
   @@index([organizationId, customerId])
@@ -546,6 +632,7 @@ model CollectionActivity {
   receivable      Receivable          @relation(fields: [receivableId], references: [id], onDelete: Cascade)
   performedByUser User                @relation(fields: [performedByUserId], references: [id], onDelete: Cascade)
   commitments     PaymentCommitment[]
+  businessEvents  BusinessEvent[]
 
   @@index([organizationId])
   @@index([organizationId, customerId])
@@ -575,6 +662,7 @@ model PaymentCommitment {
   receivable     Receivable          @relation(fields: [receivableId], references: [id], onDelete: Cascade)
   createdByUser  User                @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
   sourceActivity CollectionActivity? @relation(fields: [sourceActivityId], references: [id], onDelete: SetNull)
+  businessEvents BusinessEvent[]
 
   @@index([organizationId])
   @@index([organizationId, customerId])
@@ -668,21 +756,41 @@ model Document {
 }
 
 model BusinessEvent {
-  id             String            @id @default(uuid())
-  organizationId String
-  customerId     String?
-  eventType      BusinessEventType
-  summary        String
-  payload        Json              @default("{}")
-  actorId        String?
-  createdAt      DateTime          @default(now())
+  id                   String            @id @default(uuid())
+  organizationId       String
+  customerId           String?
+  receivableId         String?
+  paymentId            String?
+  collectionActivityId String?
+  paymentCommitmentId  String?
+  type                 BusinessEventType @default(CUSTOMER_CREATED)
+  occurredAt           DateTime          @default(now())
+  recordedAt           DateTime          @default(now())
+  actorType            ActorType         @default(USER)
+  actorUserId          String?
+  source               EventSource       @default(USER_ACTION)
+  data                 Json              @default("{}")
+  version              Int               @default(1)
+  correlationId        String?
+  causationId          String?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @default(now()) @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  customer     Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  organization         Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer             Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  receivable           Receivable?         @relation(fields: [receivableId], references: [id], onDelete: SetNull)
+  payment              Payment?            @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  collectionActivity   CollectionActivity? @relation(fields: [collectionActivityId], references: [id], onDelete: SetNull)
+  paymentCommitment    PaymentCommitment?  @relation(fields: [paymentCommitmentId], references: [id], onDelete: SetNull)
+  actorUser            User?               @relation("AuthoredBusinessEvents", fields: [actorUserId], references: [id], onDelete: SetNull)
+  memoryEvidence       BusinessMemoryEvidence[]
 
-  @@index([organizationId, customerId])
-  @@index([organizationId, eventType])
-  @@index([organizationId, createdAt])
+  @@index([organizationId, occurredAt])
+  @@index([organizationId, customerId, occurredAt])
+  @@index([organizationId, receivableId, occurredAt])
+  @@index([organizationId, type, occurredAt])
+  @@index([organizationId, actorUserId])
+  @@index([organizationId, correlationId])
   @@map("business_events")
 }
 
@@ -786,20 +894,77 @@ model Notification {
 }
 
 model Subscription {
-  id                 String             @id @default(uuid())
-  organizationId     String
-  plan               SubscriptionPlan   @default(FREE)
-  status             SubscriptionStatus @default(ACTIVE)
-  currentPeriodStart DateTime?
-  currentPeriodEnd   DateTime?
-  revenueCatId       String?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  id                       String             @id @default(uuid())
+  organizationId           String
+  billingUserId            String?
+  plan                     SubscriptionPlan   @default(FREE)
+  status                   SubscriptionStatus @default(ACTIVE)
+  revenueCatAppUserId      String?
+  revenueCatCustomerId     String?
+  revenueCatSubscriptionId String?
+  productId                String?
+  entitlementId            String?
+  store                    String?
+  environment              String?
+  startedAt                DateTime?
+  expiresAt                DateTime?
+  currentPeriodStart       DateTime?
+  currentPeriodEnd         DateTime?
+  autoRenewing             Boolean            @default(false)
+  cancelledAt              DateTime?
+  revenueCatId             String?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  billingUser  User?               @relation("BilledSubscriptions", fields: [billingUserId], references: [id], onDelete: SetNull)
+  events       SubscriptionEvent[]
+
+  @@index([organizationId])
+  @@index([billingUserId])
+  @@index([revenueCatAppUserId])
+  @@map("subscriptions")
+}
+
+model SubscriptionEvent {
+  id                String    @id @default(uuid())
+  subscriptionId    String?
+  organizationId    String?
+  revenueCatEventId String    @unique
+  eventType         String
+  productId         String?
+  environment       String?
+  payload           Json      @default("{}")
+  occurredAt        DateTime  @default(now())
+  processedAt       DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([subscriptionId])
+  @@index([organizationId])
+  @@index([eventType])
+  @@map("subscription_events")
+}
+
+model AIUsage {
+  id             String   @id @default(uuid())
+  organizationId String
+  userId         String?
+  capability     String
+  periodStart    DateTime
+  periodEnd      DateTime
+  usageCount     Int      @default(0)
+  limit          Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  @@index([organizationId])
-  @@map("subscriptions")
+  @@unique([organizationId, capability, periodStart])
+  @@index([organizationId, periodStart])
+  @@map("ai_usages")
 }
 
 model Entitlement {
@@ -944,4 +1109,153 @@ model PasswordResetToken {
   @@index([userId])
   @@index([code])
   @@map("password_reset_tokens")
+}
+
+model BusinessMemory {
+  id              String           @id @default(uuid())
+  organizationId  String
+  customerId      String?
+  receivableId    String?
+  category        MemoryCategory
+  type            MemoryType
+  timeWindow      MemoryTimeWindow @default(LAST_90_DAYS)
+  statement       String
+  value           Json             @default("{}")
+  currency        String?
+  confidence      Decimal          @default(1.0) @db.Decimal(3, 2)
+  status          MemoryStatus     @default(ACTIVE)
+  version         Int              @default(1)
+  firstObservedAt DateTime
+  lastObservedAt  DateTime
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @default(now()) @updatedAt
+
+  organization Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer?                @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  receivable   Receivable?              @relation(fields: [receivableId], references: [id], onDelete: SetNull)
+  evidence     BusinessMemoryEvidence[]
+
+  @@index([organizationId, customerId, status])
+  @@index([organizationId, category, status])
+  @@index([organizationId, type, status])
+  @@index([organizationId, lastObservedAt])
+  @@map("business_memories")
+}
+
+model BusinessMemoryEvidence {
+  id              String   @id @default(uuid())
+  memoryId        String
+  businessEventId String
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  memory        BusinessMemory @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+  businessEvent BusinessEvent  @relation(fields: [businessEventId], references: [id], onDelete: Cascade)
+
+  @@unique([memoryId, businessEventId])
+  @@index([memoryId])
+  @@index([businessEventId])
+  @@map("business_memory_evidence")
+}
+
+enum AICapability {
+  COLLECTION_PRIORITIZATION
+  CUSTOMER_EXPLANATION
+  COLLECTION_RECOMMENDATION
+  CUSTOMER_SUMMARY
+  COLLECTION_MESSAGE_DRAFT
+  BUSINESS_QA
+}
+
+enum AIRequestStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  RATE_LIMITED
+}
+
+enum AIRecommendationAction {
+  FOLLOW_UP_NOW
+  FOLLOW_UP_LATER
+  REQUEST_PAYMENT_DATE
+  REQUEST_PARTIAL_PAYMENT
+  REVIEW_COMMITMENT
+  CHANGE_COLLECTION_CHANNEL
+  ESCALATE
+  NO_ACTION
+}
+
+enum AIRecommendationStatus {
+  ACTIVE
+  ACCEPTED
+  DISMISSED
+  EXPIRED
+}
+
+enum AIUrgencyLevel {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum AIConfidenceLevel {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+model AIRequest {
+  id            String          @id @default(uuid())
+  organizationId String
+  userId        String?
+  capability    AICapability
+  model         String
+  promptVersion String          @default("v1")
+  status        AIRequestStatus @default(PENDING)
+  latencyMs     Int?
+  inputTokens   Int?
+  outputTokens  Int?
+  errorMessage  String?
+  createdAt     DateTime        @default(now())
+  completedAt   DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, capability])
+  @@index([userId, createdAt])
+  @@map("ai_requests")
+}
+
+model AIRecommendation {
+  id                String                 @id @default(uuid())
+  organizationId    String
+  userId            String?
+  customerId        String?
+  receivableId      String?
+  capability        AICapability           @default(COLLECTION_RECOMMENDATION)
+  action            AIRecommendationAction
+  urgency           AIUrgencyLevel         @default(MEDIUM)
+  title             String
+  reasoningSummary  String
+  suggestedChannel  String?
+  suggestedMessage  String?
+  evidenceMemoryIds String[]               @default([])
+  evidenceEventIds  String[]               @default([])
+  confidence        AIConfidenceLevel      @default(HIGH)
+  status            AIRecommendationStatus @default(ACTIVE)
+  expiresAt         DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @default(now()) @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  receivable   Receivable?  @relation(fields: [receivableId], references: [id], onDelete: SetNull)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, customerId, status])
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, urgency, status])
+  @@map("ai_recommendations")
 }

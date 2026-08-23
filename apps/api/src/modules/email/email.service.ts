@@ -77,6 +77,14 @@ export class EmailService {
       }
     }
 
+    // Fallback for development / test mode when Resend is not configured
+    const nodeEnv = this.configService.get<string>('NODE_ENV') || process.env.NODE_ENV || 'development';
+    if (nodeEnv !== 'production') {
+      const mockId = `dev-mock-${Date.now()}`;
+      this.logger.log(`[Dev Email Mock] To: ${JSON.stringify(options.to)}, Subject: "${options.subject}" (Mock ID: ${mockId})`);
+      return { success: true, messageId: mockId };
+    }
+
     return { success: false, error: 'Email delivery client not configured.' };
   }
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
+  Modal,
   TouchableOpacity,
   Switch,
   Alert as NativeAlert,
@@ -29,11 +30,23 @@ import {
   ShieldIcon,
   FaceIdIcon,
   FingerprintIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  XIcon,
 } from '@/design/icons';
 import { BiometricService, DeviceBiometricCapabilities } from '@/services/biometrics/biometric.service';
 import { authApi } from '@/services/api/auth';
+import { SecureStorageService } from '@/services/storage/secure-storage';
 import { useAuthStore } from '@/store/auth-store';
 import { useTheme } from '@/design/theme';
+
+const AUTO_LOCK_OPTIONS = [
+  { label: 'Immediately on exit', value: 0, description: 'Locks as soon as you minimize or leave the app' },
+  { label: 'After 1 minute', value: 60000, description: 'Locks after 1 minute in background' },
+  { label: 'After 5 minutes (Default)', value: 300000, description: 'Recommended balance of security and speed' },
+  { label: 'After 15 minutes', value: 900000, description: 'Locks after 15 minutes in background' },
+  { label: 'After 30 minutes', value: 1800000, description: 'Locks after 30 minutes in background' },
+];
 
 const changePasswordFormSchema = z
   .object({
@@ -59,6 +72,8 @@ export default function SecuritySettingsScreen() {
     isFingerprintEnabled,
     setFaceIdEnabled,
     setFingerprintEnabled,
+    autoLockTimeoutMs,
+    setAutoLockTimeout,
   } = useAuthStore();
   const { tokens, isDark } = useTheme();
 
@@ -74,6 +89,7 @@ export default function SecuritySettingsScreen() {
 
   const [showFaceScanner, setShowFaceScanner] = useState(false);
   const [showFingerprintModal, setShowFingerprintModal] = useState(false);
+  const [showAutoLockModal, setShowAutoLockModal] = useState(false);
   const [pwSuccessMessage, setPwSuccessMessage] = useState<string | null>(null);
   const [pwErrorMessage, setPwErrorMessage] = useState<string | null>(null);
 
@@ -136,6 +152,10 @@ export default function SecuritySettingsScreen() {
       });
 
       if (response.success) {
+        const currentUser = useAuthStore.getState().user;
+        if (currentUser?.email) {
+          await SecureStorageService.setBiometricVaultCredentials(currentUser.email, values.newPassword);
+        }
         setPwSuccessMessage('Password changed successfully.');
         reset();
       } else {
@@ -301,6 +321,50 @@ export default function SecuritySettingsScreen() {
           </View>
         </Card>
 
+        {/* Auto-Lock Inactivity Timeout Setting */}
+        <TouchableOpacity
+          activeOpacity={0.75}
+          onPress={() => setShowAutoLockModal(true)}
+          style={{
+            backgroundColor: isDark ? tokens.surface : '#FFFFFF',
+            borderColor: tokens.border,
+            borderWidth: 1,
+          }}
+          className="rounded-2xl p-4 mb-5 flex-row items-center justify-between"
+        >
+          <View className="flex-row items-center flex-1 mr-3">
+            <View
+              style={{ backgroundColor: tokens.accentSoft }}
+              className="w-10 h-10 rounded-xl items-center justify-center mr-3"
+            >
+              <ClockIcon size={20} color={tokens.accent} />
+            </View>
+            <View className="flex-1">
+              <Text
+                style={{ color: tokens.textPrimary }}
+                className="text-sm font-bold"
+              >
+                Inactivity Auto-Lock
+              </Text>
+              <Text
+                style={{ color: tokens.textSecondary }}
+                className="text-xs mt-0.5"
+              >
+                Locks workspace when app is minimized or phone is locked
+              </Text>
+            </View>
+          </View>
+          <View className="flex-row items-center">
+            <Text
+              style={{ color: tokens.primary }}
+              className="text-xs font-bold mr-2"
+            >
+              {AUTO_LOCK_OPTIONS.find((opt) => opt.value === autoLockTimeoutMs)?.label || '5 minutes'}
+            </Text>
+            <ChevronRightIcon size={16} color={tokens.textMuted} />
+          </View>
+        </TouchableOpacity>
+
         {/* Active Sessions Link */}
         <TouchableOpacity
           activeOpacity={0.75}
@@ -410,6 +474,103 @@ export default function SecuritySettingsScreen() {
           </View>
         </Card>
       </KeyboardAwareContainer>
+
+      {/* Auto-Lock Inactivity Timeout Selection Modal */}
+      <Modal
+        visible={showAutoLockModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAutoLockModal(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            justifyContent: 'flex-end',
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: isDark ? tokens.surface : '#FFFFFF',
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              paddingHorizontal: 24,
+              paddingTop: 20,
+              paddingBottom: Platform.OS === 'ios' ? 40 : 28,
+              borderWidth: 1,
+              borderColor: tokens.border,
+            }}
+          >
+            {/* Modal Header */}
+            <View className="flex-row items-center justify-between mb-4">
+              <View>
+                <Text style={{ color: tokens.textPrimary }} className="text-base font-bold">
+                  Inactivity Auto-Lock
+                </Text>
+                <Text style={{ color: tokens.textSecondary }} className="text-xs mt-0.5">
+                  Select when to require biometric or password unlock
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowAutoLockModal(false)}
+                className="w-8 h-8 rounded-full items-center justify-center bg-black/10 dark:bg-white/10"
+              >
+                <XIcon size={18} color={tokens.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Options List */}
+            <View className="gap-2.5 my-2">
+              {AUTO_LOCK_OPTIONS.map((opt) => {
+                const isSelected = opt.value === autoLockTimeoutMs;
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    activeOpacity={0.7}
+                    onPress={async () => {
+                      await setAutoLockTimeout(opt.value);
+                      setShowAutoLockModal(false);
+                    }}
+                    style={{
+                      backgroundColor: isSelected
+                        ? isDark
+                          ? 'rgba(0,165,129,0.15)'
+                          : 'rgba(0,165,129,0.08)'
+                        : isDark
+                        ? tokens.surfaceRaised
+                        : tokens.surfaceMuted,
+                      borderColor: isSelected ? tokens.accent : tokens.border,
+                      borderWidth: isSelected ? 1.5 : 1,
+                    }}
+                    className="p-3.5 rounded-2xl flex-row items-center justify-between"
+                  >
+                    <View className="flex-1 mr-3">
+                      <Text
+                        style={{
+                          color: isSelected ? tokens.accent : tokens.textPrimary,
+                          fontWeight: isSelected ? '700' : '600',
+                        }}
+                        className="text-sm"
+                      >
+                        {opt.label}
+                      </Text>
+                      <Text
+                        style={{ color: tokens.textSecondary }}
+                        className="text-[11px] mt-0.5"
+                      >
+                        {opt.description}
+                      </Text>
+                    </View>
+                    {isSelected && (
+                      <CheckCircleIcon size={20} color={tokens.accent} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

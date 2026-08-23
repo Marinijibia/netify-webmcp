@@ -10,11 +10,11 @@
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/splash.png",
-      "resizeMode": "cover",
+      "resizeMode": "contain",
       "backgroundColor": "#001D31",
       "dark": {
         "image": "./assets/images/splash.png",
-        "resizeMode": "cover",
+        "resizeMode": "contain",
         "backgroundColor": "#001D31"
       }
     },
@@ -24,7 +24,7 @@
       "icon": "./assets/images/icon.png",
       "splash": {
         "image": "./assets/images/splash.png",
-        "resizeMode": "cover",
+        "resizeMode": "contain",
         "backgroundColor": "#001D31"
       }
     },
@@ -37,11 +37,11 @@
       },
       "splash": {
         "image": "./assets/images/splash.png",
-        "resizeMode": "cover",
+        "resizeMode": "contain",
         "backgroundColor": "#001D31",
         "dark": {
           "image": "./assets/images/splash.png",
-          "resizeMode": "cover",
+          "resizeMode": "contain",
           "backgroundColor": "#001D31"
         }
       },
@@ -59,11 +59,13 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/splash.png",
-          "resizeMode": "cover",
+          "imageWidth": 220,
+          "resizeMode": "contain",
           "backgroundColor": "#001D31",
           "dark": {
             "image": "./assets/images/splash.png",
-            "resizeMode": "cover",
+            "imageWidth": 220,
+            "resizeMode": "contain",
             "backgroundColor": "#001D31"
           }
         }

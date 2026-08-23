@@ -11,6 +11,7 @@ import {
   UsePipes,
 } from '@nestjs/common';
 import { CustomerService } from './customer.service';
+import { BusinessEventService } from '../business-event/business-event.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { CurrentUser, AuthenticatedUserContext } from '../../common/decorators/current-user.decorator';
@@ -20,18 +21,23 @@ import {
   createCustomerContactSchema,
   updateCustomerContactSchema,
   customerQuerySchema,
+  CustomerTimelineQuerySchema,
   CreateCustomerInput,
   UpdateCustomerInput,
   CreateCustomerContactInput,
   UpdateCustomerContactInput,
   CustomerQueryInput,
+  CustomerTimelineQueryInput,
 } from '@netify/validation';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 
 @Controller('customers')
 @UseGuards(JwtAuthGuard, TenantGuard)
 export class CustomerController {
-  constructor(private readonly customerService: CustomerService) {}
+  constructor(
+    private readonly customerService: CustomerService,
+    private readonly businessEventService: BusinessEventService
+  ) {}
 
   @Get()
   async list(
@@ -60,13 +66,33 @@ export class CustomerController {
     };
   }
 
+  @Get(':id/timeline')
+  async getTimeline(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Param('id') id: string,
+    @Query(new ZodValidationPipe(CustomerTimelineQuerySchema)) query: CustomerTimelineQueryInput
+  ) {
+    const data = await this.businessEventService.getCustomerTimeline(
+      user.organizationId,
+      id,
+      query
+    );
+    return {
+      success: true,
+      data: data.items,
+      customer: data.customer,
+      pagination: data.pagination,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   @Post()
   @UsePipes(new ZodValidationPipe(createCustomerSchema))
   async create(
     @CurrentUser() user: AuthenticatedUserContext,
     @Body() body: CreateCustomerInput
   ) {
-    const data = await this.customerService.create(user.organizationId, body);
+    const data = await this.customerService.create(user.organizationId, body, user.userId);
     return {
       success: true,
       data,

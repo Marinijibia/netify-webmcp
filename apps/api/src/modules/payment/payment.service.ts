@@ -8,15 +8,26 @@ import {
   Prisma,
   PaymentStatus,
   ReceivableStatus,
+  BusinessEventType,
+  ActorType,
+  EventSource,
 } from '@netify/database';
 import { CreatePaymentInput, PaymentQueryInput } from '@netify/validation';
 import { CommitmentService } from '../commitment/commitment.service';
+import { BusinessEventService } from '../business-event/business-event.service';
 
 @Injectable()
 export class PaymentService {
-  constructor(private readonly commitmentService: CommitmentService) {}
+  constructor(
+    private readonly commitmentService: CommitmentService,
+    private readonly businessEventService: BusinessEventService
+  ) {}
 
-  async recordPayment(organizationId: string, input: CreatePaymentInput) {
+  async recordPayment(
+    organizationId: string,
+    input: CreatePaymentInput,
+    actorUserId?: string | null
+  ) {
     if (!input.receivableId) {
       throw new BadRequestException('receivableId is required');
     }
@@ -146,7 +157,30 @@ export class PaymentService {
         },
       });
 
-      // 10. Update Receivable Status deterministically
+      const correlationId = 'corr_pay_' + payment.id;
+
+      // 10. Record canonical PAYMENT_CONFIRMED Business Event
+      await this.businessEventService.recordEvent(tx, {
+        organizationId,
+        customerId: receivable.customerId,
+        receivableId: receivable.id,
+        paymentId: payment.id,
+        type: BusinessEventType.PAYMENT_CONFIRMED,
+        occurredAt: payment.paidAt,
+        actorType: actorUserId ? ActorType.USER : ActorType.SYSTEM,
+        actorUserId: actorUserId || null,
+        source: EventSource.PAYMENT_PROCESS,
+        data: {
+          amount: payment.amount.toString(),
+          currency: payment.currency,
+          method: payment.method,
+          reference: payment.reference,
+        },
+        correlationId,
+        version: 1,
+      });
+
+      // 11. Update Receivable Status deterministically
       const newTotalPaid = currentPaid.add(paymentAmount);
       const newBalance = originalAmount.sub(newTotalPaid);
       const newStatus =
@@ -159,11 +193,58 @@ export class PaymentService {
         data: { status: newStatus },
       });
 
-      // 11. Authoritative Engine: Evaluate Payment Commitments
+      // Emit status event if receivable became fully paid or partially paid
+      if (newStatus === ReceivableStatus.PAID) {
+        await this.businessEventService.recordEvent(tx, {
+          organizationId,
+          customerId: receivable.customerId,
+          receivableId: receivable.id,
+          paymentId: payment.id,
+          type: BusinessEventType.RECEIVABLE_PAID,
+          occurredAt: payment.paidAt,
+          actorType: actorUserId ? ActorType.USER : ActorType.SYSTEM,
+          actorUserId: actorUserId || null,
+          source: EventSource.PAYMENT_PROCESS,
+          data: {
+            originalAmount: originalAmount.toString(),
+            totalPaid: newTotalPaid.toString(),
+            currency: receivable.currency,
+          },
+          correlationId,
+          causationId: payment.id,
+          version: 1,
+        });
+      } else if (receivable.status !== ReceivableStatus.PARTIALLY_PAID) {
+        await this.businessEventService.recordEvent(tx, {
+          organizationId,
+          customerId: receivable.customerId,
+          receivableId: receivable.id,
+          paymentId: payment.id,
+          type: BusinessEventType.RECEIVABLE_PARTIALLY_PAID,
+          occurredAt: payment.paidAt,
+          actorType: actorUserId ? ActorType.USER : ActorType.SYSTEM,
+          actorUserId: actorUserId || null,
+          source: EventSource.PAYMENT_PROCESS,
+          data: {
+            originalAmount: originalAmount.toString(),
+            totalPaid: newTotalPaid.toString(),
+            remainingBalance: newBalance.toString(),
+            currency: receivable.currency,
+          },
+          correlationId,
+          causationId: payment.id,
+          version: 1,
+        });
+      }
+
+      // 12. Authoritative Engine: Evaluate Payment Commitments
       await this.commitmentService.evaluateCommitmentsForPayment(
         organizationId,
         receivable.id,
-        tx
+        tx,
+        correlationId,
+        payment.id,
+        actorUserId
       );
 
       return {
@@ -182,7 +263,11 @@ export class PaymentService {
     });
   }
 
-  async reversePayment(organizationId: string, paymentId: string) {
+  async reversePayment(
+    organizationId: string,
+    paymentId: string,
+    actorUserId?: string | null
+  ) {
     return prisma.$transaction(async (tx) => {
       const payment = await tx.payment.findFirst({
         where: { id: paymentId, organizationId },
@@ -223,6 +308,25 @@ export class PaymentService {
           customer: { select: { id: true, name: true } },
           receivable: { select: { id: true, reference: true, currency: true } },
         },
+      });
+
+      // Record canonical PAYMENT_REVERSED Business Event
+      await this.businessEventService.recordEvent(tx, {
+        organizationId,
+        customerId: payment.customerId,
+        receivableId: payment.receivableId,
+        paymentId: payment.id,
+        type: BusinessEventType.PAYMENT_REVERSED,
+        occurredAt: new Date(),
+        actorType: actorUserId ? ActorType.USER : ActorType.SYSTEM,
+        actorUserId: actorUserId || null,
+        source: EventSource.USER_ACTION,
+        data: {
+          amount: payment.amount.toString(),
+          currency: payment.currency,
+          originalReference: payment.reference,
+        },
+        version: 1,
       });
 
       // Recalculate remaining confirmed payments
@@ -269,8 +373,8 @@ export class PaymentService {
   }
 
   async list(organizationId: string, query: PaymentQueryInput) {
-    const page = query.page || 1;
-    const pageSize = query.pageSize || 20;
+    const page = Math.max(1, Number(query.page) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(query.pageSize) || 20));
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.PaymentWhereInput = { organizationId };

@@ -43,8 +43,27 @@ jest.mock('@netify/database', () => {
       WHATSAPP: 'WHATSAPP',
       OTHER: 'OTHER',
     },
+    BusinessEventType: {
+      CUSTOMER_CREATED: 'CUSTOMER_CREATED',
+      CUSTOMER_UPDATED: 'CUSTOMER_UPDATED',
+    },
+    ActorType: {
+      USER: 'USER',
+      SYSTEM: 'SYSTEM',
+      CUSTOMER: 'CUSTOMER',
+      PROVIDER: 'PROVIDER',
+    },
+    EventSource: {
+      USER_ACTION: 'USER_ACTION',
+      PAYMENT_PROCESS: 'PAYMENT_PROCESS',
+      COLLECTION_ACTIVITY: 'COLLECTION_ACTIVITY',
+      SCHEDULED_PROCESS: 'SCHEDULED_PROCESS',
+      SYSTEM: 'SYSTEM',
+    },
   };
 });
+
+import { BusinessEventService } from '../business-event/business-event.service';
 
 describe('CustomerService (Domain Design 02 Test Suite)', () => {
   let service: CustomerService;
@@ -53,7 +72,16 @@ describe('CustomerService (Domain Design 02 Test Suite)', () => {
     jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CustomerService],
+      providers: [
+        CustomerService,
+        {
+          provide: BusinessEventService,
+          useValue: {
+            recordEvent: jest.fn().mockResolvedValue({ id: 'evt-cust-mock' }),
+            getCustomerTimeline: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
     service = module.get<CustomerService>(CustomerService);

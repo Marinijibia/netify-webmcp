@@ -21,6 +21,7 @@ import {
   resetPasswordSchema,
   changePasswordSchema,
   refreshTokenSchema,
+  switchOrganizationSchema,
   RegisterInput,
   LoginInput,
   VerifyEmailInput,
@@ -29,6 +30,7 @@ import {
   ResetPasswordInput,
   ChangePasswordInput,
   RefreshTokenInput,
+  SwitchOrganizationInput,
 } from '@netify/validation';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -246,6 +248,28 @@ export class AuthController {
     return {
       success: true,
       data,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Post('switch-organization')
+  @UseGuards(JwtAuthGuard)
+  @UsePipes(new ZodValidationPipe(switchOrganizationSchema))
+  async switchOrganization(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Body() body: SwitchOrganizationInput,
+    @Headers('user-agent') userAgent?: string,
+    @Ip() ipAddress?: string
+  ) {
+    const data = await this.authService.switchOrganization(
+      user.userId,
+      body.organizationId,
+      { userAgent, ipAddress }
+    );
+    return {
+      success: true,
+      data,
+      message: 'Switched organization successfully',
       timestamp: new Date().toISOString(),
     };
   }

@@ -1,6 +1,10 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import { z } from 'zod';
-import { AIProvider, AIGenerateOptions } from '../interfaces/ai-provider.interface';
+import {
+  AIProvider,
+  AIGenerateOptions,
+  StructuredAIResult,
+} from '../interfaces/ai-provider.interface';
 
 export class GeminiProvider implements AIProvider {
   public readonly name = 'gemini';
@@ -76,6 +80,22 @@ export class GeminiProvider implements AIProvider {
       console.warn(`[GeminiProvider.structuredOutput parsing error]: ${error.message}. Attempting recovery.`);
       return this.generateMockStructured(prompt, schema);
     }
+  }
+
+  async structuredOutputWithMetrics<T>(
+    prompt: string,
+    schema: z.ZodType<T, any, any>,
+    options?: AIGenerateOptions
+  ): Promise<StructuredAIResult<T>> {
+    const startTime = Date.now();
+    const data = await this.structuredOutput(prompt, schema, options);
+    return {
+      data,
+      metrics: {
+        model: this.modelName,
+        latencyMs: Date.now() - startTime,
+      },
+    };
   }
 
   async embed(text: string): Promise<number[]> {

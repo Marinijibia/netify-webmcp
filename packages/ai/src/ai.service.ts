@@ -64,7 +64,17 @@ export class AIService {
     return this.risk.explainRisk(signals, context);
   }
 
-  async draftFollowupMessage(input: DraftMessageInput & { customerName: string; totalOutstanding: number; currency: string; daysOverdue?: number; recentCommitmentSummary?: string }): Promise<AIDraftMessageResponse> {
+  async draftFollowupMessage(input: {
+    customerId: string;
+    customerName: string;
+    totalOutstanding: number;
+    currency: string;
+    suggestedPaymentAmount?: number;
+    tone: 'polite_reminder' | 'firm_followup' | 'urgent_escalation' | 'payment_plan';
+    channel: 'whatsapp' | 'sms' | 'email';
+    daysOverdue?: number;
+    recentCommitmentSummary?: string;
+  }): Promise<AIDraftMessageResponse> {
     return this.messaging.draftFollowupMessage({
       customerId: input.customerId,
       customerName: input.customerName,
