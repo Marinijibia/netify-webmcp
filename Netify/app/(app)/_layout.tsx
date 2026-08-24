@@ -13,6 +13,13 @@ export default function AppLayout() {
       }}
     >
       <Stack.Screen name="index" />
+      <Stack.Screen name="copilot/index" />
+      <Stack.Screen name="customers/index" />
+      <Stack.Screen name="receivables/index" />
+      <Stack.Screen name="commitments/index" />
+      <Stack.Screen name="notifications/index" />
+      <Stack.Screen name="settings/index" />
+      <Stack.Screen name="subscription/index" />
       <Stack.Screen name="security/index" />
       <Stack.Screen name="security/sessions" />
     </Stack>

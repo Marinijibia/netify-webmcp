@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -12,6 +13,8 @@ import {
 import { AIService } from './ai.service';
 import { CollectionPriorityService } from './collection-priority.service';
 import { CollectionAttentionService } from './collection-attention.service';
+import { ConversationService } from './conversation.service';
+import { ActionExecutionService } from './action-execution.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TenantGuard } from '../../common/guards/tenant.guard';
 import { FeatureGuard } from '../../common/guards/feature.guard';
@@ -30,6 +33,9 @@ import {
   BusinessQAInputSchema,
   UpdateRecommendationStatusSchema,
   TodayAttentionQuerySchema,
+  AISendMessageSchema,
+  AIActionConfirmSchema,
+  UpdateLanguagePreferenceSchema,
   PriorityCustomerQueryInput,
   CustomerExplainInput,
   CustomerRecommendationInput,
@@ -38,6 +44,9 @@ import {
   BusinessQAInput,
   UpdateRecommendationStatusInput,
   TodayAttentionQueryInput,
+  AISendMessageInput,
+  AIActionConfirmInput,
+  UpdateLanguagePreferenceInput,
 } from '@netify/validation';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 
@@ -48,12 +57,154 @@ export class AIController {
   constructor(
     private readonly aiService: AIService,
     private readonly priorityService: CollectionPriorityService,
-    private readonly attentionService: CollectionAttentionService
+    private readonly attentionService: CollectionAttentionService,
+    private readonly conversationService: ConversationService,
+    private readonly actionService: ActionExecutionService
   ) {}
 
   /**
+   * POST /api/v1/ai/chat
+   * Main multilingual conversational intelligence endpoint.
+   */
+  @Post('chat')
+  @UsePipes(new ZodValidationPipe(AISendMessageSchema))
+  async chat(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Body() body: AISendMessageInput
+  ) {
+    const data = await this.aiService.chat(
+      user.organizationId,
+      user.userId,
+      body
+    );
+    return {
+      success: true,
+      data,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * GET /api/v1/ai/conversations
+   * Lists historical conversation sessions for the active business.
+   */
+  @Get('conversations')
+  async listConversations(@CurrentUser() user: AuthenticatedUserContext) {
+    const data = await this.conversationService.listConversations(
+      user.organizationId,
+      user.userId
+    );
+    return {
+      success: true,
+      data,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * GET /api/v1/ai/conversations/:id
+   * Retrieves messages for a specific conversation.
+   */
+  @Get('conversations/:id')
+  async getConversation(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Param('id') conversationId: string
+  ) {
+    const data = await this.conversationService.getConversation(
+      user.organizationId,
+      user.userId,
+      conversationId
+    );
+    return {
+      success: true,
+      data,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * DELETE /api/v1/ai/conversations/:id
+   * Deletes a conversation.
+   */
+  @Delete('conversations/:id')
+  async deleteConversation(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Param('id') conversationId: string
+  ) {
+    await this.conversationService.deleteConversation(
+      user.organizationId,
+      user.userId,
+      conversationId
+    );
+    return {
+      success: true,
+      data: { deleted: true },
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * POST /api/v1/ai/actions/:id/confirm
+   * Confirms or declines a proposed action with explicit user approval.
+   */
+  @Post('actions/:id/confirm')
+  @UsePipes(new ZodValidationPipe(AIActionConfirmSchema))
+  async confirmAction(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Param('id') actionProposalId: string,
+    @Body() body: AIActionConfirmInput
+  ) {
+    const data = await this.actionService.confirmAction(
+      user.organizationId,
+      user.userId,
+      actionProposalId,
+      body.confirm,
+      body.notes
+    );
+    return {
+      success: true,
+      data,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * GET /api/v1/ai/actions
+   * Lists action proposals for user review.
+   */
+  @Get('actions')
+  async listActions(@CurrentUser() user: AuthenticatedUserContext) {
+    const data = await this.actionService.listProposals(
+      user.organizationId,
+      user.userId
+    );
+    return {
+      success: true,
+      data,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * PATCH /api/v1/ai/language
+   * Updates user's preferred language.
+   */
+  @Patch('language')
+  @UsePipes(new ZodValidationPipe(UpdateLanguagePreferenceSchema))
+  async updateLanguage(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Body() body: UpdateLanguagePreferenceInput
+  ) {
+    const data = await this.aiService.updateUserLanguage(user.userId, body.language);
+    return {
+      success: true,
+      data,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
    * GET /api/v1/ai/today
-   * Returns deterministic today's attention metrics, briefing, and top priority customers.
    */
   @Get('today')
   @UsePipes(new ZodValidationPipe(TodayAttentionQuerySchema))
@@ -74,7 +225,6 @@ export class AIController {
 
   /**
    * GET /api/v1/ai/priority-customers
-   * Returns prioritized customer queue calculated deterministically with explainable reasons.
    */
   @Get('priority-customers')
   @UsePipes(new ZodValidationPipe(PriorityCustomerQuerySchema))
@@ -95,7 +245,6 @@ export class AIController {
 
   /**
    * POST /api/v1/ai/customers/:customerId/explain
-   * Explains customer priority and debt background with evidence grounding.
    */
   @Post('customers/:customerId/explain')
   @UsePipes(new ZodValidationPipe(CustomerExplainInputSchema))
@@ -119,7 +268,6 @@ export class AIController {
 
   /**
    * POST /api/v1/ai/customers/:customerId/recommend
-   * Generates grounded collection recommendation and persists AIRecommendation record.
    */
   @Post('customers/:customerId/recommend')
   @UsePipes(new ZodValidationPipe(CustomerRecommendationInputSchema))
@@ -143,7 +291,6 @@ export class AIController {
 
   /**
    * POST /api/v1/ai/customers/:customerId/draft-message
-   * Drafts a culturally respectful collection message for user review.
    */
   @Post('customers/:customerId/draft-message')
   @UsePipes(new ZodValidationPipe(DraftMessageInputSchema))
@@ -167,7 +314,6 @@ export class AIController {
 
   /**
    * POST /api/v1/ai/customers/:customerId/summary
-   * Generates 360-degree customer overview.
    */
   @Post('customers/:customerId/summary')
   @UsePipes(new ZodValidationPipe(CustomerSummaryInputSchema))
@@ -191,7 +337,6 @@ export class AIController {
 
   /**
    * POST /api/v1/ai/qa
-   * Answers natural language business queries grounded in database results.
    */
   @Post('qa')
   @UsePipes(new ZodValidationPipe(BusinessQAInputSchema))
@@ -213,7 +358,6 @@ export class AIController {
 
   /**
    * PATCH /api/v1/ai/recommendations/:id/status
-   * Updates recommendation lifecycle state (ACCEPTED / DISMISSED).
    */
   @Patch('recommendations/:id/status')
   @UsePipes(new ZodValidationPipe(UpdateRecommendationStatusSchema))

@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ServiceUnavailableException,
+  Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -13,8 +14,12 @@ import {
   AIRecommendationStatus,
   AIUrgencyLevel,
   AIConfidenceLevel,
+  AppLanguage as DbAppLanguage,
 } from '@netify/database';
-import { OpenAIProvider } from '@netify/ai';
+import {
+  AIService as AIPackageService,
+  AIProviderFactory,
+} from '@netify/ai';
 import {
   CustomerExplainInput,
   CustomerRecommendationInput,
@@ -32,28 +37,293 @@ import {
   CustomerSummaryOutputSchema,
   BusinessQAOutput,
   BusinessQAOutputSchema,
-  DailyBriefingOutput,
+  AISendMessageInput,
+  AppLanguage,
 } from '@netify/validation';
 import { AIContextBuilder } from './ai-context-builder';
 import { CollectionAttentionService } from './collection-attention.service';
 import { BusinessQAService } from './business-qa.service';
+import { ConversationService } from './conversation.service';
+import { ActionExecutionService } from './action-execution.service';
 import { AI_SYSTEM_INSTRUCTIONS, PROMPT_VERSIONS } from './ai-prompts';
+
+export interface ChatResponseOutput {
+  conversationId: string;
+  messageId: string;
+  sender: 'COPILOT';
+  content: string;
+  detectedLanguage: AppLanguage;
+  intent: string;
+  facts: Array<{ title: string; detail: string; metric?: string | number }>;
+  inferences: Array<{ title: string; reason: string; urgency?: string }>;
+  evidence: {
+    memoryIds: string[];
+    eventIds: string[];
+    customerIds: string[];
+    receivableIds: string[];
+  };
+  suggestedActions: Array<{
+    id?: string;
+    actionType: string;
+    title: string;
+    description: string;
+    payload: Record<string, any>;
+    isConsequential: boolean;
+  }>;
+  suggestedFollowUps: string[];
+  metrics: {
+    latencyMs: number;
+    provider: string;
+  };
+}
 
 @Injectable()
 export class AIService {
-  private openaiProvider: OpenAIProvider;
-  private defaultModel: string;
+  private readonly logger = new Logger(AIService.name);
+  private aiPackage: AIPackageService;
+  private providerFactory: AIProviderFactory;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly contextBuilder: AIContextBuilder,
     private readonly attentionService: CollectionAttentionService,
-    private readonly qaService: BusinessQAService
+    private readonly qaService: BusinessQAService,
+    private readonly conversationService: ConversationService,
+    private readonly actionService: ActionExecutionService
   ) {
-    const apiKey = this.configService.get<string>('OPENAI_API_KEY');
-    this.defaultModel =
-      this.configService.get<string>('AI_MODEL_DEFAULT') || 'gpt-4o-mini';
-    this.openaiProvider = new OpenAIProvider(apiKey, this.defaultModel);
+    const geminiKey = this.configService.get<string>('GEMINI_API_KEY');
+    const geminiModel = this.configService.get<string>('GEMINI_MODEL') || 'gemini-1.5-flash';
+    const openaiKey = this.configService.get<string>('OPENAI_API_KEY');
+    const openaiModel = this.configService.get<string>('OPENAI_MODEL') || 'gpt-4o-mini';
+    const innaKey = this.configService.get<string>('INNA_API_KEY');
+    const innaBaseUrl = this.configService.get<string>('INNA_BASE_URL');
+    const innaModel = this.configService.get<string>('INNA_MODEL');
+    const defaultProvider = (this.configService.get<string>('AI_PROVIDER') as any) || 'gemini';
+
+    this.providerFactory = new AIProviderFactory({
+      defaultProvider,
+      geminiApiKey: geminiKey,
+      geminiModel,
+      openaiApiKey: openaiKey,
+      openaiModel,
+      innaApiKey: innaKey,
+      innaBaseUrl,
+      innaModel,
+      enableInnaForAfricanLanguages: true,
+    });
+
+    this.aiPackage = new AIPackageService({
+      provider: defaultProvider,
+      geminiApiKey: geminiKey,
+      geminiModel,
+      openaiApiKey: openaiKey,
+      openaiModel,
+      innaApiKey: innaKey,
+      innaBaseUrl,
+      innaModel,
+    });
+  }
+
+  /**
+   * Main Multilingual AI Copilot conversational endpoint.
+   * Integrates language detection, deterministic data retrieval, Business Memory, and action proposal generation.
+   */
+  async chat(
+    organizationId: string,
+    userId: string,
+    input: AISendMessageInput
+  ): Promise<ChatResponseOutput> {
+    const startTime = Date.now();
+
+    // 1. Ensure or create conversation
+    let targetConversationId = input.conversationId;
+    if (!targetConversationId) {
+      const conv = await this.conversationService.createConversation(
+        organizationId,
+        userId,
+        {
+          title: input.content.slice(0, 40) + '...',
+          language: input.language,
+        }
+      );
+      targetConversationId = conv.id;
+    }
+
+    // 2. Detect Intent & Language
+    const detected = await this.aiPackage.detectIntent(input.content, input.language);
+    const targetLanguage = input.language || detected.detectedLanguage;
+
+    // 3. Record User Message
+    await this.conversationService.addMessage(
+      organizationId,
+      userId,
+      targetConversationId,
+      {
+        sender: 'USER',
+        content: input.content,
+        language: targetLanguage,
+        intent: detected.intentType,
+      }
+    );
+
+    // 4. Retrieve Deterministic Business Data
+    const qaResult = await this.qaService.executeDeterministicQuery(organizationId, {
+      query: input.content,
+      customerId: input.customerId || detected.extractedParameters?.customerId,
+      timeWindowDays: detected.extractedParameters?.timeWindowDays || 30,
+    });
+
+    // 5. Resolve AI Provider for the target language
+    const routingDecision = this.providerFactory.resolveProvider({
+      language: targetLanguage,
+      taskType: 'chat',
+    });
+
+    const provider = routingDecision.selectedProvider;
+
+    // 6. Build Multilingual Prompt with strict factual separation
+    const prompt = `User Query: "${input.content}"
+Detected Intent: ${detected.intentType}
+Detected Language: ${targetLanguage} (Code-switched: ${detected.isCodeSwitched})
+
+--- AUTHORITATIVE BUSINESS DATA (FACTS) ---
+${JSON.stringify(qaResult.data, null, 2)}
+Context Summary: ${qaResult.contextSummary}
+
+--- INSTRUCTIONS ---
+You are Netify AI Copilot, the intelligent financial assistant for African businesses.
+Respond in the language requested: "${targetLanguage}" (English: "en", Hausa: "ha", Yoruba: "yo", Igbo: "ig", Nigerian Pidgin: "pcm").
+If Pidgin ("pcm") is requested or code-switched, use natural, professional Nigerian business Pidgin (e.g. "Who dey owe pass", "Abeg check", "Nawa for debt").
+
+CRITICAL RULES:
+1. NEVER invent or fabricate financial numbers, balances, or transactions. Rely ONLY on the Authoritative Business Data above.
+2. Clearly separate FACTS from INFERENCES / RECOMMENDATIONS.
+3. If an action is appropriate (e.g. drafting a collection message, setting a follow-up date), propose it in "suggestedActions".
+4. If there are zero debts or no records found, explain gently that more business records are needed.
+
+Respond strictly in JSON format matching this schema:
+{
+  "content": "Conversational reply to the business owner in the requested language (2-4 sentences)",
+  "facts": [
+    { "title": "Fact title", "detail": "Specific factual detail with real numbers", "metric": "₦450,000" }
+  ],
+  "inferences": [
+    { "title": "Inference title", "reason": "Behavioral deduction or warning", "urgency": "HIGH" | "MEDIUM" | "LOW" }
+  ],
+  "suggestedActions": [
+    {
+      "actionType": "CREATE_FOLLOW_UP" | "DRAFT_MESSAGE" | "LOG_ACTIVITY",
+      "title": "Action title",
+      "description": "Explanation of action",
+      "payload": { "customerId": "uuid if available", "dueDate": "YYYY-MM-DD", "amount": 1000 },
+      "isConsequential": true
+    }
+  ],
+  "suggestedFollowUps": ["Question 1", "Question 2"]
+}`;
+
+    let parsedResult: any;
+    try {
+      const rawResponse = await provider.generate(prompt, {
+        temperature: 0.2,
+        systemInstruction: AI_SYSTEM_INSTRUCTIONS.COPILOT_CORE,
+      });
+
+      let cleanJson = rawResponse.trim();
+      if (cleanJson.startsWith('```json')) {
+        cleanJson = cleanJson.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanJson.startsWith('```')) {
+        cleanJson = cleanJson.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+
+      parsedResult = JSON.parse(cleanJson);
+    } catch (err: any) {
+      this.logger.warn(`AI Provider failed for language ${targetLanguage}, using deterministic fallback narration: ${err.message}`);
+      parsedResult = {
+        content: qaResult.contextSummary || 'Here is what your verified business records show.',
+        facts: [{ title: 'Business Records', detail: qaResult.contextSummary }],
+        inferences: [],
+        suggestedActions: [],
+        suggestedFollowUps: ['Who should I follow up with today?', 'Show total outstanding receivables'],
+      };
+    }
+
+    const latencyMs = Date.now() - startTime;
+
+    // 7. Persist any proposed actions
+    const createdActionProposals: any[] = [];
+    if (Array.isArray(parsedResult.suggestedActions)) {
+      for (const action of parsedResult.suggestedActions) {
+        if (action.actionType && action.title) {
+          const proposal = await this.actionService.proposeAction({
+            organizationId,
+            userId,
+            conversationId: targetConversationId,
+            actionType: action.actionType,
+            title: action.title,
+            description: action.description || action.title,
+            payload: action.payload || {},
+            isConsequential: action.isConsequential ?? true,
+          });
+          createdActionProposals.push({
+            id: proposal.id,
+            ...action,
+          });
+        }
+      }
+    }
+
+    // 8. Record Copilot Message
+    const copilotMessage = await this.conversationService.addMessage(
+      organizationId,
+      userId,
+      targetConversationId,
+      {
+        sender: 'COPILOT',
+        content: parsedResult.content || 'Here is your business intelligence summary.',
+        language: targetLanguage,
+        intent: detected.intentType,
+        evidenceCustomerIds: qaResult.citations || [],
+        metrics: {
+          latencyMs,
+          provider: routingDecision.providerName,
+        },
+      }
+    );
+
+    // 9. Telemetry logging
+    await this.logAIRequest({
+      organizationId,
+      userId,
+      capability: AICapability.BUSINESS_QA,
+      model: routingDecision.providerName,
+      promptVersion: 'v2-multilingual',
+      status: AIRequestStatus.SUCCESS,
+      latencyMs,
+    });
+
+    return {
+      conversationId: targetConversationId,
+      messageId: copilotMessage.id,
+      sender: 'COPILOT',
+      content: parsedResult.content,
+      detectedLanguage: targetLanguage,
+      intent: detected.intentType,
+      facts: parsedResult.facts || [],
+      inferences: parsedResult.inferences || [],
+      evidence: {
+        memoryIds: [],
+        eventIds: [],
+        customerIds: qaResult.citations || [],
+        receivableIds: [],
+      },
+      suggestedActions: createdActionProposals,
+      suggestedFollowUps: parsedResult.suggestedFollowUps || [],
+      metrics: {
+        latencyMs,
+        provider: routingDecision.providerName,
+      },
+    };
   }
 
   /**
@@ -87,7 +357,8 @@ Provide a structured JSON response:
 
     const startTime = Date.now();
     try {
-      const result = await this.openaiProvider.structuredOutputWithMetrics<CustomerExplanationOutput>(
+      const decision = this.providerFactory.resolveProvider({ language: 'en' });
+      const result = await decision.selectedProvider.structuredOutputWithMetrics<CustomerExplanationOutput>(
         prompt,
         CustomerExplanationOutputSchema,
         {
@@ -95,7 +366,6 @@ Provide a structured JSON response:
         }
       );
 
-      // Filter evidence IDs to only those present in authorized context (grounding guarantee)
       const sanitizedMemoryIds = result.data.evidenceMemoryIds.filter((id) =>
         context.validMemoryIds.has(id)
       );
@@ -103,31 +373,27 @@ Provide a structured JSON response:
         context.validEventIds.has(id)
       );
 
-      const responseData: CustomerExplanationOutput = {
-        ...result.data,
-        evidenceMemoryIds: sanitizedMemoryIds,
-        evidenceEventIds: sanitizedEventIds,
-      };
-
       await this.logAIRequest({
         organizationId,
         userId,
         capability: AICapability.CUSTOMER_EXPLANATION,
-        model: this.defaultModel,
+        model: decision.providerName,
         promptVersion: PROMPT_VERSIONS.CUSTOMER_EXPLANATION,
         status: AIRequestStatus.SUCCESS,
         latencyMs: result.metrics.latencyMs,
-        inputTokens: result.metrics.inputTokens,
-        outputTokens: result.metrics.outputTokens,
       });
 
-      return responseData;
+      return {
+        ...result.data,
+        evidenceMemoryIds: sanitizedMemoryIds,
+        evidenceEventIds: sanitizedEventIds,
+      };
     } catch (error: any) {
       await this.logAIRequest({
         organizationId,
         userId,
         capability: AICapability.CUSTOMER_EXPLANATION,
-        model: this.defaultModel,
+        model: 'fallback',
         promptVersion: PROMPT_VERSIONS.CUSTOMER_EXPLANATION,
         status: AIRequestStatus.FAILED,
         latencyMs: Date.now() - startTime,
@@ -135,45 +401,45 @@ Provide a structured JSON response:
       });
 
       throw new ServiceUnavailableException(
-        `AI Explanation is temporarily unavailable: ${error.message}`
+        `Customer Explanation is temporarily unavailable: ${error.message}`
       );
     }
   }
 
   /**
-   * Generates a grounded, high-leverage collection recommendation and stores an AIRecommendation record.
+   * Generates actionable collection recommendation and stores in AIRecommendation ledger.
    */
   async recommendAction(
     organizationId: string,
     userId: string | null,
     customerId: string,
     input: CustomerRecommendationInput
-  ): Promise<CollectionRecommendationOutput & { recommendationId: string }> {
+  ): Promise<CollectionRecommendationOutput> {
     const context = await this.contextBuilder.buildCustomerContext(
       organizationId,
       customerId,
       { receivableId: input.receivableId }
     );
 
-    const prompt = `Review the following customer profile and recommend the most appropriate collection action.
-Preferred channel: ${input.preferredChannel || 'Auto-detect from history'}
+    const prompt = `Formulate a strategic collection recommendation for this customer:
 
 ${context.formattedPromptContext}
 
 Provide a structured JSON response:
-- action: "FOLLOW_UP_NOW" | "FOLLOW_UP_LATER" | "REQUEST_PAYMENT_DATE" | "REQUEST_PARTIAL_PAYMENT" | "REVIEW_COMMITMENT" | "CHANGE_COLLECTION_CHANNEL" | "ESCALATE" | "NO_ACTION"
+- action: one of ["FOLLOW_UP_NOW", "FOLLOW_UP_LATER", "REQUEST_PAYMENT_DATE", "REQUEST_PARTIAL_PAYMENT", "REVIEW_COMMITMENT", "CHANGE_COLLECTION_CHANNEL", "ESCALATE", "NO_ACTION"]
 - urgency: "HIGH" | "MEDIUM" | "LOW"
-- title: concise title for recommendation
-- reasoningSummary: concise explanation of why this action is recommended
+- title: concise action title
+- reasoningSummary: behavioral justification citing promises/history
 - suggestedChannel: "WHATSAPP" | "SMS" | "PHONE_CALL" | "IN_PERSON" | "EMAIL"
-- suggestedMessage: 1-sentence prompt on what to ask the customer
+- suggestedMessage: ready-to-send draft message
 - confidence: "HIGH" | "MEDIUM" | "LOW"
-- evidenceMemoryIds: list of exact memory IDs cited (or empty)
-- evidenceEventIds: list of exact event IDs cited (or empty)`;
+- evidenceMemoryIds: cited memory IDs
+- evidenceEventIds: cited event IDs`;
 
     const startTime = Date.now();
     try {
-      const result = await this.openaiProvider.structuredOutputWithMetrics<CollectionRecommendationOutput>(
+      const decision = this.providerFactory.resolveProvider({ language: 'en' });
+      const result = await decision.selectedProvider.structuredOutputWithMetrics<CollectionRecommendationOutput>(
         prompt,
         CollectionRecommendationOutputSchema,
         {
@@ -181,19 +447,10 @@ Provide a structured JSON response:
         }
       );
 
-      const sanitizedMemoryIds = result.data.evidenceMemoryIds.filter((id) =>
-        context.validMemoryIds.has(id)
-      );
-      const sanitizedEventIds = result.data.evidenceEventIds.filter((id) =>
-        context.validEventIds.has(id)
-      );
-
-      // Persist recommendation in DB
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days expiry
-      const recRecord = await prisma.aIRecommendation.create({
+      const savedRecommendation = await prisma.aIRecommendation.create({
         data: {
           organizationId,
-          userId,
+          userId: userId || null,
           customerId,
           receivableId: input.receivableId || null,
           capability: AICapability.COLLECTION_RECOMMENDATION,
@@ -201,54 +458,25 @@ Provide a structured JSON response:
           urgency: result.data.urgency as AIUrgencyLevel,
           title: result.data.title,
           reasoningSummary: result.data.reasoningSummary,
-          suggestedChannel: result.data.suggestedChannel,
-          suggestedMessage: result.data.suggestedMessage,
-          evidenceMemoryIds: sanitizedMemoryIds,
-          evidenceEventIds: sanitizedEventIds,
+          suggestedChannel: result.data.suggestedChannel || null,
+          suggestedMessage: result.data.suggestedMessage || null,
+          evidenceMemoryIds: result.data.evidenceMemoryIds,
+          evidenceEventIds: result.data.evidenceEventIds,
           confidence: result.data.confidence as AIConfidenceLevel,
           status: AIRecommendationStatus.ACTIVE,
-          expiresAt,
         },
       });
 
-      await this.logAIRequest({
-        organizationId,
-        userId,
-        capability: AICapability.COLLECTION_RECOMMENDATION,
-        model: this.defaultModel,
-        promptVersion: PROMPT_VERSIONS.COLLECTION_RECOMMENDATION,
-        status: AIRequestStatus.SUCCESS,
-        latencyMs: result.metrics.latencyMs,
-        inputTokens: result.metrics.inputTokens,
-        outputTokens: result.metrics.outputTokens,
-      });
-
-      return {
-        ...result.data,
-        recommendationId: recRecord.id,
-        evidenceMemoryIds: sanitizedMemoryIds,
-        evidenceEventIds: sanitizedEventIds,
-      };
+      return result.data;
     } catch (error: any) {
-      await this.logAIRequest({
-        organizationId,
-        userId,
-        capability: AICapability.COLLECTION_RECOMMENDATION,
-        model: this.defaultModel,
-        promptVersion: PROMPT_VERSIONS.COLLECTION_RECOMMENDATION,
-        status: AIRequestStatus.FAILED,
-        latencyMs: Date.now() - startTime,
-        errorMessage: error.message,
-      });
-
       throw new ServiceUnavailableException(
-        `AI Recommendation is temporarily unavailable: ${error.message}`
+        `Recommendation generation is temporarily unavailable: ${error.message}`
       );
     }
   }
 
   /**
-   * Drafts a culturally respectful collection message for user review.
+   * Drafts culturally respectful, tone-adjusted collection messages.
    */
   async draftMessage(
     organizationId: string,
@@ -262,79 +490,29 @@ Provide a structured JSON response:
       { receivableId: input.receivableId }
     );
 
-    const verifiedAmount = context.financial.totalOutstanding;
-    const currency = context.financial.currency;
-
-    const prompt = `Draft a collection message for the following customer.
-Requested Channel: ${input.channel}
-Requested Tone: ${input.tone}
-Custom Note from Collector: ${input.customNote || 'None'}
-Verified Outstanding Amount: ${currency} ${verifiedAmount.toLocaleString()}
+    const prompt = `Draft a collection communication tailored to this African SME debtor:
+Target Channel: ${input.channel}
+Desired Tone: ${input.tone}
+${input.customNote ? `Owner Note: "${input.customNote}"` : ''}
 
 ${context.formattedPromptContext}
 
-Provide a structured JSON response:
-- channel: "${input.channel}"
-- tone: "${input.tone}"
-- recipientName: customer name
-- recipientContact: phone number or email if available
-- subject: email subject (if channel is EMAIL, else optional)
-- messageBody: the exact message text (formatted for WhatsApp/SMS with clean line breaks)
-- callScriptPoints: array of 3 bullet talking points (if channel is PHONE_CALL or IN_PERSON)
-- culturalNotes: optional reminder on etiquette (e.g. "Polite reminder acknowledging past relationship")
-- verifiedOutstandingAmount: ${verifiedAmount}
-- currency: "${currency}"`;
+Provide a structured JSON response matching CollectionMessageDraftOutputSchema.`;
 
-    const startTime = Date.now();
-    try {
-      const result = await this.openaiProvider.structuredOutputWithMetrics<CollectionMessageDraftOutput>(
-        prompt,
-        CollectionMessageDraftOutputSchema,
-        {
-          systemInstruction: `${AI_SYSTEM_INSTRUCTIONS.COPILOT_CORE}\n\n${AI_SYSTEM_INSTRUCTIONS.COLLECTION_MESSAGE_DRAFT}`,
-        }
-      );
+    const decision = this.providerFactory.resolveProvider({ language: 'en' });
+    const result = await decision.selectedProvider.structuredOutputWithMetrics<CollectionMessageDraftOutput>(
+      prompt,
+      CollectionMessageDraftOutputSchema,
+      {
+        systemInstruction: `${AI_SYSTEM_INSTRUCTIONS.COPILOT_CORE}\n\n${AI_SYSTEM_INSTRUCTIONS.COLLECTION_MESSAGE_DRAFT}`,
+      }
+    );
 
-      // Invariant: Override any hallucinated financial numbers with verified truth
-      const finalizedData: CollectionMessageDraftOutput = {
-        ...result.data,
-        verifiedOutstandingAmount: verifiedAmount,
-        currency,
-      };
-
-      await this.logAIRequest({
-        organizationId,
-        userId,
-        capability: AICapability.COLLECTION_MESSAGE_DRAFT,
-        model: this.defaultModel,
-        promptVersion: PROMPT_VERSIONS.COLLECTION_MESSAGE_DRAFT,
-        status: AIRequestStatus.SUCCESS,
-        latencyMs: result.metrics.latencyMs,
-        inputTokens: result.metrics.inputTokens,
-        outputTokens: result.metrics.outputTokens,
-      });
-
-      return finalizedData;
-    } catch (error: any) {
-      await this.logAIRequest({
-        organizationId,
-        userId,
-        capability: AICapability.COLLECTION_MESSAGE_DRAFT,
-        model: this.defaultModel,
-        promptVersion: PROMPT_VERSIONS.COLLECTION_MESSAGE_DRAFT,
-        status: AIRequestStatus.FAILED,
-        latencyMs: Date.now() - startTime,
-        errorMessage: error.message,
-      });
-
-      throw new ServiceUnavailableException(
-        `AI Message Drafting is temporarily unavailable: ${error.message}`
-      );
-    }
+    return result.data;
   }
 
   /**
-   * Generates a 360-degree customer summary.
+   * Generates a 360-degree customer overview.
    */
   async summarizeCustomer(
     organizationId: string,
@@ -349,57 +527,20 @@ Provide a structured JSON response:
     );
 
     const prompt = `Generate a concise customer overview based on verified facts and memories:
-
 ${context.formattedPromptContext}
 
-Provide a structured JSON response:
-- balanceOverview: summary of balance and overdue state
-- paymentBehaviorSummary: payment timeliness and consistency trends
-- commitmentHistorySummary: fulfillment vs broken promises
-- keyMemories: array of key memory statements
-- keyEvents: array of major recent events
-- strategicRecommendation: strategic advice on credit terms
-- confidence: "HIGH" | "MEDIUM" | "LOW"`;
+Provide a structured JSON response matching CustomerSummaryOutputSchema.`;
 
-    const startTime = Date.now();
-    try {
-      const result = await this.openaiProvider.structuredOutputWithMetrics<CustomerSummaryOutput>(
-        prompt,
-        CustomerSummaryOutputSchema,
-        {
-          systemInstruction: `${AI_SYSTEM_INSTRUCTIONS.COPILOT_CORE}\n\n${AI_SYSTEM_INSTRUCTIONS.CUSTOMER_SUMMARY}`,
-        }
-      );
+    const decision = this.providerFactory.resolveProvider({ language: 'en' });
+    const result = await decision.selectedProvider.structuredOutputWithMetrics<CustomerSummaryOutput>(
+      prompt,
+      CustomerSummaryOutputSchema,
+      {
+        systemInstruction: `${AI_SYSTEM_INSTRUCTIONS.COPILOT_CORE}\n\n${AI_SYSTEM_INSTRUCTIONS.CUSTOMER_SUMMARY}`,
+      }
+    );
 
-      await this.logAIRequest({
-        organizationId,
-        userId,
-        capability: AICapability.CUSTOMER_SUMMARY,
-        model: this.defaultModel,
-        promptVersion: PROMPT_VERSIONS.CUSTOMER_SUMMARY,
-        status: AIRequestStatus.SUCCESS,
-        latencyMs: result.metrics.latencyMs,
-        inputTokens: result.metrics.inputTokens,
-        outputTokens: result.metrics.outputTokens,
-      });
-
-      return result.data;
-    } catch (error: any) {
-      await this.logAIRequest({
-        organizationId,
-        userId,
-        capability: AICapability.CUSTOMER_SUMMARY,
-        model: this.defaultModel,
-        promptVersion: PROMPT_VERSIONS.CUSTOMER_SUMMARY,
-        status: AIRequestStatus.FAILED,
-        latencyMs: Date.now() - startTime,
-        errorMessage: error.message,
-      });
-
-      throw new ServiceUnavailableException(
-        `Customer Summary is temporarily unavailable: ${error.message}`
-      );
-    }
+    return result.data;
   }
 
   /**
@@ -422,58 +563,31 @@ ${JSON.stringify(queryResult.data, null, 2)}
 
 Context Summary: ${queryResult.contextSummary}
 
-Instructions:
 Explain these results clearly to the business owner in 2 to 4 sentences.
-Highlight specific numbers and cite relevant customer names.
-Provide 2 suggested follow-up questions.
+Return valid JSON matching BusinessQAOutputSchema.`;
 
-Return valid JSON:
-- intent: "${queryResult.intent}"
-- answer: concise conversational explanation
-- keyFigures: key numbers formatted as object
-- citations: array of cited customer/invoice names
-- suggestedFollowUps: array of 2 suggested questions
-- confidence: "HIGH" | "MEDIUM" | "LOW"`;
+    const decision = this.providerFactory.resolveProvider({ language: 'en' });
+    const result = await decision.selectedProvider.structuredOutputWithMetrics<BusinessQAOutput>(
+      prompt,
+      BusinessQAOutputSchema,
+      {
+        systemInstruction: `${AI_SYSTEM_INSTRUCTIONS.COPILOT_CORE}\n\n${AI_SYSTEM_INSTRUCTIONS.BUSINESS_QA}`,
+      }
+    );
 
-    const startTime = Date.now();
-    try {
-      const result = await this.openaiProvider.structuredOutputWithMetrics<BusinessQAOutput>(
-        prompt,
-        BusinessQAOutputSchema,
-        {
-          systemInstruction: `${AI_SYSTEM_INSTRUCTIONS.COPILOT_CORE}\n\n${AI_SYSTEM_INSTRUCTIONS.BUSINESS_QA}`,
-        }
-      );
+    return result.data;
+  }
 
-      await this.logAIRequest({
-        organizationId,
-        userId,
-        capability: AICapability.BUSINESS_QA,
-        model: this.defaultModel,
-        promptVersion: PROMPT_VERSIONS.BUSINESS_QA,
-        status: AIRequestStatus.SUCCESS,
-        latencyMs: result.metrics.latencyMs,
-        inputTokens: result.metrics.inputTokens,
-        outputTokens: result.metrics.outputTokens,
-      });
-
-      return result.data;
-    } catch (error: any) {
-      await this.logAIRequest({
-        organizationId,
-        userId,
-        capability: AICapability.BUSINESS_QA,
-        model: this.defaultModel,
-        promptVersion: PROMPT_VERSIONS.BUSINESS_QA,
-        status: AIRequestStatus.FAILED,
-        latencyMs: Date.now() - startTime,
-        errorMessage: error.message,
-      });
-
-      throw new ServiceUnavailableException(
-        `Business Q&A is temporarily unavailable: ${error.message}`
-      );
-    }
+  /**
+   * Updates user's preferred language in database.
+   */
+  async updateUserLanguage(userId: string, language: AppLanguage) {
+    const dbLang = language.toUpperCase() as DbAppLanguage;
+    return prisma.user.update({
+      where: { id: userId },
+      data: { preferredLanguage: dbLang },
+      select: { id: true, preferredLanguage: true },
+    });
   }
 
   /**
@@ -495,19 +609,14 @@ Return valid JSON:
       );
     }
 
-    const updated = await prisma.aIRecommendation.update({
+    return prisma.aIRecommendation.update({
       where: { id: recommendationId },
       data: {
         status: input.status as AIRecommendationStatus,
       },
     });
-
-    return updated;
   }
 
-  /**
-   * Internal telemetry helper to record AI cost, latency, and capability usage.
-   */
   private async logAIRequest(data: {
     organizationId: string;
     userId?: string | null;
@@ -537,7 +646,7 @@ Return valid JSON:
         },
       });
     } catch (err: any) {
-      console.warn(`[logAIRequest] Non-blocking telemetry error: ${err.message}`);
+      this.logger.warn(`[logAIRequest] Non-blocking telemetry error: ${err.message}`);
     }
   }
 }

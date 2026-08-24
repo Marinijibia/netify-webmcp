@@ -7,8 +7,10 @@ import {
 } from './billing.types';
 
 // RevenueCat SDK public API keys can be supplied via environment/constants
+const REVENUECAT_KEY = process.env.EXPO_PUBLIC_REVENUECAT_KEY || '';
 const REVENUECAT_APPLE_KEY = process.env.EXPO_PUBLIC_REVENUECAT_APPLE_KEY || '';
 const REVENUECAT_GOOGLE_KEY = process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_KEY || '';
+const REVENUECAT_SAMSUNG_KEY = process.env.EXPO_PUBLIC_REVENUECAT_SAMSUNG_KEY || '';
 
 let Purchases: any = null;
 
@@ -29,6 +31,8 @@ export class RevenueCatBillingProvider implements BillingProvider {
 
     const key =
       apiKey ||
+      REVENUECAT_SAMSUNG_KEY ||
+      REVENUECAT_KEY ||
       (Platform.OS === 'ios' ? REVENUECAT_APPLE_KEY : REVENUECAT_GOOGLE_KEY);
 
     if (!key || !Purchases) {

@@ -1,0 +1,14 @@
+# EAS Build Ignore
+node_modules
+.expo
+.expo-shared
+dist
+build
+web-build
+android
+ios
+.git
+.github
+.vscode
+.idea
+*.log

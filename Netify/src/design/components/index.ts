@@ -33,3 +33,6 @@ export * from './ProPaywallModal';
 export * from './BusinessPaywallModal';
 export * from './BusinessSwitcherModal';
 export * from './SubscriptionCard';
+export * from './LanguageSelectorModal';
+export * from './EvidenceDrawer';
+export * from './ActionProposalCard';

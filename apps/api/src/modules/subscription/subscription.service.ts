@@ -260,6 +260,10 @@ export class SubscriptionService {
           break;
         }
       }
+    } else {
+      this.logger.warn(
+        `RevenueCat event ${event.id} contains unknown product ${event.product_id} or entitlement ${event.entitlement_id}. Defaulting to FREE.`
+      );
     }
 
     let targetStatus: SubscriptionStatus = SubscriptionStatus.ACTIVE;
@@ -272,7 +276,13 @@ export class SubscriptionService {
       case 'RENEWAL':
       case 'UNCANCELLATION':
       case 'SUBSCRIPTION_EXTENDED':
+      case 'UNPAUSE':
+      case 'TRANSFER':
         targetStatus = SubscriptionStatus.ACTIVE;
+        break;
+
+      case 'PAUSE':
+        targetStatus = SubscriptionStatus.INACTIVE;
         break;
 
       case 'CANCELLATION':
@@ -298,6 +308,7 @@ export class SubscriptionService {
         break;
 
       default:
+        this.logger.log(`RevenueCat event type '${event.type}' recognized as informational.`);
         targetStatus = SubscriptionStatus.ACTIVE;
         break;
     }

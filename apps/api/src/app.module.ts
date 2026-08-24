@@ -21,6 +21,8 @@ import { NotificationModule } from './modules/notification/notification.module';
 import { SubscriptionModule } from './modules/subscription/subscription.module';
 import { BusinessEventModule } from './modules/business-event/business-event.module';
 import { BusinessMemoryModule } from './modules/business-memory/business-memory.module';
+import { CommandCenterModule } from './modules/command-center/command-center.module';
+import { SignalModule } from './modules/signal/signal.module';
 
 @Module({
   imports: [
@@ -61,8 +63,10 @@ import { BusinessMemoryModule } from './modules/business-memory/business-memory.
     CollectionsModule,
     MemoryModule,
     AIModule,
+    CommandCenterModule,
     DocumentModule,
     NotificationModule,
+    SignalModule,
     SubscriptionModule,
   ],
   providers: [

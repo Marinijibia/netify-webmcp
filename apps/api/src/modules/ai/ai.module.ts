@@ -6,6 +6,8 @@ import { CollectionPriorityService } from './collection-priority.service';
 import { CollectionAttentionService } from './collection-attention.service';
 import { AIContextBuilder } from './ai-context-builder';
 import { BusinessQAService } from './business-qa.service';
+import { ConversationService } from './conversation.service';
+import { ActionExecutionService } from './action-execution.service';
 import { AuthModule } from '../auth/auth.module';
 import { SubscriptionModule } from '../subscription/subscription.module';
 
@@ -18,6 +20,8 @@ import { SubscriptionModule } from '../subscription/subscription.module';
     CollectionAttentionService,
     AIContextBuilder,
     BusinessQAService,
+    ConversationService,
+    ActionExecutionService,
   ],
   exports: [
     AIService,
@@ -25,6 +29,8 @@ import { SubscriptionModule } from '../subscription/subscription.module';
     CollectionAttentionService,
     AIContextBuilder,
     BusinessQAService,
+    ConversationService,
+    ActionExecutionService,
   ],
 })
 export class AIModule {}

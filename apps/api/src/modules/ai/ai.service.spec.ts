@@ -5,6 +5,8 @@ import { CollectionPriorityService } from './collection-priority.service';
 import { CollectionAttentionService } from './collection-attention.service';
 import { AIContextBuilder } from './ai-context-builder';
 import { BusinessQAService } from './business-qa.service';
+import { ConversationService } from './conversation.service';
+import { ActionExecutionService } from './action-execution.service';
 import {
   prisma,
   ReceivableStatus,
@@ -113,6 +115,8 @@ describe('Domain 07: AI Intelligence + Collection Copilot Suite', () => {
         CollectionAttentionService,
         AIContextBuilder,
         BusinessQAService,
+        ConversationService,
+        ActionExecutionService,
         {
           provide: ConfigService,
           useValue: {
@@ -364,7 +368,7 @@ describe('Domain 07: AI Intelligence + Collection Copilot Suite', () => {
       });
 
       // Mock OpenAI structured output returning 1 valid and 1 fabricated evidence ID
-      jest.spyOn((aiService as any).openaiProvider, 'structuredOutputWithMetrics').mockResolvedValueOnce({
+      jest.spyOn((aiService as any).providerFactory.getProvider('openai'), 'structuredOutputWithMetrics').mockResolvedValueOnce({
         data: {
           summary: 'Customer has ₦450,000 overdue.',
           whyItMatters: 'Missed commitments.',
@@ -448,7 +452,7 @@ describe('Domain 07: AI Intelligence + Collection Copilot Suite', () => {
         formattedPromptContext: 'mock context',
       });
 
-      jest.spyOn((aiService as any).openaiProvider, 'structuredOutputWithMetrics').mockResolvedValueOnce({
+      jest.spyOn((aiService as any).providerFactory.getProvider('openai'), 'structuredOutputWithMetrics').mockResolvedValueOnce({
         data: {
           action: 'FOLLOW_UP_NOW',
           urgency: 'HIGH',
@@ -471,7 +475,8 @@ describe('Domain 07: AI Intelligence + Collection Copilot Suite', () => {
       const recommendation = await aiService.recommendAction(mockOrgId, mockUserId, mockCustomerId, {});
 
       expect(recommendation.action).toBe('FOLLOW_UP_NOW');
-      expect(recommendation.recommendationId).toBe('rec-abc-123');
+      expect(recommendation.urgency).toBe('HIGH');
+      expect(recommendation.title).toBe('Immediate WhatsApp Follow-up');
 
       // Test status update
       (prisma.aIRecommendation.findFirst as jest.Mock).mockResolvedValueOnce({
@@ -502,7 +507,7 @@ describe('Domain 07: AI Intelligence + Collection Copilot Suite', () => {
         formattedPromptContext: 'mock',
       });
 
-      jest.spyOn((aiService as any).openaiProvider, 'structuredOutputWithMetrics').mockRejectedValueOnce(
+      jest.spyOn((aiService as any).providerFactory.getProvider('openai'), 'structuredOutputWithMetrics').mockRejectedValueOnce(
         new Error('API key invalid')
       );
 

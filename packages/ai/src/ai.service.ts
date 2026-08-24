@@ -1,15 +1,21 @@
 import { AIProvider } from './interfaces/ai-provider.interface';
-import { GeminiProvider } from './providers/gemini.provider';
-import { OpenAIProvider } from './providers/openai.provider';
+import { AIProviderFactory } from './providers/ai-provider.factory';
 import { ExtractionCapability } from './capabilities/extraction.capability';
 import { RiskReasoningCapability } from './capabilities/risk-reasoning.capability';
 import { MessagingCapability } from './capabilities/messaging.capability';
 import { InvestigationCapability } from './capabilities/investigation.capability';
 import { MemoryCapability } from './capabilities/memory.capability';
+import { IntentRoutingCapability } from './capabilities/intent-routing.capability';
+import {
+  AIRouterConfig,
+  AIRoutingOptions,
+  AIRoutingDecision,
+} from './interfaces/ai-router.interface';
 import {
   ExtractCommitmentInput,
   ExtractedCommitmentOutput,
-  DraftMessageInput,
+  StructuredBusinessIntent,
+  AppLanguage,
 } from '@netify/validation';
 import {
   DeterministicRiskSignals,
@@ -19,38 +25,58 @@ import {
   AIInvestigationResponse,
 } from '@netify/types';
 
-export interface AIServiceConfig {
-  provider: 'gemini' | 'openai';
-  geminiApiKey?: string;
-  geminiModel?: string;
-  openaiApiKey?: string;
-  openaiModel?: string;
+export interface AIServiceConfig extends Partial<AIRouterConfig> {
+  provider?: 'gemini' | 'openai' | 'inna';
 }
 
 export class AIService {
-  private provider: AIProvider;
+  private factory: AIProviderFactory;
+  private defaultProvider: AIProvider;
   public readonly extraction: ExtractionCapability;
   public readonly risk: RiskReasoningCapability;
   public readonly messaging: MessagingCapability;
   public readonly investigation: InvestigationCapability;
   public readonly memory: MemoryCapability;
+  public readonly intent: IntentRoutingCapability;
 
   constructor(config: AIServiceConfig) {
-    if (config.provider === 'openai') {
-      this.provider = new OpenAIProvider(config.openaiApiKey, config.openaiModel);
-    } else {
-      this.provider = new GeminiProvider(config.geminiApiKey, config.geminiModel);
-    }
+    const routerConfig: AIRouterConfig = {
+      defaultProvider: config.provider || 'gemini',
+      enableInnaForAfricanLanguages: config.enableInnaForAfricanLanguages ?? true,
+      geminiApiKey: config.geminiApiKey,
+      geminiModel: config.geminiModel,
+      openaiApiKey: config.openaiApiKey,
+      openaiModel: config.openaiModel,
+      innaApiKey: config.innaApiKey,
+      innaBaseUrl: config.innaBaseUrl,
+      innaModel: config.innaModel,
+    };
 
-    this.extraction = new ExtractionCapability(this.provider);
-    this.risk = new RiskReasoningCapability(this.provider);
-    this.messaging = new MessagingCapability(this.provider);
-    this.investigation = new InvestigationCapability(this.provider);
-    this.memory = new MemoryCapability(this.provider);
+    this.factory = new AIProviderFactory(routerConfig);
+    const initialDecision = this.factory.resolveProvider({ language: 'en' });
+    this.defaultProvider = initialDecision.selectedProvider;
+
+    this.extraction = new ExtractionCapability(this.defaultProvider);
+    this.risk = new RiskReasoningCapability(this.defaultProvider);
+    this.messaging = new MessagingCapability(this.defaultProvider);
+    this.investigation = new InvestigationCapability(this.defaultProvider);
+    this.memory = new MemoryCapability(this.defaultProvider);
+    this.intent = new IntentRoutingCapability(this.defaultProvider);
+  }
+
+  resolveProvider(options?: AIRoutingOptions): AIRoutingDecision {
+    return this.factory.resolveProvider(options);
   }
 
   getProviderName(): string {
-    return this.provider.name;
+    return this.defaultProvider.name;
+  }
+
+  async detectIntent(
+    query: string,
+    preferredLanguage?: AppLanguage
+  ): Promise<StructuredBusinessIntent> {
+    return this.intent.detectIntentAndLanguage(query, preferredLanguage);
   }
 
   async extractCommitment(input: ExtractCommitmentInput): Promise<ExtractedCommitmentOutput> {

@@ -172,7 +172,7 @@ export class EntitlementService {
     let highestPlan: SubscriptionPlan = SubscriptionPlan.FREE;
 
     for (const m of ownedMemberships) {
-      const activeSub = m.organization.subscriptions[0];
+      const activeSub = m.organization?.subscriptions?.[0];
       if (activeSub) {
         if (activeSub.plan === SubscriptionPlan.ENTERPRISE) {
           highestPlan = SubscriptionPlan.ENTERPRISE;

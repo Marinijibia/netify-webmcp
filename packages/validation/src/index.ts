@@ -10,3 +10,5 @@ export * from './business-event.schema';
 export * from './business-memory.schema';
 export * from './ai.schema';
 export * from './subscription.schema';
+export * from './command-center.schema';
+export * from './notification.schema';

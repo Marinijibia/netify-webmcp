@@ -6,7 +6,9 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { TodayAttentionData } from '../../services/api/ai';
 
 interface DailyBriefingCardProps {
-  data: TodayAttentionData | null;
+  data?: TodayAttentionData | null;
+  briefing?: string;
+  calculatedAt?: string;
   loading?: boolean;
   onAskCopilot?: () => void;
   onRefresh?: () => void;
@@ -14,13 +16,18 @@ interface DailyBriefingCardProps {
 
 export function DailyBriefingCard({
   data,
+  briefing,
+  calculatedAt,
   loading = false,
   onAskCopilot,
   onRefresh,
 }: DailyBriefingCardProps) {
   const { tokens, isDark } = useTheme();
 
-  if (loading && !data) {
+  const briefingText = briefing || data?.executiveBriefing;
+  const timestamp = calculatedAt || data?.calculatedAt;
+
+  if (loading && !briefingText) {
     return (
       <View
         style={[
@@ -38,7 +45,7 @@ export function DailyBriefingCard({
     );
   }
 
-  if (!data) return null;
+  if (!briefingText) return null;
 
   return (
     <View
@@ -54,7 +61,7 @@ export function DailyBriefingCard({
       <View style={styles.headerRow}>
         <View style={styles.badgeContainer}>
           <MaterialCommunityIcons name="robot" size={16} color="#00A581" />
-          <Text style={styles.badgeText}>Collection Copilot Daily Briefing</Text>
+          <Text style={styles.badgeText}>Command Center Daily Briefing</Text>
         </View>
 
         {onAskCopilot && (
@@ -64,61 +71,82 @@ export function DailyBriefingCard({
             activeOpacity={0.8}
           >
             <Feather name="message-square" size={13} color="#FFFFFF" />
-            <Text style={styles.copilotButtonText}>Ask AI</Text>
+            <Text style={styles.copilotButtonText}>Ask Copilot</Text>
           </TouchableOpacity>
         )}
       </View>
 
       {/* Executive Narrative */}
       <Text style={[styles.briefingText, { color: tokens.textPrimary }]}>
-        {data.executiveBriefing}
+        {briefingText}
       </Text>
 
-      {/* Metrics Row */}
-      <View
-        style={[
-          styles.metricsRow,
-          {
-            borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
-          },
-        ]}
-      >
-        <View style={styles.metricItem}>
-          <Text style={[styles.metricLabel, { color: tokens.textSecondary }]}>
-            Overdue Balance
-          </Text>
-          <Text style={[styles.metricValue, { color: data.totalOverdue > 0 ? '#EF4444' : '#10B981' }]}>
-            {data.currency} {data.totalOverdue.toLocaleString()}
-          </Text>
-        </View>
-
-        <View style={styles.metricDivider} />
-
-        <View style={styles.metricItem}>
-          <Text style={[styles.metricLabel, { color: tokens.textSecondary }]}>
-            Promises Due Today
-          </Text>
-          <Text style={[styles.metricValue, { color: '#00A581' }]}>
-            {data.commitmentsDueCount}{' '}
-            <Text style={styles.metricUnit}>
-              ({data.currency} {data.commitmentsDueAmount.toLocaleString()})
+      {/* Metrics Row if data is available */}
+      {data && (
+        <View
+          style={[
+            styles.metricsRow,
+            {
+              borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+            },
+          ]}
+        >
+          <View style={styles.metricItem}>
+            <Text style={[styles.metricLabel, { color: tokens.textSecondary }]}>
+              Overdue Balance
             </Text>
-          </Text>
-        </View>
+            <Text style={[styles.metricValue, { color: data.totalOverdue > 0 ? '#EF4444' : '#10B981' }]}>
+              {data.currency} {data.totalOverdue.toLocaleString()}
+            </Text>
+          </View>
 
-        <View style={styles.metricDivider} />
+          <View style={styles.metricDivider} />
 
-        <View style={styles.metricItem}>
-          <Text style={[styles.metricLabel, { color: tokens.textSecondary }]}>
-            High Priority
-          </Text>
-          <View style={styles.priorityCountBadge}>
-            <Text style={styles.priorityCountText}>
-              {data.highPriorityCount} accounts
+          <View style={styles.metricItem}>
+            <Text style={[styles.metricLabel, { color: tokens.textSecondary }]}>
+              Promises Due Today
+            </Text>
+            <Text style={[styles.metricValue, { color: '#00A581' }]}>
+              {data.commitmentsDueCount}{' '}
+              <Text style={styles.metricUnit}>
+                ({data.currency} {data.commitmentsDueAmount.toLocaleString()})
+              </Text>
+            </Text>
+          </View>
+
+          <View style={styles.metricDivider} />
+
+          <View style={styles.metricItem}>
+            <Text style={[styles.metricLabel, { color: tokens.textSecondary }]}>
+              Priority Cases
+            </Text>
+            <Text
+              style={[
+                styles.metricValue,
+                { color: data.highPriorityCount > 0 ? '#F59E0B' : '#10B981' },
+              ]}
+            >
+              {data.highPriorityCount}
             </Text>
           </View>
         </View>
-      </View>
+      )}
+
+      {/* Footer Timestamp */}
+      {timestamp && (
+        <View style={styles.footerRow}>
+          <Feather name="clock" size={11} color={tokens.textMuted} />
+          <Text style={[styles.timestampText, { color: tokens.textMuted }]}>
+            Updated {new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+          {onRefresh && (
+            <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
+              <Feather name="refresh-cw" size={11} color="#00A581" />
+              <Text style={styles.refreshText}>Refresh</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -128,13 +156,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     padding: 16,
-    marginBottom: 20,
+    marginVertical: 4,
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    alignItems: 'center',
+    marginBottom: 10,
   },
   badgeContainer: {
     flexDirection: 'row',
@@ -151,19 +179,19 @@ const styles = StyleSheet.create({
   copilotButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 20,
+    borderRadius: 12,
   },
   copilotButtonText: {
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
   briefingText: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 14.5,
+    lineHeight: 22,
     fontWeight: '500',
     marginBottom: 14,
   },
@@ -171,22 +199,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderTopWidth: 1,
     paddingTop: 12,
+    borderTopWidth: 1,
+    marginBottom: 10,
   },
   metricItem: {
     flex: 1,
     alignItems: 'center',
   },
-  metricDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
-  },
   metricLabel: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: '500',
-    marginBottom: 4,
+    marginBottom: 2,
     textAlign: 'center',
   },
   metricValue: {
@@ -196,22 +220,36 @@ const styles = StyleSheet.create({
   },
   metricUnit: {
     fontSize: 10,
-    fontWeight: '500',
+    fontWeight: '400',
   },
-  priorityCountBadge: {
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+  metricDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: 'rgba(0, 0, 0, 0.08)',
   },
-  priorityCountText: {
-    color: '#EF4444',
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  timestampText: {
     fontSize: 11,
-    fontWeight: '700',
+    flex: 1,
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  refreshText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#00A581',
   },
   loadingText: {
     fontSize: 13,
+    fontStyle: 'italic',
     textAlign: 'center',
-    paddingVertical: 12,
+    paddingVertical: 8,
   },
 });
