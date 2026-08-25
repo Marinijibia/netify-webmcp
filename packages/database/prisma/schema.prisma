@@ -326,6 +326,7 @@ enum AppLanguage {
   YO
   IG
   PCM
+  FF
 }
 
 enum NotificationChannel {

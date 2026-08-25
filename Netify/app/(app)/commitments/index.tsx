@@ -10,12 +10,14 @@ import {
   TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useTheme } from '../../../src/design/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '@/design/theme';
 import {
   commitmentsApi,
   PaymentCommitmentItem,
   CommitmentStatus,
-} from '../../../src/services/api/commitments';
+} from '@/services/api/commitments';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -24,8 +26,11 @@ import {
   AlertCircleIcon,
   CheckCircleIcon,
   ClockIcon,
-  TrendingUpIcon,
-} from '../../../src/design/icons';
+} from '@/design/icons';
+import Feather from '@expo/vector-icons/Feather';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { Avatar, Shimmer } from '@/design/components';
+import { GRADIENTS, GRADIENT_DIRECTION } from '@/design/tokens/gradients';
 
 type TimeframeFilter = 'ALL' | 'TODAY' | 'UPCOMING' | 'MISSED' | 'FULFILLED';
 
@@ -39,7 +44,7 @@ const TIMEFRAME_TABS: { label: string; value: TimeframeFilter }[] = [
 
 export default function CommitmentsScreen() {
   const router = useRouter();
-  const { tokens } = useTheme();
+  const { tokens, isDark } = useTheme();
 
   const [activeTab, setActiveTab] = useState<TimeframeFilter>('TODAY');
   const [commitments, setCommitments] = useState<PaymentCommitmentItem[]>([]);
@@ -109,40 +114,45 @@ export default function CommitmentsScreen() {
     if (status === 'FULFILLED') {
       return {
         label: 'FULFILLED',
-        bgColor: '#DEF7EC',
-        textColor: '#03543F',
-        icon: <CheckCircleIcon size={14} color="#03543F" />,
+        stripeColor: '#16A34A',
+        bgColor: isDark ? 'rgba(22,163,74,0.2)' : 'rgba(22,163,74,0.12)',
+        textColor: '#16A34A',
+        icon: <CheckCircleIcon size={12} color="#16A34A" />,
       };
     }
     if (status === 'PARTIALLY_FULFILLED') {
       return {
         label: 'PARTIAL',
-        bgColor: '#E1EFFE',
-        textColor: '#1E429F',
-        icon: <ClockIcon size={14} color="#1E429F" />,
+        stripeColor: '#3B82F6',
+        bgColor: isDark ? 'rgba(59,130,246,0.2)' : 'rgba(59,130,246,0.12)',
+        textColor: '#3B82F6',
+        icon: <ClockIcon size={12} color="#3B82F6" />,
       };
     }
     if (status === 'MISSED' || isMissed) {
       return {
         label: 'MISSED',
-        bgColor: '#FDE8E8',
-        textColor: '#9B1C1C',
-        icon: <AlertCircleIcon size={14} color="#9B1C1C" />,
+        stripeColor: '#EF4444',
+        bgColor: isDark ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.12)',
+        textColor: '#EF4444',
+        icon: <AlertCircleIcon size={12} color="#EF4444" />,
       };
     }
     if (status === 'CANCELLED') {
       return {
         label: 'CANCELLED',
-        bgColor: '#F3F4F6',
-        textColor: '#6B7280',
-        icon: <ClockIcon size={14} color="#6B7280" />,
+        stripeColor: '#94A3B8',
+        bgColor: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(148,163,184,0.12)',
+        textColor: '#94A3B8',
+        icon: <ClockIcon size={12} color="#94A3B8" />,
       };
     }
     return {
       label: 'PENDING',
-      bgColor: '#FEF08A',
-      textColor: '#713F12',
-      icon: <ClockIcon size={14} color="#713F12" />,
+      stripeColor: '#F59E0B',
+      bgColor: isDark ? 'rgba(245,158,11,0.2)' : 'rgba(245,158,11,0.12)',
+      textColor: '#F59E0B',
+      icon: <ClockIcon size={12} color="#F59E0B" />,
     };
   };
 
@@ -158,157 +168,161 @@ export default function CommitmentsScreen() {
 
     return (
       <TouchableOpacity
-        style={[
-          styles.commitmentCard,
-          {
-            backgroundColor: tokens.surface,
-            borderColor: tokens.border,
-          },
-        ]}
+        style={styles.cardWrapper}
+        activeOpacity={0.75}
         onPress={() => router.push(`/(app)/commitments/${item.id}` as any)}
       >
-        <View style={styles.cardHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.customerName, { color: tokens.textPrimary }]} numberOfLines={1}>
-              {item.customer?.name || 'Customer'}
-            </Text>
-            {item.receivable?.reference && (
-              <Text style={[styles.receivableRef, { color: tokens.textSecondary }]}>
-                Ref: {item.receivable.reference}
-              </Text>
-            )}
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: badge.bgColor }]}>
-            {badge.icon}
-            <Text style={[styles.statusBadgeText, { color: badge.textColor }]}>{badge.label}</Text>
-          </View>
-        </View>
-
-        <View style={styles.cardDivider} />
-
-        <View style={styles.cardBody}>
-          <View style={styles.amountColumn}>
-            <Text style={[styles.metricLabel, { color: tokens.textSecondary }]}>Promised Amount</Text>
-            <Text style={[styles.amountValue, { color: tokens.textPrimary }]}>{formattedAmount}</Text>
-          </View>
-
-          <View style={styles.dateColumn}>
-            <Text style={[styles.metricLabel, { color: tokens.textSecondary }]}>Promise Date</Text>
-            <View style={styles.dateRow}>
-              <CalendarIcon size={14} color={tokens.textSecondary} />
-              <Text style={[styles.dateValue, { color: tokens.textPrimary }]}>{promisedDate}</Text>
-            </View>
-          </View>
-        </View>
-
-        {item.daysOverdue && item.daysOverdue > 0 && item.status !== 'FULFILLED' ? (
-          <View style={[styles.overdueBanner, { backgroundColor: '#FDE8E8' }]}>
-            <AlertCircleIcon size={14} color="#9B1C1C" />
-            <Text style={styles.overdueBannerText}>
-              Missed by {item.daysOverdue} {item.daysOverdue === 1 ? 'day' : 'days'}
-            </Text>
-          </View>
-        ) : null}
-
-        {item.notes ? (
-          <Text style={[styles.notesText, { color: tokens.textSecondary }]} numberOfLines={2}>
-            "{item.notes}"
-          </Text>
-        ) : null}
-      </TouchableOpacity>
-    );
-  };
-
-  return (
-    <View style={[styles.container, { backgroundColor: tokens.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: tokens.border }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <ChevronLeftIcon size={24} color={tokens.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: tokens.textPrimary }]}>Payment Promises</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      {/* Timeframe Filter Tabs */}
-      <View style={[styles.tabsWrapper, { borderBottomColor: tokens.border }]}>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={TIMEFRAME_TABS}
-          keyExtractor={(item) => item.value}
-          contentContainerStyle={styles.tabsContainer}
-          renderItem={({ item }) => {
-            const isSelected = activeTab === item.value;
-            return (
-              <TouchableOpacity
-                style={[
-                  styles.tab,
-                  isSelected && {
-                    borderBottomColor: tokens.primary,
-                    borderBottomWidth: 2,
-                  },
-                ]}
-                onPress={() => setActiveTab(item.value)}
-              >
-                <Text
-                  style={[
-                    styles.tabText,
-                    {
-                      color: isSelected ? tokens.primary : tokens.textSecondary,
-                      fontWeight: isSelected ? '700' : '500',
-                    },
-                  ]}
-                >
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          }}
-        />
-      </View>
-
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
         <View
           style={[
-            styles.searchBox,
+            styles.commitmentCard,
             {
               backgroundColor: tokens.surface,
               borderColor: tokens.border,
             },
           ]}
         >
-          <SearchIcon size={18} color={tokens.textSecondary} />
+          {/* Left colored stripe */}
+          <View style={[styles.stripe, { backgroundColor: badge.stripeColor }]} />
+
+          <View style={styles.cardInner}>
+            <View style={styles.cardHeader}>
+              <Avatar name={item.customer?.name || 'Customer'} size="sm" />
+              <View style={styles.nameBlock}>
+                <Text style={[styles.customerName, { color: tokens.textPrimary }]} numberOfLines={1}>
+                  {item.customer?.name || 'Customer'}
+                </Text>
+                {item.receivable?.reference && (
+                  <Text style={[styles.receivableRef, { color: tokens.textMuted }]}>
+                    Ref: {item.receivable.reference}
+                  </Text>
+                )}
+              </View>
+              <View style={[styles.statusBadge, { backgroundColor: badge.bgColor }]}>
+                {badge.icon}
+                <Text style={[styles.statusBadgeText, { color: badge.textColor }]}>{badge.label}</Text>
+              </View>
+            </View>
+
+            <View style={[styles.cardDivider, { backgroundColor: tokens.border }]} />
+
+            <View style={styles.cardBody}>
+              <View style={styles.amountColumn}>
+                <Text style={[styles.metricLabel, { color: tokens.textMuted }]}>Promised Amount</Text>
+                <Text style={[styles.amountValue, { color: tokens.textPrimary }]}>{formattedAmount}</Text>
+              </View>
+
+              <View style={styles.dateColumn}>
+                <Text style={[styles.metricLabel, { color: tokens.textMuted }]}>Promise Date</Text>
+                <View style={styles.dateRow}>
+                  <CalendarIcon size={12} color={tokens.textSecondary} />
+                  <Text style={[styles.dateValue, { color: tokens.textPrimary }]}>{promisedDate}</Text>
+                </View>
+              </View>
+            </View>
+
+            {item.daysOverdue && item.daysOverdue > 0 && item.status !== 'FULFILLED' ? (
+              <View style={[styles.overdueBanner, { backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : '#FEF2F2' }]}>
+                <AlertCircleIcon size={13} color="#EF4444" />
+                <Text style={styles.overdueBannerText}>
+                  Missed by {item.daysOverdue} {item.daysOverdue === 1 ? 'day' : 'days'}
+                </Text>
+              </View>
+            ) : null}
+
+            {item.notes ? (
+              <Text style={[styles.notesText, { color: tokens.textSecondary }]} numberOfLines={2}>
+                "{item.notes}"
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const headerGradient = isDark ? GRADIENTS.darkHero : GRADIENTS.navyHero;
+
+  return (
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: tokens.background }]}>
+      {/* ── PREMIUM HEADER ── */}
+      <LinearGradient
+        colors={headerGradient as [string, string]}
+        start={GRADIENT_DIRECTION.toBottomRight.start}
+        end={GRADIENT_DIRECTION.toBottomRight.end}
+        style={styles.header}
+      >
+        <View style={styles.headerLeft}>
+          <TouchableOpacity
+            style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.15)' }]}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
+            <ChevronLeftIcon size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View>
+            <Text style={styles.headerTitle}>Payment Promises</Text>
+            <Text style={styles.headerSubtitle}>Commitments & scheduled dues</Text>
+          </View>
+        </View>
+      </LinearGradient>
+
+      {/* ── SEARCH BAR & TIMEFRAME TABS ── */}
+      <View style={[styles.controlsContainer, { backgroundColor: tokens.surface, borderBottomColor: tokens.border }]}>
+        <View style={[styles.searchBar, { backgroundColor: tokens.surfaceMuted, borderColor: tokens.border }]}>
+          <SearchIcon size={16} color={tokens.textMuted} />
           <TextInput
-            style={[styles.searchInput, { color: tokens.textPrimary }]}
-            placeholder="Search promises by customer..."
-            placeholderTextColor={tokens.textSecondary}
+            placeholder="Search by customer, reference, notes..."
+            placeholderTextColor={tokens.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
+            style={[styles.searchInput, { color: tokens.textPrimary }]}
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Feather name="x" size={16} color={tokens.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Timeframe Filter Tabs */}
+        <View style={styles.tabsRow}>
+          {TIMEFRAME_TABS.map((tab) => {
+            const isSelected = activeTab === tab.value;
+            return (
+              <TouchableOpacity
+                key={tab.value}
+                onPress={() => setActiveTab(tab.value)}
+                activeOpacity={0.75}
+                style={styles.tabWrap}
+              >
+                {isSelected ? (
+                  <LinearGradient
+                    colors={GRADIENTS.navyToTeal as [string, string]}
+                    start={GRADIENT_DIRECTION.toRight.start}
+                    end={GRADIENT_DIRECTION.toRight.end}
+                    style={styles.tabActive}
+                  >
+                    <Text style={styles.tabActiveText}>{tab.label}</Text>
+                  </LinearGradient>
+                ) : (
+                  <View style={[styles.tabInactive, { backgroundColor: tokens.surfaceMuted, borderColor: tokens.border }]}>
+                    <Text style={[styles.tabInactiveText, { color: tokens.textSecondary }]}>{tab.label}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
 
-      {/* Content List */}
+      {/* ── CONTENT AREA ── */}
       {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={tokens.primary} />
-          <Text style={[styles.loadingText, { color: tokens.textSecondary }]}>
-            Loading commitments...
-          </Text>
-        </View>
-      ) : filteredCommitments.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <TrendingUpIcon size={48} color={tokens.textSecondary} />
-          <Text style={[styles.emptyTitle, { color: tokens.textPrimary }]}>No Promises Found</Text>
-          <Text style={[styles.emptySubtitle, { color: tokens.textSecondary }]}>
-            {activeTab === 'TODAY'
-              ? 'No customer promises scheduled for today.'
-              : activeTab === 'MISSED'
-              ? 'No missed commitments.'
-              : 'Record a collection activity to log customer promises.'}
-          </Text>
+        <View style={styles.skeletonList}>
+          {[0, 1, 2, 3].map((i) => (
+            <View key={i} style={styles.skeletonCard}>
+              <Shimmer width="100%" height={110} borderRadius={18} />
+            </View>
+          ))}
         </View>
       ) : (
         <FlatList
@@ -316,12 +330,35 @@ export default function CommitmentsScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderCommitmentItem}
           contentContainerStyle={styles.listContent}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={tokens.accent} />
+          }
           onEndReached={loadMore}
           onEndReachedThreshold={0.3}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconCircle}>
+                <LinearGradient
+                  colors={GRADIENTS.tealSheen as [string, string]}
+                  style={styles.emptyGradient}
+                >
+                  <MaterialCommunityIcons name="handshake-outline" size={32} color="#FFFFFF" />
+                </LinearGradient>
+              </View>
+              <Text style={[styles.emptyTitle, { color: tokens.textPrimary }]}>
+                {searchQuery ? 'No Promises Found' : 'No Promises in this View'}
+              </Text>
+              <Text style={[styles.emptyDesc, { color: tokens.textSecondary }]}>
+                {searchQuery
+                  ? `No payment promises matched "${searchQuery}".`
+                  : 'Payment promises recorded from follow-ups and customer commitments will appear here.'}
+              </Text>
+            </View>
+          }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -334,127 +371,164 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    paddingVertical: 12,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   backButton: {
-    padding: 4,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
   },
-  tabsWrapper: {
+  headerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '500',
+  },
+  controlsContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
     borderBottomWidth: 1,
   },
-  tabsContainer: {
-    paddingHorizontal: 12,
-  },
-  tab: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    marginRight: 4,
-  },
-  tabText: {
-    fontSize: 14,
-  },
-  searchContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  searchBox: {
+  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
     paddingHorizontal: 12,
-    height: 42,
-    borderRadius: 8,
+    height: 44,
+    borderRadius: 14,
     borderWidth: 1,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 8,
-    fontSize: 14,
+    fontSize: 13.5,
+    fontWeight: '500',
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 6,
+  },
+  tabWrap: {
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  tabActive: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  tabActiveText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  tabInactive: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  tabInactiveText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  skeletonList: {
+    padding: 16,
+  },
+  skeletonCard: {
+    marginBottom: 12,
   },
   listContent: {
     padding: 16,
-    paddingTop: 4,
     paddingBottom: 32,
   },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 16,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    marginTop: 6,
-    textAlign: 'center',
-    maxWidth: 280,
+  cardWrapper: {
+    marginBottom: 12,
   },
   commitmentCard: {
-    padding: 16,
-    borderRadius: 12,
+    borderRadius: 18,
     borderWidth: 1,
-    marginBottom: 12,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  stripe: {
+    width: 4,
+  },
+  cardInner: {
+    flex: 1,
+    padding: 14,
   },
   cardHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  nameBlock: {
+    flex: 1,
   },
   customerName: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 1,
   },
   receivableRef: {
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: 11,
+    fontWeight: '500',
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
   statusBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 9.5,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   cardDivider: {
     height: 1,
-    backgroundColor: '#E2E8F0',
-    marginVertical: 12,
+    marginBottom: 10,
   },
   cardBody: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 6,
   },
   amountColumn: {
     flex: 1,
   },
   dateColumn: {
-    flex: 1,
     alignItems: 'flex-end',
   },
   metricLabel: {
-    fontSize: 12,
-    marginBottom: 4,
+    fontSize: 10.5,
+    fontWeight: '500',
+    marginBottom: 2,
   },
   amountValue: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
   },
   dateRow: {
@@ -463,7 +537,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   dateValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   overdueBanner: {
@@ -472,17 +546,44 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 6,
-    marginTop: 10,
+    borderRadius: 8,
+    marginTop: 8,
   },
   overdueBannerText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#9B1C1C',
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#EF4444',
   },
   notesText: {
-    fontSize: 13,
+    fontSize: 12,
     fontStyle: 'italic',
     marginTop: 8,
+    lineHeight: 16,
+  },
+  emptyContainer: {
+    paddingVertical: 48,
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  emptyIconCircle: {
+    marginBottom: 16,
+  },
+  emptyGradient: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  emptyDesc: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

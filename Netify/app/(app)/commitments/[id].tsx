@@ -11,6 +11,7 @@ import {
   Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../src/design/theme';
 import {
   commitmentsApi,
@@ -19,16 +20,19 @@ import {
 } from '../../../src/services/api/commitments';
 import {
   ChevronLeftIcon,
-  CheckCircleIcon,
   AlertCircleIcon,
-  ClockIcon,
   CalendarIcon,
-  DollarSignIcon,
-  UsersIcon,
-  FileTextIcon,
-  MessageSquareIcon,
   TrashIcon,
 } from '../../../src/design/icons';
+import { GRADIENTS } from '../../../src/design/tokens/gradients';
+
+function getStatusColors(status: CommitmentStatus, isMissed?: boolean): { bg: string; text: string } {
+  if (status === 'FULFILLED') return { bg: '#DEF7EC', text: '#03543F' };
+  if (status === 'PARTIALLY_FULFILLED') return { bg: '#E1EFFE', text: '#1E429F' };
+  if (status === 'MISSED' || isMissed) return { bg: '#FDE8E8', text: '#9B1C1C' };
+  if (status === 'CANCELLED') return { bg: '#F3F4F6', text: '#6B7280' };
+  return { bg: '#FEF08A', text: '#713F12' }; // PENDING
+}
 
 export default function CommitmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -39,7 +43,6 @@ export default function CommitmentDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Cancellation Modal State
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
@@ -123,20 +126,33 @@ export default function CommitmentDetailScreen() {
     year: 'numeric',
   });
 
+  const statusColors = getStatusColors(commitment.status as CommitmentStatus, commitment.isMissed);
+  const isActionable = commitment.status !== 'FULFILLED' && commitment.status !== 'CANCELLED';
+
   return (
     <View style={[styles.container, { backgroundColor: tokens.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: tokens.border }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <ChevronLeftIcon size={24} color={tokens.textPrimary} />
+      {/* Gradient Header */}
+      <LinearGradient
+        colors={GRADIENTS.navyHero}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.8}>
+          <ChevronLeftIcon size={20} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: tokens.textPrimary }]}>Promise Details</Text>
-        <View style={{ width: 24 }} />
-      </View>
+        <Text style={styles.headerTitle}>Promise Details</Text>
+        <View style={{ width: 40 }} />
+      </LinearGradient>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Main Commitment Hero Card */}
-        <View style={[styles.heroCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
+        {/* Hero Card */}
+        <LinearGradient
+          colors={['rgba(0,165,129,0.08)', 'rgba(0,48,81,0.04)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.heroCard, { borderColor: 'rgba(0,165,129,0.2)' }]}
+        >
           <Text style={[styles.heroLabel, { color: tokens.textSecondary }]}>Committed Payment</Text>
           <Text style={[styles.heroAmount, { color: tokens.primary }]}>{formattedAmount}</Text>
 
@@ -148,47 +164,15 @@ export default function CommitmentDetailScreen() {
           </View>
 
           <View style={styles.badgeContainer}>
-            <View
-              style={[
-                styles.statusBadge,
-                {
-                  backgroundColor:
-                    commitment.status === 'FULFILLED'
-                      ? '#DEF7EC'
-                      : commitment.status === 'PARTIALLY_FULFILLED'
-                      ? '#E1EFFE'
-                      : commitment.status === 'MISSED' || commitment.isMissed
-                      ? '#FDE8E8'
-                      : commitment.status === 'CANCELLED'
-                      ? '#F3F4F6'
-                      : '#FEF08A',
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.statusBadgeText,
-                  {
-                    color:
-                      commitment.status === 'FULFILLED'
-                        ? '#03543F'
-                        : commitment.status === 'PARTIALLY_FULFILLED'
-                        ? '#1E429F'
-                        : commitment.status === 'MISSED' || commitment.isMissed
-                        ? '#9B1C1C'
-                        : commitment.status === 'CANCELLED'
-                        ? '#6B7280'
-                        : '#713F12',
-                  },
-                ]}
-              >
+            <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
+              <Text style={[styles.statusBadgeText, { color: statusColors.text }]}>
                 {commitment.status}
               </Text>
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
-        {/* Debtor & Receivable Reference */}
+        {/* Associated Debt */}
         <Text style={[styles.sectionHeading, { color: tokens.textPrimary }]}>Associated Debt</Text>
         <View style={[styles.infoCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
           <View style={styles.infoRow}>
@@ -220,17 +204,14 @@ export default function CommitmentDetailScreen() {
           )}
         </View>
 
-        {/* Source Activity Evidence Card */}
+        {/* Source Activity Evidence */}
         {commitment.sourceActivity && (
           <>
             <Text style={[styles.sectionHeading, { color: tokens.textPrimary }]}>
               Collection Evidence
             </Text>
             <View
-              style={[
-                styles.infoCard,
-                { backgroundColor: tokens.surface, borderColor: tokens.border },
-              ]}
+              style={[styles.infoCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
             >
               <View style={styles.infoRow}>
                 <Text style={[styles.infoLabel, { color: tokens.textSecondary }]}>Channel:</Text>
@@ -267,10 +248,7 @@ export default function CommitmentDetailScreen() {
           <>
             <Text style={[styles.sectionHeading, { color: tokens.textPrimary }]}>Promise Notes</Text>
             <View
-              style={[
-                styles.infoCard,
-                { backgroundColor: tokens.surface, borderColor: tokens.border },
-              ]}
+              style={[styles.infoCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
             >
               <Text style={[styles.activityNotes, { color: tokens.textPrimary }]}>
                 {commitment.notes}
@@ -280,10 +258,11 @@ export default function CommitmentDetailScreen() {
         ) : null}
 
         {/* Cancel Action */}
-        {commitment.status !== 'FULFILLED' && commitment.status !== 'CANCELLED' && (
+        {isActionable && (
           <TouchableOpacity
-            style={[styles.cancelButton, { borderColor: tokens.danger }]}
+            style={[styles.cancelButton, { borderColor: tokens.danger, backgroundColor: tokens.dangerSoft }]}
             onPress={() => setCancelModalVisible(true)}
+            activeOpacity={0.8}
           >
             <TrashIcon size={18} color={tokens.danger} />
             <Text style={[styles.cancelButtonText, { color: tokens.danger }]}>Cancel Commitment</Text>
@@ -349,26 +328,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-  },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -399,21 +358,51 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 52,
+    paddingBottom: 18,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 40,
+  },
   heroCard: {
-    padding: 20,
-    borderRadius: 16,
+    padding: 22,
+    borderRadius: 20,
     borderWidth: 1,
     alignItems: 'center',
     marginBottom: 20,
+    elevation: 2,
+    shadowColor: '#003051',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
   },
   heroLabel: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
   heroAmount: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: '800',
     marginTop: 6,
   },
@@ -421,7 +410,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 10,
+    marginTop: 12,
   },
   promiseDateText: {
     fontSize: 14,
@@ -431,13 +420,14 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   statusBadge: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 20,
   },
   statusBadgeText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   sectionHeading: {
     fontSize: 15,
@@ -447,9 +437,14 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     marginBottom: 16,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
   },
   infoRow: {
     flexDirection: 'row',
@@ -463,11 +458,13 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 14,
     fontWeight: '600',
+    maxWidth: '55%',
+    textAlign: 'right',
   },
   activityNotes: {
     fontSize: 13,
     marginTop: 4,
-    lineHeight: 18,
+    lineHeight: 20,
   },
   cancelButton: {
     flexDirection: 'row',
@@ -475,7 +472,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 14,
     paddingVertical: 14,
     marginTop: 20,
   },
@@ -490,9 +487,9 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalCard: {
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    padding: 20,
+    padding: 22,
   },
   modalTitle: {
     fontSize: 18,
@@ -505,7 +502,7 @@ const styles = StyleSheet.create({
   },
   modalInput: {
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 12,
     marginTop: 14,
     minHeight: 70,
@@ -520,7 +517,7 @@ const styles = StyleSheet.create({
   modalCancelBtn: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
   },
   modalCancelText: {
@@ -529,9 +526,10 @@ const styles = StyleSheet.create({
   modalConfirmBtn: {
     paddingHorizontal: 18,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    minWidth: 100,
   },
   modalConfirmText: {
     color: '#FFFFFF',

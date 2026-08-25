@@ -3,6 +3,7 @@ import { ha } from './translations/ha';
 import { yo } from './translations/yo';
 import { ig } from './translations/ig';
 import { pcm } from './translations/pcm';
+import { ff } from './translations/ff';
 import { SupportedLanguage } from './language-registry';
 
 export * from './language-registry';
@@ -13,6 +14,7 @@ const translations: Record<SupportedLanguage, typeof en> = {
   yo,
   ig,
   pcm,
+  ff,
 };
 
 export type TranslationKey =

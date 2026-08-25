@@ -215,18 +215,38 @@ export const useBillingStore = create<BillingStoreState>((set, get) => ({
   canAccessFeature: (feature: string) => {
     const { subscription, isPro, isBusiness, isEnterprise } = get();
 
+    // Server-authoritative feature flag overrides everything
     if (subscription?.features?.includes(feature)) {
       return true;
     }
 
-    if (feature.startsWith('AI_') || feature === 'BUSINESS_MEMORY_FULL') {
+    // ── FREE plan gets basic AI Copilot access (20 req/mo) ─────────────────
+    // The backend enforces the quota and returns 429 when exceeded.
+    // Client should NOT pre-emptively block — only gate on API error response.
+    const FREE_AI_FEATURES = ['AI_COLLECTION_COPILOT', 'AI_DAILY_BRIEFING'];
+    if (FREE_AI_FEATURES.includes(feature)) {
+      return true; // backend quota handles the limit
+    }
+
+    // ── Pro-only AI features ────────────────────────────────────────────────
+    // These are NOT available on FREE at all.
+    const PRO_AI_FEATURES = [
+      'AI_WHATSAPP_DRAFTING',
+      'AI_RISK_SCORING',
+      'AI_COLLECTION_AUTOMATION',
+      'AI_CUSTOMER_INTELLIGENCE',
+      'BUSINESS_MEMORY_FULL',
+    ];
+    if (PRO_AI_FEATURES.includes(feature)) {
       return isPro || isBusiness || isEnterprise;
     }
 
+    // ── Business-only features ──────────────────────────────────────────────
     if (feature === 'MULTI_BUSINESS' || feature === 'CROSS_BUSINESS_OVERVIEW') {
       return isBusiness || isEnterprise;
     }
 
+    // Everything else is available to all plans
     return true;
   },
 

@@ -11,6 +11,7 @@ import {
   Switch,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../../src/design/theme';
 import {
   receivablesApi,
@@ -24,14 +25,9 @@ import {
 } from '../../../../src/services/api/collection-activities';
 import {
   ChevronLeftIcon,
-  PhoneIcon,
-  MessageSquareIcon,
-  UsersIcon,
-  CalendarIcon,
-  DollarSignIcon,
-  CheckCircleIcon,
   AlertCircleIcon,
 } from '../../../../src/design/icons';
+import { GRADIENTS } from '../../../../src/design/tokens/gradients';
 
 const ACTIVITY_TYPES: { label: string; value: ActivityType }[] = [
   { label: 'Call', value: 'CALL' },
@@ -98,7 +94,6 @@ export default function RecordActivityScreen() {
       const res = await receivablesApi.getById(id);
       if (res.data) {
         setReceivable(res.data);
-        // Default commitment amount to remaining balance
         setCommitmentAmount(res.data.balance || res.data.originalAmount);
       } else {
         setError('Failed to load receivable details');
@@ -205,17 +200,26 @@ export default function RecordActivityScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: tokens.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { borderBottomColor: tokens.border }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <ChevronLeftIcon size={24} color={tokens.textPrimary} />
+      {/* Gradient Header */}
+      <LinearGradient
+        colors={GRADIENTS.navyHero}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.8}>
+          <ChevronLeftIcon size={20} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: tokens.textPrimary }]}>Record Collection Activity</Text>
-        <View style={{ width: 24 }} />
-      </View>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.headerTitle}>Record Collection Activity</Text>
+          <Text style={styles.headerSubtitle}>
+            {receivable.customer?.name || 'Customer'}
+          </Text>
+        </View>
+      </LinearGradient>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Receivable Summary Card */}
+        {/* Summary Card */}
         <View style={[styles.summaryCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
           <Text style={[styles.customerName, { color: tokens.textPrimary }]}>
             {receivable.customer?.name || 'Customer'}
@@ -228,7 +232,7 @@ export default function RecordActivityScreen() {
           </View>
         </View>
 
-        {/* Activity Channel Picker */}
+        {/* Communication Channel */}
         <Text style={[styles.sectionTitle, { color: tokens.textPrimary }]}>Communication Channel</Text>
         <View style={styles.chipGrid}>
           {CHANNELS.map((ch) => {
@@ -244,6 +248,7 @@ export default function RecordActivityScreen() {
                   },
                 ]}
                 onPress={() => setSelectedChannel(ch.value)}
+                activeOpacity={0.8}
               >
                 <Text style={[styles.chipText, { color: isSelected ? '#FFFFFF' : tokens.textPrimary }]}>
                   {ch.label}
@@ -253,7 +258,7 @@ export default function RecordActivityScreen() {
           })}
         </View>
 
-        {/* Activity Type Picker */}
+        {/* Interaction Type */}
         <Text style={[styles.sectionTitle, { color: tokens.textPrimary }]}>Interaction Type</Text>
         <View style={styles.chipGrid}>
           {ACTIVITY_TYPES.map((t) => {
@@ -269,6 +274,7 @@ export default function RecordActivityScreen() {
                   },
                 ]}
                 onPress={() => setSelectedType(t.value)}
+                activeOpacity={0.8}
               >
                 <Text style={[styles.chipText, { color: isSelected ? '#FFFFFF' : tokens.textPrimary }]}>
                   {t.label}
@@ -278,7 +284,7 @@ export default function RecordActivityScreen() {
           })}
         </View>
 
-        {/* Outcome Picker */}
+        {/* Outcome */}
         <Text style={[styles.sectionTitle, { color: tokens.textPrimary }]}>Interaction Outcome</Text>
         <View style={styles.chipGrid}>
           {OUTCOMES.map((o) => {
@@ -294,6 +300,7 @@ export default function RecordActivityScreen() {
                   },
                 ]}
                 onPress={() => handleOutcomeSelect(o.value)}
+                activeOpacity={0.8}
               >
                 <Text style={[styles.chipText, { color: isSelected ? '#FFFFFF' : tokens.textPrimary }]}>
                   {o.label}
@@ -303,7 +310,7 @@ export default function RecordActivityScreen() {
           })}
         </View>
 
-        {/* Notes Input */}
+        {/* Notes */}
         <Text style={[styles.sectionTitle, { color: tokens.textPrimary }]}>Human Notes / Conversation Detail</Text>
         <TextInput
           style={[
@@ -322,7 +329,7 @@ export default function RecordActivityScreen() {
           onChangeText={setNotes}
         />
 
-        {/* Payment Commitment Toggle Section */}
+        {/* Commitment Toggle */}
         <View style={[styles.commitmentSection, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
           <View style={styles.commitmentHeaderRow}>
             <View style={{ flex: 1 }}>
@@ -342,7 +349,7 @@ export default function RecordActivityScreen() {
           </View>
 
           {hasCommitment && (
-            <View style={styles.commitmentFields}>
+            <View style={[styles.commitmentFields, { borderTopColor: tokens.border }]}>
               <Text style={[styles.fieldLabel, { color: tokens.textPrimary }]}>
                 Promised Amount ({receivable.currency})
               </Text>
@@ -375,6 +382,7 @@ export default function RecordActivityScreen() {
                       },
                     ]}
                     onPress={() => setPromiseDays(days)}
+                    activeOpacity={0.8}
                   >
                     <Text
                       style={[
@@ -411,19 +419,24 @@ export default function RecordActivityScreen() {
         <TouchableOpacity
           style={[
             styles.submitButton,
-            {
-              backgroundColor: tokens.primary,
-              opacity: submitting ? 0.7 : 1,
-            },
+            { opacity: submitting ? 0.7 : 1 },
           ]}
           onPress={handleSubmit}
           disabled={submitting}
+          activeOpacity={0.85}
         >
-          {submitting ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.submitButtonText}>Save Collection Activity</Text>
-          )}
+          <LinearGradient
+            colors={GRADIENTS.navyToTeal}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.submitGradient}
+          >
+            {submitting ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.submitButtonText}>Save Collection Activity</Text>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -433,26 +446,6 @@ export default function RecordActivityScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
   },
   centerContainer: {
     flex: 1,
@@ -484,11 +477,49 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 52,
+    paddingBottom: 18,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.65)',
+    marginTop: 2,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 40,
+  },
   summaryCard: {
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     marginBottom: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
   },
   customerName: {
     fontSize: 16,
@@ -509,29 +540,29 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    marginTop: 12,
-    marginBottom: 8,
+    fontWeight: '700',
+    marginTop: 16,
+    marginBottom: 10,
   },
   chipGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   chip: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
   },
   chipText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   textArea: {
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 12,
     fontSize: 14,
     textAlignVertical: 'top',
@@ -539,7 +570,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   commitmentSection: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     padding: 16,
     marginBottom: 24,
@@ -560,7 +591,6 @@ const styles = StyleSheet.create({
   commitmentFields: {
     marginTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
     paddingTop: 16,
   },
   fieldLabel: {
@@ -571,7 +601,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
@@ -583,21 +613,24 @@ const styles = StyleSheet.create({
   dayButton: {
     flex: 1,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dayButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
   },
   submitButton: {
-    paddingVertical: 15,
-    borderRadius: 10,
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  submitGradient: {
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
   },
   submitButtonText: {
     color: '#FFFFFF',

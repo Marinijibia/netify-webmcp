@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/design/theme';
 import { Input, Button, Card, Alert } from '@/design/components';
 import { ChevronLeftIcon, UserIcon } from '@/design/icons';
 import { customersApi, CustomerItem } from '@/services/api/customers';
+import { GRADIENTS } from '@/design/tokens/gradients';
 
 export default function EditCustomerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -74,34 +76,35 @@ export default function EditCustomerScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: tokens.background }}>
-      {/* Header */}
-      <View className="px-6 py-4 flex-row items-center border-b border-slate-100 dark:border-slate-800">
+    <SafeAreaView style={{ flex: 1, backgroundColor: tokens.background }} edges={['top']}>
+      {/* Gradient Header */}
+      <LinearGradient
+        colors={GRADIENTS.navyHero}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={editStyles.header}
+      >
         <TouchableOpacity
           onPress={() => router.back()}
-          className="w-10 h-10 rounded-xl items-center justify-center mr-3"
-          style={{ backgroundColor: isDark ? tokens.surface : '#F1F5F9' }}
+          style={editStyles.backButton}
+          activeOpacity={0.8}
         >
-          <ChevronLeftIcon size={20} color={tokens.textPrimary} />
+          <ChevronLeftIcon size={20} color="#FFFFFF" />
         </TouchableOpacity>
-        <View>
-          <Text style={{ color: tokens.textPrimary }} className="text-xl font-bold">
-            Edit Customer
-          </Text>
-          <Text style={{ color: tokens.textSecondary }} className="text-xs">
-            Update debtor profile and business notes
-          </Text>
+        <View style={editStyles.headerCenter}>
+          <Text style={editStyles.headerTitle}>Edit Customer</Text>
+          <Text style={editStyles.headerSubtitle}>Update debtor profile and business notes</Text>
         </View>
-      </View>
+      </LinearGradient>
 
       {initialLoading ? (
-        <View className="flex-1 items-center justify-center">
+        <View style={editStyles.loadingContainer}>
           <ActivityIndicator size="large" color={tokens.primary} />
         </View>
       ) : (
-        <ScrollView className="flex-1 px-6 py-4" showsVerticalScrollIndicator={false}>
+        <ScrollView style={{ flex: 1, paddingHorizontal: 20 }} contentContainerStyle={{ paddingTop: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
           {errorMessage && (
-            <Alert variant="danger" title="Error" message={errorMessage} className="mb-4" />
+            <Alert variant="danger" title="Error" message={errorMessage} style={{ marginBottom: 16 }} />
           )}
 
           {/* Identity Card */}
@@ -110,10 +113,11 @@ export default function EditCustomerScreen() {
               backgroundColor: isDark ? tokens.surface : '#FFFFFF',
               borderColor: tokens.border,
               borderWidth: 1,
+              padding: 16,
+              marginBottom: 16,
             }}
-            className="p-4 mb-4"
           >
-            <Text style={{ color: tokens.textPrimary }} className="text-sm font-bold mb-3 uppercase tracking-wider">
+            <Text style={{ color: tokens.textPrimary, fontSize: 12, fontWeight: '700', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.8 }}>
               Profile Details
             </Text>
 
@@ -122,21 +126,21 @@ export default function EditCustomerScreen() {
               value={name}
               onChangeText={setName}
               leftIcon={<UserIcon size={18} color={tokens.textMuted} />}
-              className="mb-3"
+              style={{ marginBottom: 12 }}
             />
 
             <Input
               label="Office / Billing Address"
               value={address}
               onChangeText={setAddress}
-              className="mb-3"
+              style={{ marginBottom: 12 }}
             />
 
             {/* Status Selection */}
-            <Text style={{ color: tokens.textSecondary }} className="text-xs font-bold mb-2 uppercase">
+            <Text style={{ color: tokens.textSecondary, fontSize: 11, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>
               Status
             </Text>
-            <View className="flex-row items-center mb-1">
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
               {(['ACTIVE', 'INACTIVE', 'ARCHIVED'] as const).map((s) => {
                 const isSelected = status === s;
                 return (
@@ -145,15 +149,19 @@ export default function EditCustomerScreen() {
                     onPress={() => setStatus(s)}
                     style={{
                       backgroundColor: isSelected ? tokens.primary : isDark ? tokens.background : '#F1F5F9',
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 8,
+                      marginRight: 8,
                     }}
-                    className="px-3 py-1.5 rounded-lg mr-2"
+                    activeOpacity={0.8}
                   >
                     <Text
                       style={{
                         color: isSelected ? '#FFFFFF' : tokens.textSecondary,
                         fontWeight: isSelected ? '700' : '500',
+                        fontSize: 12,
                       }}
-                      className="text-xs"
                     >
                       {s}
                     </Text>
@@ -169,10 +177,11 @@ export default function EditCustomerScreen() {
               backgroundColor: isDark ? tokens.surface : '#FFFFFF',
               borderColor: tokens.border,
               borderWidth: 1,
+              padding: 16,
+              marginBottom: 24,
             }}
-            className="p-4 mb-6"
           >
-            <Text style={{ color: tokens.textPrimary }} className="text-sm font-bold mb-3 uppercase tracking-wider">
+            <Text style={{ color: tokens.textPrimary, fontSize: 12, fontWeight: '700', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.8 }}>
               Internal Notes
             </Text>
 
@@ -191,10 +200,47 @@ export default function EditCustomerScreen() {
             size="lg"
             loading={saving}
             onPress={handleSubmit}
-            className="mb-8"
+            style={{ marginBottom: 32 }}
           />
         </ScrollView>
       )}
     </SafeAreaView>
   );
 }
+
+const editStyles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 18,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  headerCenter: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 19,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.65)',
+    marginTop: 2,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

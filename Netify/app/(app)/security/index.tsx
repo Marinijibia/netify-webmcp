@@ -39,6 +39,8 @@ import { authApi } from '@/services/api/auth';
 import { SecureStorageService } from '@/services/storage/secure-storage';
 import { useAuthStore } from '@/store/auth-store';
 import { useTheme } from '@/design/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { GRADIENTS, GRADIENT_DIRECTION } from '@/design/tokens/gradients';
 
 const AUTO_LOCK_OPTIONS = [
   { label: 'Immediately on exit', value: 0, description: 'Locks as soon as you minimize or leave the app' },
@@ -194,27 +196,37 @@ export default function SecuritySettingsScreen() {
           paddingVertical: 16,
         }}
       >
-        {/* Top Bar */}
-        <View className="flex-row items-center justify-between mb-6">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{
-              backgroundColor: isDark ? tokens.surface : '#FFFFFF',
-              borderColor: tokens.border,
-              borderWidth: 1,
-            }}
-            className="h-10 w-10 rounded-xl items-center justify-center"
-          >
-            <ChevronLeftIcon size={20} color={tokens.textPrimary} />
-          </TouchableOpacity>
-          <Text
-            style={{ color: tokens.textPrimary }}
-            className="text-lg font-bold"
-          >
-            Settings & Privacy
-          </Text>
-          <View className="w-10" />
-        </View>
+      {/* ── PREMIUM HEADER ── */}
+      <LinearGradient
+        colors={(isDark ? GRADIENTS.darkHero : GRADIENTS.navyHero) as [string, string]}
+        start={GRADIENT_DIRECTION.toBottomRight.start}
+        end={GRADIENT_DIRECTION.toBottomRight.end}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          gap: 12,
+        }}
+      >
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: 'rgba(255,255,255,0.15)',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          activeOpacity={0.7}
+        >
+          <ChevronLeftIcon size={18} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={{ fontSize: 18, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.3 }}>
+          Security & Privacy
+        </Text>
+      </LinearGradient>
 
         {/* Theme Appearance Selector */}
         <ThemeSelector className="mb-5" />

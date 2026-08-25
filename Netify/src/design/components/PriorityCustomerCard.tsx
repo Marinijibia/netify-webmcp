@@ -4,6 +4,7 @@ import { useTheme } from '../theme';
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { PriorityCustomerItem, AIUrgencyLevel } from '../../services/api/ai';
+import { Avatar } from './Avatar';
 
 interface PriorityCustomerCardProps {
   customer: PriorityCustomerItem;
@@ -11,36 +12,31 @@ interface PriorityCustomerCardProps {
   onQuickMessage?: () => void;
 }
 
-export function PriorityCustomerCard({
-  customer,
-  onPress,
-  onQuickMessage,
-}: PriorityCustomerCardProps) {
+export function PriorityCustomerCard({ customer, onPress, onQuickMessage }: PriorityCustomerCardProps) {
   const { tokens, isDark } = useTheme();
 
   const getUrgencyConfig = (urgency: AIUrgencyLevel) => {
     switch (urgency) {
       case 'HIGH':
         return {
-          label: 'HIGH PRIORITY',
-          badgeBg: isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
+          label: 'HIGH',
+          stripeColor: '#EF4444',
+          badgeBg: isDark ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)',
           badgeColor: '#EF4444',
-          borderColor: isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)',
         };
       case 'MEDIUM':
         return {
-          label: 'MEDIUM PRIORITY',
-          badgeBg: isDark ? 'rgba(245, 158, 11, 0.2)' : 'rgba(245, 158, 11, 0.1)',
+          label: 'MED',
+          stripeColor: '#F59E0B',
+          badgeBg: isDark ? 'rgba(245,158,11,0.2)' : 'rgba(245,158,11,0.1)',
           badgeColor: '#F59E0B',
-          borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : 'rgba(245, 158, 11, 0.2)',
         };
-      case 'LOW':
       default:
         return {
-          label: 'LOW PRIORITY',
-          badgeBg: isDark ? 'rgba(100, 116, 139, 0.2)' : 'rgba(100, 116, 139, 0.1)',
+          label: 'LOW',
+          stripeColor: '#64748B',
+          badgeBg: isDark ? 'rgba(100,116,139,0.2)' : 'rgba(100,116,139,0.1)',
           badgeColor: '#64748B',
-          borderColor: isDark ? 'rgba(100, 116, 139, 0.3)' : 'rgba(100, 116, 139, 0.2)',
         };
     }
   };
@@ -49,106 +45,89 @@ export function PriorityCustomerCard({
 
   return (
     <TouchableOpacity
-      style={[
-        styles.card,
-        {
-          backgroundColor: tokens.surface,
-          borderColor: urgencyConfig.borderColor,
-        },
-      ]}
+      style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
       onPress={onPress}
-      activeOpacity={0.7}
+      activeOpacity={0.75}
     >
-      {/* Top Row: Customer Name & Urgency Pill */}
-      <View style={styles.headerRow}>
-        <View style={styles.titleContainer}>
-          <Text
-            style={[styles.customerName, { color: tokens.textPrimary }]}
-            numberOfLines={1}
-          >
-            {customer.customerName}
-          </Text>
-          <View style={styles.scoreRow}>
-            <MaterialCommunityIcons name="target" size={12} color="#00A581" />
-            <Text style={[styles.scoreText, { color: tokens.textSecondary }]}>
-              Score: <Text style={styles.scoreValue}>{customer.priorityScore}</Text>/100
+      {/* Left urgency stripe */}
+      <View style={[styles.stripe, { backgroundColor: urgencyConfig.stripeColor }]} />
+
+      <View style={styles.inner}>
+        {/* Header row: Avatar + Name + Urgency Badge */}
+        <View style={styles.headerRow}>
+          <Avatar name={customer.customerName} size="sm" />
+          <View style={styles.nameBlock}>
+            <Text style={[styles.customerName, { color: tokens.textPrimary }]} numberOfLines={1}>
+              {customer.customerName}
             </Text>
-          </View>
-        </View>
-
-        <View style={[styles.urgencyBadge, { backgroundColor: urgencyConfig.badgeBg }]}>
-          <Text style={[styles.urgencyText, { color: urgencyConfig.badgeColor }]}>
-            {urgencyConfig.label}
-          </Text>
-        </View>
-      </View>
-
-      {/* Financial Numbers */}
-      <View style={styles.financialRow}>
-        <View>
-          <Text style={[styles.amountLabel, { color: tokens.textSecondary }]}>
-            Total Outstanding
-          </Text>
-          <Text style={[styles.amountValue, { color: tokens.textPrimary }]}>
-            {customer.currency} {customer.totalOutstanding.toLocaleString()}
-          </Text>
-        </View>
-
-        {customer.totalOverdue > 0 && (
-          <View style={styles.overdueContainer}>
-            <Text style={styles.overdueLabel}>Overdue</Text>
-            <Text style={styles.overdueValue}>
-              {customer.currency} {customer.totalOverdue.toLocaleString()}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Deterministic Reason Bullets */}
-      {customer.reasons.length > 0 && (
-        <View
-          style={[
-            styles.reasonsContainer,
-            {
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F8FAFC',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#E2E8F0',
-            },
-          ]}
-        >
-          {customer.reasons.slice(0, 2).map((reason, idx) => (
-            <View key={idx} style={styles.reasonItem}>
-              <Feather name="alert-circle" size={12} color={urgencyConfig.badgeColor} />
-              <Text
-                style={[styles.reasonText, { color: tokens.textSecondary }]}
-                numberOfLines={1}
-              >
-                {reason}
+            <View style={styles.scoreRow}>
+              <MaterialCommunityIcons name="target" size={11} color="#00A581" />
+              <Text style={[styles.scoreText, { color: tokens.textSecondary }]}>
+                Score: <Text style={styles.scoreValue}>{customer.priorityScore}</Text>/100
               </Text>
             </View>
-          ))}
-        </View>
-      )}
-
-      {/* Footer Quick Action */}
-      <View style={styles.footerRow}>
-        <View style={styles.viewInsightsRow}>
-          <Text style={styles.viewInsightsText}>View Copilot Insights</Text>
-          <Feather name="chevron-right" size={14} color="#00A581" />
+          </View>
+          <View style={[styles.urgencyBadge, { backgroundColor: urgencyConfig.badgeBg }]}>
+            <Text style={[styles.urgencyText, { color: urgencyConfig.badgeColor }]}>
+              {urgencyConfig.label}
+            </Text>
+          </View>
         </View>
 
-        {onQuickMessage && (
-          <TouchableOpacity
-            style={[styles.messageButton, { backgroundColor: isDark ? 'rgba(0, 165, 129, 0.15)' : 'rgba(0, 165, 129, 0.1)' }]}
-            onPress={(e) => {
-              e.stopPropagation();
-              onQuickMessage();
-            }}
-            activeOpacity={0.8}
-          >
-            <Feather name="send" size={12} color="#00A581" />
-            <Text style={styles.messageButtonText}>Draft</Text>
-          </TouchableOpacity>
+        {/* Financial row */}
+        <View style={styles.financialRow}>
+          <View>
+            <Text style={[styles.amountLabel, { color: tokens.textMuted }]}>Outstanding</Text>
+            <Text style={[styles.amountValue, { color: tokens.textPrimary }]}>
+              {customer.currency} {customer.totalOutstanding.toLocaleString()}
+            </Text>
+          </View>
+
+          {customer.totalOverdue > 0 && (
+            <View style={[styles.overdueChip, { backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.07)' }]}>
+              <MaterialCommunityIcons name="clock-alert-outline" size={12} color="#EF4444" />
+              <Text style={styles.overdueChipText}>
+                {customer.currency} {customer.totalOverdue.toLocaleString()} overdue
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Reason bullets */}
+        {customer.reasons.length > 0 && (
+          <View style={[styles.reasonsContainer, {
+            backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC',
+            borderColor: isDark ? 'rgba(255,255,255,0.06)' : '#E2E8F0',
+          }]}>
+            {customer.reasons.slice(0, 2).map((reason, idx) => (
+              <View key={idx} style={styles.reasonItem}>
+                <View style={[styles.reasonDot, { backgroundColor: urgencyConfig.stripeColor }]} />
+                <Text style={[styles.reasonText, { color: tokens.textSecondary }]} numberOfLines={1}>
+                  {reason}
+                </Text>
+              </View>
+            ))}
+          </View>
         )}
+
+        {/* Footer */}
+        <View style={styles.footerRow}>
+          <View style={styles.viewInsightsRow}>
+            <Text style={styles.viewInsightsText}>View Copilot Insights</Text>
+            <Feather name="chevron-right" size={13} color="#00A581" />
+          </View>
+
+          {onQuickMessage && (
+            <TouchableOpacity
+              style={[styles.draftBtn, { backgroundColor: isDark ? 'rgba(0,165,129,0.15)' : 'rgba(0,165,129,0.08)' }]}
+              onPress={(e) => { e.stopPropagation(); onQuickMessage(); }}
+              activeOpacity={0.8}
+            >
+              <Feather name="send" size={11} color="#00A581" />
+              <Text style={styles.draftBtnText}>Draft</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -156,20 +135,27 @@ export function PriorityCustomerCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    padding: 14,
     marginBottom: 12,
+    flexDirection: 'row',
+    overflow: 'hidden',
+  },
+  stripe: {
+    width: 4,
+  },
+  inner: {
+    flex: 1,
+    padding: 14,
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
     marginBottom: 10,
   },
-  titleContainer: {
+  nameBlock: {
     flex: 1,
-    marginRight: 8,
   },
   customerName: {
     fontSize: 15,
@@ -186,16 +172,16 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   scoreValue: {
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#00A581',
   },
   urgencyBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   urgencyText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
@@ -208,37 +194,41 @@ const styles = StyleSheet.create({
   amountLabel: {
     fontSize: 11,
     fontWeight: '500',
+    marginBottom: 2,
   },
   amountValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginTop: 1,
+    fontSize: 15,
+    fontWeight: '800',
   },
-  overdueContainer: {
-    alignItems: 'flex-end',
+  overdueChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  overdueLabel: {
+  overdueChipText: {
     fontSize: 11,
-    fontWeight: '500',
-    color: '#EF4444',
-  },
-  overdueValue: {
-    fontSize: 14,
     fontWeight: '700',
     color: '#EF4444',
-    marginTop: 1,
   },
   reasonsContainer: {
     borderRadius: 8,
     borderWidth: 1,
     padding: 8,
     marginBottom: 10,
-    gap: 4,
+    gap: 5,
   },
   reasonItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 7,
+  },
+  reasonDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
   },
   reasonText: {
     fontSize: 12,
@@ -254,22 +244,22 @@ const styles = StyleSheet.create({
   viewInsightsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
   },
   viewInsightsText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#00A581',
   },
-  messageButton: {
+  draftBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 5,
+    borderRadius: 10,
   },
-  messageButtonText: {
+  draftBtnText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#00A581',

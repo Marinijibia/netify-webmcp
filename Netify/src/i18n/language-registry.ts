@@ -1,4 +1,4 @@
-export type SupportedLanguage = 'en' | 'ha' | 'yo' | 'ig' | 'pcm';
+export type SupportedLanguage = 'en' | 'ha' | 'yo' | 'ig' | 'pcm' | 'ff';
 
 export interface LanguageInfo {
   code: SupportedLanguage;
@@ -49,6 +49,14 @@ export const LANGUAGE_REGISTRY: Record<SupportedLanguage, LanguageInfo> = {
     flag: '🇳🇬',
     greeting: 'How far',
     samplePrompt: 'Who dey owe me pass today?',
+  },
+  ff: {
+    code: 'ff',
+    name: 'Fulani',
+    nativeName: 'Fulfulde',
+    flag: '🇳🇬',
+    greeting: 'Jaaraama',
+    samplePrompt: 'Hol mo yoori mi njamndi gonngal hannde?',
   },
 };
 

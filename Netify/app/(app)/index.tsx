@@ -1,45 +1,105 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
   RefreshControl,
-  ActivityIndicator,
   StyleSheet,
+  Animated,
+  Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '@/store/auth-store';
 import { useBillingStore } from '@/store/billing-store';
 import { useLanguageStore } from '@/store/language-store';
 import { LANGUAGE_REGISTRY } from '@/i18n';
 import {
-  Button,
-  Card,
   DailyBriefingCard,
   PriorityCustomerCard,
   LanguageSelectorModal,
   ProPaywallModal,
   BusinessPaywallModal,
   BusinessSwitcherModal,
+  AnimatedNumber,
+  MetricGridSkeleton,
+  BriefingCardSkeleton,
+  CustomerRowSkeleton,
+  Avatar,
 } from '@/design/components';
 import { BuildingIcon, ChevronRightIcon } from '@/design/icons';
 import { useTheme } from '@/design/theme';
 import Feather from '@expo/vector-icons/Feather';
 import { Ionicons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { commandCenterApi, CommandCenterAttentionData } from '@/services/api/command-center';
 import { aiApi, PriorityCustomerItem } from '@/services/api/ai';
 import { useNotificationStore } from '@/store/notification-store';
+import { GRADIENTS, GRADIENT_DIRECTION } from '@/design/tokens/gradients';
+
+// ─── Metric Card Component ───────────────────────────────────────────────────
+
+interface MetricCardProps {
+  label: string;
+  value: number;
+  sub: string;
+  valueColor: string;
+  bgColor: string;
+  borderColor: string;
+  icon: React.ReactNode;
+  formatValue?: (n: number) => string;
+  onPress?: () => void;
+}
+
+function MetricCard({
+  label,
+  value,
+  sub,
+  valueColor,
+  bgColor,
+  borderColor,
+  icon,
+  formatValue,
+  onPress,
+}: MetricCardProps) {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={onPress}
+      style={[styles.metricBox, { backgroundColor: bgColor, borderColor }]}
+    >
+      <View style={styles.metricTop}>
+        <Text style={[styles.metricBoxLabel, { color: valueColor }]}>{label}</Text>
+        <View style={[styles.metricIconWrap, { backgroundColor: valueColor + '22' }]}>
+          {icon}
+        </View>
+      </View>
+      <AnimatedNumber
+        value={value}
+        duration={800}
+        style={StyleSheet.flatten([styles.metricBoxValue, { color: valueColor }])}
+        format={formatValue}
+      />
+      <Text style={[styles.metricSub, { color: valueColor + 'CC' }]} numberOfLines={1}>
+        {sub}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+// ─── Main Screen Component ───────────────────────────────────────────────────
 
 export default function AppHomeScreen() {
   const router = useRouter();
-  const { user, organization, logout } = useAuthStore();
-  const { tokens } = useTheme();
+  const { user, organization } = useAuthStore();
+  const { tokens, isDark } = useTheme();
 
   const {
-    plan,
     isPro,
+    isBusiness,
+    plan,
     initializeBilling,
     openBusinessSwitcher,
     openProPaywall,
@@ -54,6 +114,9 @@ export default function AppHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Notification badge pulse
+  const badgePulse = useRef(new Animated.Value(1)).current;
+
   const langInfo = LANGUAGE_REGISTRY[currentLanguage] || LANGUAGE_REGISTRY.en;
 
   useEffect(() => {
@@ -66,6 +129,17 @@ export default function AppHomeScreen() {
     }
   }, [user?.id, organization?.id]);
 
+  useEffect(() => {
+    if (unreadCount > 0) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(badgePulse, { toValue: 1.25, duration: 600, useNativeDriver: true }),
+          Animated.timing(badgePulse, { toValue: 1, duration: 600, useNativeDriver: true }),
+        ])
+      ).start();
+    }
+  }, [unreadCount]);
+
   const loadCommandCenterData = useCallback(async () => {
     try {
       fetchUnreadCount();
@@ -74,7 +148,7 @@ export default function AppHomeScreen() {
         aiApi.getPriorityCustomers({ limit: 5 }),
       ]);
       setAttentionData(attResult);
-      setPriorityCustomers(priorityResult.items);
+      setPriorityCustomers(priorityResult?.items || []);
     } catch (err) {
       console.warn('Failed to load Command Center data:', err);
     } finally {
@@ -93,481 +167,383 @@ export default function AppHomeScreen() {
   };
 
   const handleOpenCopilot = () => {
-    if (!canAccessFeature('AI_COLLECTION_COPILOT')) {
-      openProPaywall();
-      return;
-    }
     router.push('/(app)/copilot' as any);
   };
 
-  const formattedOutstanding = attentionData?.facts
-    ? `${attentionData.currency} ${attentionData.facts.totalOutstanding.toLocaleString()}`
-    : '₦0.00';
+  const currency = attentionData?.currency || organization?.currency || '₦';
 
-  const hasZeroData =
-    attentionData?.facts.totalOutstanding === 0 &&
-    attentionData?.facts.activeCustomersCount === 0;
+  const headerGradient = isDark ? GRADIENTS.darkHero : GRADIENTS.navyHero;
+  const orgPillBg = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.18)';
 
   return (
-    <SafeAreaView
-      edges={['top']}
-      style={[
-        styles.safeArea,
-        { backgroundColor: tokens.background },
-      ]}
-    >
-      {/* App Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: tokens.surface,
-            borderBottomColor: tokens.border,
-          },
-        ]}
+    <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: tokens.background }]}>
+      {/* ── PREMIUM HEADER ── */}
+      <LinearGradient
+        colors={headerGradient as [string, string]}
+        start={GRADIENT_DIRECTION.toBottomRight.start}
+        end={GRADIENT_DIRECTION.toBottomRight.end}
+        style={styles.header}
       >
-        <TouchableOpacity
-          onPress={openBusinessSwitcher}
-          style={[
-            styles.orgPill,
-            { backgroundColor: tokens.surfaceMuted },
-          ]}
-        >
-          <BuildingIcon size={16} color={tokens.accent} />
-          <Text
-            numberOfLines={1}
-            style={[
-              styles.orgName,
-              { color: tokens.textPrimary },
-            ]}
-          >
-            {organization?.name || 'Netify Business'}
-          </Text>
-          <ChevronRightIcon size={14} color={tokens.textMuted} />
-        </TouchableOpacity>
-
-        <View style={styles.headerRight}>
-          {/* Notification Bell */}
+        {/* Top Nav Row: Org Switcher + Icons */}
+        <View style={styles.headerTopRow}>
+          {/* Business Name Switcher Pill */}
           <TouchableOpacity
-            onPress={() => router.push('/notifications' as any)}
-            style={[
-              styles.langPill,
-              {
-                paddingHorizontal: 8,
-                backgroundColor: tokens.surface,
-                borderColor: tokens.border,
-                position: 'relative',
-              },
-            ]}
+            onPress={openBusinessSwitcher}
+            style={[styles.orgPill, { backgroundColor: orgPillBg }]}
+            activeOpacity={0.75}
           >
-            <Ionicons name="notifications-outline" size={17} color={tokens.textPrimary} />
-            {unreadCount > 0 && (
-              <View
-                style={{
-                  position: 'absolute',
-                  top: -3,
-                  right: -3,
-                  backgroundColor: '#EF4444',
-                  minWidth: 16,
-                  height: 16,
-                  borderRadius: 8,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingHorizontal: 3,
-                }}
-              >
-                <Text style={{ fontSize: 9, fontWeight: '700', color: '#ffffff' }}>
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          {/* Language Selector */}
-          <TouchableOpacity
-            onPress={openLanguageModal}
-            style={[
-              styles.langPill,
-              {
-                backgroundColor: tokens.accentSoft,
-                borderColor: tokens.accent,
-              },
-            ]}
-          >
-            <Text style={styles.langPillFlag}>{langInfo.flag}</Text>
-            <Text
-              style={[
-                styles.langPillText,
-                { color: tokens.accent },
-              ]}
-            >
-              {langInfo.code.toUpperCase()}
+            <BuildingIcon size={15} color="#00B994" />
+            <Text numberOfLines={1} style={styles.orgName}>
+              {organization?.name || 'Netify Business'}
             </Text>
-            <Feather
-              name="chevron-down"
-              size={12}
-              color={tokens.accent}
-            />
+            <ChevronRightIcon size={13} color="rgba(255,255,255,0.6)" />
           </TouchableOpacity>
 
-          {/* Settings Gear */}
-          <TouchableOpacity
-            onPress={() => router.push('/settings' as any)}
-            style={[
-              styles.langPill,
-              {
-                paddingHorizontal: 8,
-                backgroundColor: tokens.surface,
-                borderColor: tokens.border,
-              },
-            ]}
-          >
-            <Ionicons name="settings-outline" size={17} color={tokens.textPrimary} />
-          </TouchableOpacity>
+          <View style={styles.headerRight}>
+            {/* Notification Bell */}
+            <TouchableOpacity
+              onPress={() => router.push('/notifications' as any)}
+              style={[styles.headerIcon, { backgroundColor: 'rgba(255,255,255,0.14)' }]}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="notifications-outline" size={18} color="#FFFFFF" />
+              {unreadCount > 0 && (
+                <Animated.View
+                  style={[styles.badgeDot, { transform: [{ scale: badgePulse }] }]}
+                >
+                  <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                </Animated.View>
+              )}
+            </TouchableOpacity>
+
+            {/* Language Selector */}
+            <TouchableOpacity
+              onPress={openLanguageModal}
+              style={[styles.langPill, { backgroundColor: 'rgba(0,185,148,0.22)', borderColor: '#00B994' }]}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.langFlag}>{langInfo.flag}</Text>
+              <Text style={styles.langCode}>{langInfo.code.toUpperCase()}</Text>
+              <Feather name="chevron-down" size={11} color="#00B994" />
+            </TouchableOpacity>
+
+            {/* Settings Trigger */}
+            <TouchableOpacity
+              onPress={() => router.push('/settings' as any)}
+              style={[styles.headerIcon, { backgroundColor: 'rgba(255,255,255,0.14)' }]}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="settings-outline" size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
 
-      <ScrollView
-        contentContainerStyle={styles.contentContainer}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={tokens.accent}
-          />
-        }
-      >
-        {/* Command Center Hero Greeting */}
-        <View style={styles.heroSection}>
-          <Text
-            style={[
-              styles.greetingText,
-              { color: tokens.textMuted },
-            ]}
-          >
-            {langInfo.greeting.toUpperCase()}
-          </Text>
-          <Text
-            style={[
-              styles.heroHeadline,
-              { color: tokens.textPrimary },
-            ]}
-          >
+        {/* Hero Greeting — inside gradient for both light + dark */}
+        <View style={styles.headerGreeting}>
+          <View style={styles.greetingRow}>
+            <View style={styles.greetingAccentLine} />
+            <Text style={styles.greetingSubtext}>
+              {langInfo.greeting.toUpperCase()}
+            </Text>
+          </View>
+          <Text style={styles.heroHeadline}>
             {t('commandCenter.greeting')}
           </Text>
         </View>
+      </LinearGradient>
+
+      {/* ── SCROLLABLE CONTENT ── */}
+      <ScrollView
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={tokens.accent} />
+        }
+      >
+        {/* ── QUICK ACTIONS BAR ── */}
+        <View style={styles.quickActionsContainer}>
+          <TouchableOpacity
+            onPress={() => router.push('/(app)/customers/create' as any)}
+            style={[styles.quickActionCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.quickActionIconWrap, { backgroundColor: 'rgba(0,165,129,0.12)' }]}>
+              <Feather name="user-plus" size={16} color="#00A581" />
+            </View>
+            <Text style={[styles.quickActionLabel, { color: tokens.textPrimary }]}>
+              + Customer
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push('/(app)/receivables/create' as any)}
+            style={[styles.quickActionCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.quickActionIconWrap, { backgroundColor: 'rgba(239,68,68,0.12)' }]}>
+              <Feather name="file-plus" size={16} color="#EF4444" />
+            </View>
+            <Text style={[styles.quickActionLabel, { color: tokens.textPrimary }]}>
+              + Receivable
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push('/(app)/commitments' as any)}
+            style={[styles.quickActionCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.quickActionIconWrap, { backgroundColor: 'rgba(245,158,11,0.12)' }]}>
+              <MaterialCommunityIcons name="handshake-outline" size={16} color="#F59E0B" />
+            </View>
+            <Text style={[styles.quickActionLabel, { color: tokens.textPrimary }]}>
+              Promises
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleOpenCopilot}
+            style={[styles.quickActionCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.quickActionIconWrap, { backgroundColor: 'rgba(99,102,241,0.12)' }]}>
+              <MaterialCommunityIcons name="robot-outline" size={16} color="#6366F1" />
+            </View>
+            <Text style={[styles.quickActionLabel, { color: tokens.textPrimary }]}>
+              AI Copilot
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={tokens.accent} />
-            <Text
-              style={[
-                styles.loadingText,
-                { color: tokens.textMuted },
-              ]}
-            >
-              {t('common.loading')}
-            </Text>
-          </View>
-        ) : hasZeroData ? (
-          /* Empty State for New Business */
-          <Card style={styles.emptyCard}>
-            <View style={styles.emptyStateContainer}>
-              <Feather
-                name="trending-up"
-                size={40}
-                color={tokens.accent}
-              />
-              <Text
-                style={[
-                  styles.emptyTitle,
-                  { color: tokens.textPrimary },
-                ]}
-              >
-                {t('commandCenter.noDataTitle')}
-              </Text>
-              <Text
-                style={[
-                  styles.emptyDesc,
-                  { color: tokens.textSecondary },
-                ]}
-              >
-                {t('commandCenter.noDataDesc')}
-              </Text>
-              <View style={styles.emptyActions}>
-                <Button
-                  label={t('commandCenter.addCustomer')}
-                  onPress={() => router.push('/(app)/customers/create' as any)}
-                  variant="primary"
-                />
-                <Button
-                  label={t('commandCenter.addReceivable')}
-                  onPress={() => router.push('/(app)/receivables/create' as any)}
-                  variant="secondary"
-                />
-              </View>
-            </View>
-          </Card>
-        ) : (
           <>
-            {/* 4 Financial Attention Metrics Grid */}
+            <MetricGridSkeleton />
+            <BriefingCardSkeleton />
+            {[0, 1, 2].map((i) => (
+              <CustomerRowSkeleton key={i} />
+            ))}
+          </>
+        ) : (
+          <View>
+            {/* ── FINANCIAL ATTENTION METRICS (2×2 GRID) ── */}
             <View style={styles.metricsGrid}>
-              {/* Total Outstanding */}
-              <View
-                style={[
-                  styles.metricBox,
-                  {
-                    backgroundColor: tokens.surface,
-                    borderColor: tokens.border,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.metricBoxLabel,
-                    { color: tokens.textMuted },
-                  ]}
-                >
-                  {t('commandCenter.totalOutstanding')}
-                </Text>
-                <Text
-                  style={[
-                    styles.metricBoxValue,
-                    { color: tokens.danger },
-                  ]}
-                >
-                  {formattedOutstanding}
-                </Text>
-                <Text
-                  style={[
-                    styles.metricSub,
-                    { color: tokens.textSecondary },
-                  ]}
-                >
-                  {attentionData?.facts.activeCustomersCount || 0} active accounts
-                </Text>
-              </View>
+              <MetricCard
+                label={t('commandCenter.totalOutstanding')}
+                value={attentionData?.facts?.totalOutstanding || 0}
+                sub={`${attentionData?.facts?.activeCustomersCount || 0} active accounts`}
+                valueColor={tokens.danger}
+                bgColor={tokens.dangerSoft}
+                borderColor={tokens.danger + '33'}
+                icon={<MaterialCommunityIcons name="cash-remove" size={16} color={tokens.danger} />}
+                formatValue={(n) => `${currency}${n.toLocaleString()}`}
+                onPress={() => router.push('/(app)/receivables' as any)}
+              />
+              <MetricCard
+                label={t('commandCenter.overdueCustomers')}
+                value={attentionData?.facts?.overdueCustomersCount || 0}
+                sub={`${currency}${(attentionData?.facts?.totalOverdue || 0).toLocaleString()} past due`}
+                valueColor={tokens.warning}
+                bgColor={tokens.warningSoft}
+                borderColor={tokens.warning + '33'}
+                icon={<MaterialCommunityIcons name="clock-alert-outline" size={16} color={tokens.warning} />}
+                onPress={() => router.push('/(app)/receivables' as any)}
+              />
+              <MetricCard
+                label={t('commandCenter.promisesDueToday')}
+                value={attentionData?.facts?.promisesDueTodayCount || 0}
+                sub={`${currency}${(attentionData?.facts?.promisesDueTodayAmount || 0).toLocaleString()} expected`}
+                valueColor={tokens.accent}
+                bgColor={tokens.accentSoft}
+                borderColor={tokens.accent + '33'}
+                icon={<MaterialCommunityIcons name="handshake-outline" size={16} color={tokens.accent} />}
+                onPress={() => router.push('/(app)/commitments' as any)}
+              />
+              <MetricCard
+                label={t('commandCenter.highRiskCases')}
+                value={attentionData?.facts?.highRiskCasesCount || 0}
+                sub={`${attentionData?.facts?.missedPromisesCount || 0} missed commitments`}
+                valueColor="#7C3AED"
+                bgColor={isDark ? '#1E0D40' : '#F5F3FF'}
+                borderColor="#7C3AED33"
+                icon={<MaterialCommunityIcons name="alert-circle-outline" size={16} color="#7C3AED" />}
+                onPress={() => router.push('/(app)/receivables' as any)}
+              />
+            </View>
 
-              {/* Overdue Customers */}
-              <View
-                style={[
-                  styles.metricBox,
-                  {
-                    backgroundColor: tokens.surface,
-                    borderColor: tokens.border,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.metricBoxLabel,
-                    { color: tokens.textMuted },
-                  ]}
+            {/* ── CORE BUSINESS MODULES NAVIGATION ── */}
+            <View style={styles.sectionContainer}>
+              <Text style={[styles.sectionTitle, { color: tokens.textPrimary, marginBottom: 12 }]}>
+                Business Modules
+              </Text>
+              <View style={styles.modulesGrid}>
+                {/* Customers Module */}
+                <TouchableOpacity
+                  onPress={() => router.push('/(app)/customers' as any)}
+                  style={[styles.moduleCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
+                  activeOpacity={0.75}
                 >
-                  {t('commandCenter.overdueCustomers')}
-                </Text>
-                <Text
-                  style={[
-                    styles.metricBoxValue,
-                    { color: tokens.warning },
-                  ]}
-                >
-                  {attentionData?.facts.overdueCustomersCount || 0}
-                </Text>
-                <Text
-                  style={[
-                    styles.metricSub,
-                    { color: tokens.textSecondary },
-                  ]}
-                >
-                  {attentionData?.currency}{' '}
-                  {(attentionData?.facts.totalOverdue || 0).toLocaleString()}{' '}
-                  past due
-                </Text>
-              </View>
+                  <View style={[styles.moduleIconCircle, { backgroundColor: 'rgba(0,165,129,0.12)' }]}>
+                    <Feather name="users" size={20} color="#00A581" />
+                  </View>
+                  <Text style={[styles.moduleTitle, { color: tokens.textPrimary }]}>Customers</Text>
+                  <Text style={[styles.moduleDesc, { color: tokens.textSecondary }]}>
+                    Directory & debtor records
+                  </Text>
+                </TouchableOpacity>
 
-              {/* Promises Due Today */}
-              <View
-                style={[
-                  styles.metricBox,
-                  {
-                    backgroundColor: tokens.surface,
-                    borderColor: tokens.border,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.metricBoxLabel,
-                    { color: tokens.textMuted },
-                  ]}
+                {/* Receivables Module */}
+                <TouchableOpacity
+                  onPress={() => router.push('/(app)/receivables' as any)}
+                  style={[styles.moduleCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
+                  activeOpacity={0.75}
                 >
-                  {t('commandCenter.promisesDueToday')}
-                </Text>
-                <Text
-                  style={[
-                    styles.metricBoxValue,
-                    { color: tokens.accent },
-                  ]}
-                >
-                  {attentionData?.facts.promisesDueTodayCount || 0}
-                </Text>
-                <Text
-                  style={[
-                    styles.metricSub,
-                    { color: tokens.textSecondary },
-                  ]}
-                >
-                  {attentionData?.currency}{' '}
-                  {(attentionData?.facts.promisesDueTodayAmount || 0).toLocaleString()}{' '}
-                  expected
-                </Text>
-              </View>
+                  <View style={[styles.moduleIconCircle, { backgroundColor: 'rgba(239,68,68,0.12)' }]}>
+                    <MaterialCommunityIcons name="file-document-outline" size={20} color="#EF4444" />
+                  </View>
+                  <Text style={[styles.moduleTitle, { color: tokens.textPrimary }]}>Receivables</Text>
+                  <Text style={[styles.moduleDesc, { color: tokens.textSecondary }]}>
+                    Debt ledger & invoices
+                  </Text>
+                </TouchableOpacity>
 
-              {/* High Risk Cases */}
-              <View
-                style={[
-                  styles.metricBox,
-                  {
-                    backgroundColor: tokens.surface,
-                    borderColor: tokens.border,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.metricBoxLabel,
-                    { color: tokens.textMuted },
-                  ]}
+                {/* Payment Promises Module */}
+                <TouchableOpacity
+                  onPress={() => router.push('/(app)/commitments' as any)}
+                  style={[styles.moduleCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
+                  activeOpacity={0.75}
                 >
-                  {t('commandCenter.highRiskCases')}
-                </Text>
-                <Text
-                  style={[
-                    styles.metricBoxValue,
-                    { color: tokens.danger },
-                  ]}
+                  <View style={[styles.moduleIconCircle, { backgroundColor: 'rgba(245,158,11,0.12)' }]}>
+                    <MaterialCommunityIcons name="handshake" size={20} color="#F59E0B" />
+                  </View>
+                  <Text style={[styles.moduleTitle, { color: tokens.textPrimary }]}>Commitments</Text>
+                  <Text style={[styles.moduleDesc, { color: tokens.textSecondary }]}>
+                    Payment promises & dues
+                  </Text>
+                </TouchableOpacity>
+
+                {/* AI Copilot Module */}
+                <TouchableOpacity
+                  onPress={handleOpenCopilot}
+                  style={[styles.moduleCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
+                  activeOpacity={0.75}
                 >
-                  {attentionData?.facts.highRiskCasesCount || 0}
-                </Text>
-                <Text
-                  style={[
-                    styles.metricSub,
-                    { color: tokens.textSecondary },
-                  ]}
-                >
-                  {attentionData?.facts.missedPromisesCount || 0} missed
-                  commitments
-                </Text>
+                  <View style={[styles.moduleIconCircle, { backgroundColor: 'rgba(99,102,241,0.12)' }]}>
+                    <MaterialCommunityIcons name="robot" size={20} color="#6366F1" />
+                  </View>
+                  <Text style={[styles.moduleTitle, { color: tokens.textPrimary }]}>AI Intelligence</Text>
+                  <Text style={[styles.moduleDesc, { color: tokens.textSecondary }]}>
+                    Collections reasoning
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
 
-            {/* Daily Intelligence Briefing */}
-            {attentionData?.executiveBriefing && (
-              <View style={styles.sectionContainer}>
-                <DailyBriefingCard
-                  briefing={attentionData.executiveBriefing}
-                  calculatedAt={attentionData.calculatedAt}
-                  onAskCopilot={handleOpenCopilot}
-                />
-              </View>
-            )}
+            {/* ── AI DAILY BRIEFING CARD ── */}
+            <View style={styles.sectionContainer}>
+              <DailyBriefingCard
+                briefing={
+                  attentionData?.executiveBriefing ||
+                  'Your daily business briefing analyzes outstanding debts, payment promises, and collection priorities across your customer accounts in real-time.'
+                }
+                calculatedAt={attentionData?.calculatedAt || new Date().toISOString()}
+                onAskCopilot={handleOpenCopilot}
+                onRefresh={onRefresh}
+              />
+            </View>
 
-            {/* Priority Customer Queue */}
-            {priorityCustomers.length > 0 && (
-              <View style={styles.sectionContainer}>
-                <View style={styles.sectionHeader}>
-                  <Text
-                    style={[
-                      styles.sectionTitle,
-                      { color: tokens.textPrimary },
-                    ]}
-                  >
+            {/* ── PRIORITY CUSTOMERS / ACTION QUEUE ── */}
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitleRow}>
+                  <Text style={[styles.sectionTitle, { color: tokens.textPrimary }]}>
                     {t('commandCenter.topPriority')}
                   </Text>
-                  <TouchableOpacity
-                    onPress={() => router.push('/(app)/customers' as any)}
-                  >
-                    <Text
-                      style={[
-                        styles.viewAllText,
-                        { color: tokens.accent },
-                      ]}
-                    >
-                      {t('common.viewAll')}
-                    </Text>
-                  </TouchableOpacity>
+                  {priorityCustomers.length > 0 && (
+                    <View style={[styles.countBadge, { backgroundColor: tokens.dangerSoft }]}>
+                      <Text style={[styles.countBadgeText, { color: tokens.danger }]}>
+                        {priorityCustomers.length}
+                      </Text>
+                    </View>
+                  )}
                 </View>
+                <TouchableOpacity onPress={() => router.push('/(app)/customers' as any)}>
+                  <Text style={[styles.viewAllText, { color: tokens.accent }]}>
+                    {t('common.viewAll')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-                {priorityCustomers.map((cust) => (
+              {priorityCustomers.length > 0 ? (
+                priorityCustomers.map((cust) => (
                   <PriorityCustomerCard
                     key={cust.customerId}
                     customer={cust}
-                    onPress={() =>
-                      router.push(`/(app)/customers/${cust.customerId}` as any)
-                    }
+                    onPress={() => router.push(`/(app)/customers/${cust.customerId}` as any)}
                     onQuickMessage={() => {
-                      if (!canAccessFeature('AI_COLLECTION_COPILOT')) {
-                        openProPaywall();
-                        return;
-                      }
                       router.push('/(app)/copilot' as any);
                     }}
                   />
-                ))}
-              </View>
-            )}
-          </>
+                ))
+              ) : (
+                <View style={[styles.emptyCustomerCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
+                  <Feather name="check-circle" size={24} color="#00A581" style={{ marginBottom: 6 }} />
+                  <Text style={[styles.emptyCustomerTitle, { color: tokens.textPrimary }]}>
+                    No Urgent Collection Flags
+                  </Text>
+                  <Text style={[styles.emptyCustomerDesc, { color: tokens.textSecondary }]}>
+                    Your high-priority debtor queues will populate here as receivables mature.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => router.push('/(app)/customers' as any)}
+                    style={[styles.viewCustomersBtn, { backgroundColor: tokens.accentSoft, borderColor: tokens.accent }]}
+                  >
+                    <Text style={[styles.viewCustomersBtnText, { color: tokens.accent }]}>
+                      Browse All Customers
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
         )}
       </ScrollView>
 
-      {/* Floating / Bottom Ask Copilot Bar */}
-      <View
-        style={[
-          styles.floatingBarContainer,
-          {
-            backgroundColor: tokens.surface,
-            borderTopColor: tokens.border,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          onPress={handleOpenCopilot}
-          style={[
-            styles.copilotBar,
-            {
-              backgroundColor: tokens.surfaceMuted,
-              borderColor: tokens.accent,
-            },
-          ]}
-        >
-          <View style={styles.copilotBarLeft}>
-            <View
-              style={[
-                styles.copilotIconCircle,
-                { backgroundColor: tokens.accent },
-              ]}
+      {/* ── FLOATING COPILOT BAR ── */}
+      <View style={[styles.floatingBarContainer, { backgroundColor: tokens.surface, borderTopColor: tokens.border }]}>
+        <Pressable onPress={handleOpenCopilot}>
+          {({ pressed }) => (
+            <LinearGradient
+              colors={
+                pressed
+                  ? ['#003F5F', '#007A64']
+                  : isDark
+                  ? ['rgba(0,165,129,0.18)', 'rgba(0,185,148,0.12)']
+                  : ['rgba(0,165,129,0.06)', 'rgba(0,185,148,0.04)']
+              }
+              start={GRADIENT_DIRECTION.toRight.start}
+              end={GRADIENT_DIRECTION.toRight.end}
+              style={[styles.copilotBar, { borderColor: tokens.accent }]}
             >
-              <Feather name="cpu" size={16} color="#FFFFFF" />
-            </View>
-            <Text
-              style={[
-                styles.copilotBarText,
-                { color: tokens.textSecondary },
-              ]}
-            >
-              {t('copilot.placeholder')}
-            </Text>
-          </View>
-          <Feather
-            name="arrow-up-right"
-            size={18}
-            color={tokens.accent}
-          />
-        </TouchableOpacity>
+              <View style={styles.copilotBarLeft}>
+                <LinearGradient
+                  colors={GRADIENTS.tealSheen as [string, string]}
+                  style={styles.copilotIconCircle}
+                >
+                  <MaterialCommunityIcons name="robot-outline" size={17} color="#FFFFFF" />
+                </LinearGradient>
+                <Text style={[styles.copilotBarText, { color: tokens.textSecondary }]}>
+                  {t('copilot.placeholder')}
+                </Text>
+              </View>
+              <View style={[styles.copilotArrow, { backgroundColor: tokens.accent }]}>
+                <Feather name="arrow-up-right" size={16} color="#FFFFFF" />
+              </View>
+            </LinearGradient>
+          )}
+        </Pressable>
       </View>
 
-      {/* Modals */}
+      {/* ── MODALS ── */}
       <LanguageSelectorModal
         visible={useLanguageStore((state) => state.isLanguageModalOpen)}
         onClose={useLanguageStore((state) => state.closeLanguageModal)}
@@ -579,123 +555,283 @@ export default function AppHomeScreen() {
   );
 }
 
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
+  safeArea: { flex: 1 },
+
+  // ── Header ──────────────────────────────────────────────────────────────
   header: {
+    flexDirection: 'column',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
+  },
+  headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
+    marginBottom: 18,
+  },
+  headerGreeting: {
+    paddingHorizontal: 2,
   },
   orgPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 7,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 20,
     maxWidth: '55%',
   },
   orgName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
+    color: '#FFFFFF',
     flexShrink: 1,
+    letterSpacing: 0.1,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
+  headerIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeDot: {
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    backgroundColor: '#EF4444',
+    minWidth: 17,
+    height: 17,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: '#003051',
+  },
+  badgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
   langPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
-  langPillFlag: {
-    fontSize: 14,
+  langFlag: { fontSize: 14 },
+  langCode: { fontSize: 11, fontWeight: '800', color: '#00B994' },
+
+  // ── Content ──────────────────────────────────────────────────────────────
+  contentContainer: { padding: 16, paddingBottom: 110 },
+  greetingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  greetingAccentLine: {
+    width: 3,
+    height: 14,
+    borderRadius: 2,
+    backgroundColor: '#00B994',
   },
-  langPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  planBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  planBadgeText: {
+  greetingSubtext: {
     fontSize: 11,
     fontWeight: '800',
-  },
-  contentContainer: {
-    padding: 16,
-    paddingBottom: 90,
-  },
-  heroSection: {
-    marginBottom: 16,
+    letterSpacing: 2,
+    color: 'rgba(255,255,255,0.55)',
   },
   greetingText: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginBottom: 4,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 2,
+    color: 'rgba(255,255,255,0.55)',
   },
   heroHeadline: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
     letterSpacing: -0.5,
+    lineHeight: 32,
+    color: '#FFFFFF',
   },
+
+  // ── Quick Actions ────────────────────────────────────────────────────────
+  quickActionsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 20,
+  },
+  quickActionCard: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  quickActionIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  quickActionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+
+  // ── Metric Grid ──────────────────────────────────────────────────────────
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 22,
   },
   metricBox: {
     width: '48%',
     padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  metricTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  metricIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   metricBoxLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 6,
+    fontSize: 10,
+    fontWeight: '700',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    flex: 1,
+    marginRight: 4,
   },
   metricBoxValue: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
     marginBottom: 4,
+    letterSpacing: -0.5,
   },
   metricSub: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+
+  // ── Business Modules Grid ────────────────────────────────────────────────
+  modulesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  moduleCard: {
+    width: '48%',
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  moduleIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  moduleTitle: {
+    fontSize: 14.5,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  moduleDesc: {
     fontSize: 11.5,
+    lineHeight: 16,
+    fontWeight: '500',
   },
-  sectionContainer: {
-    marginBottom: 20,
-  },
+
+  // ── Section headers ──────────────────────────────────────────────────────
+  sectionContainer: { marginBottom: 22 },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  sectionTitle: {
-    fontSize: 17,
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sectionTitle: { fontSize: 16, fontWeight: '800', letterSpacing: -0.2 },
+  countBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  countBadgeText: { fontSize: 11, fontWeight: '800' },
+  viewAllText: { fontSize: 13, fontWeight: '700' },
+
+  // ── Empty Priority Customer Card ─────────────────────────────────────────
+  emptyCustomerCard: {
+    padding: 20,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  emptyCustomerTitle: {
+    fontSize: 14.5,
+    fontWeight: '800',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  emptyCustomerDesc: {
+    fontSize: 12.5,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  viewCustomersBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  viewCustomersBtnText: {
+    fontSize: 12.5,
     fontWeight: '700',
   },
-  viewAllText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
+
+  // ── Copilot Floating Bar ─────────────────────────────────────────────────
   floatingBarContainer: {
     position: 'absolute',
     bottom: 0,
@@ -703,15 +839,16 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 16,
     paddingVertical: 12,
+    paddingBottom: 20,
     borderTopWidth: 1,
   },
   copilotBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 24,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 28,
     borderWidth: 1.5,
   },
   copilotBarLeft: {
@@ -721,46 +858,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   copilotIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },
   copilotBarText: {
     fontSize: 13,
+    fontWeight: '500',
     flex: 1,
   },
-  loadingContainer: {
-    paddingVertical: 40,
+  copilotArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 13,
-    marginTop: 10,
-  },
-  emptyCard: {
-    padding: 24,
-    borderRadius: 20,
-    marginTop: 10,
-  },
-  emptyStateContainer: {
-    alignItems: 'center',
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 12,
-    marginBottom: 6,
-  },
-  emptyDesc: {
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 19,
-    marginBottom: 20,
-  },
-  emptyActions: {
-    flexDirection: 'row',
-    gap: 12,
+    justifyContent: 'center',
   },
 });

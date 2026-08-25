@@ -7,31 +7,33 @@ import {
   RefreshControl,
   ActivityIndicator,
   TextInput,
+  StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '../../../src/design/theme';
-import { Card } from '../../../src/design/components/Card';
-import { Badge } from '../../../src/design/components/Badge';
-import { EmptyState } from '../../../src/design/components/EmptyState';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '@/design/theme';
+import { Shimmer, Button } from '@/design/components';
 import {
   SearchIcon,
-  PlusIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   FileTextIcon,
   CalendarIcon,
-} from '../../../src/design/icons';
+} from '@/design/icons';
+import Feather from '@expo/vector-icons/Feather';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {
   receivablesApi,
   ReceivableItem,
-} from '../../../src/services/api/receivables';
+} from '@/services/api/receivables';
+import { GRADIENTS, GRADIENT_DIRECTION } from '@/design/tokens/gradients';
 
-type StatusFilter = 'ALL' | 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE';
+type StatusFilter = 'ALL' | 'OPEN' | 'PARTIALLY_PAID' | 'OVERDUE' | 'PAID';
 
 export default function ReceivablesScreen() {
   const router = useRouter();
-  const { tokens } = useTheme();
+  const { tokens, isDark } = useTheme();
 
   const [receivables, setReceivables] = useState<ReceivableItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,244 +124,585 @@ export default function ReceivablesScreen() {
     }
   };
 
-  const renderStatusBadge = (receivable: ReceivableItem) => {
-    if (receivable.status === 'CANCELLED') {
-      return <Badge label="CANCELLED" variant="neutral" size="sm" />;
-    }
+  const getStatusConfig = (receivable: ReceivableItem) => {
     if (receivable.status === 'PAID') {
-      return <Badge label="PAID" variant="success" size="sm" />;
+      return {
+        label: 'PAID',
+        stripeColor: '#16A34A',
+        badgeBg: isDark ? 'rgba(22,163,74,0.2)' : 'rgba(22,163,74,0.12)',
+        badgeColor: '#16A34A',
+      };
     }
     if (receivable.isOverdue) {
-      return <Badge label={`OVERDUE (${receivable.daysOverdue}d)`} variant="danger" size="sm" />;
+      return {
+        label: `OVERDUE (${receivable.daysOverdue}d)`,
+        stripeColor: '#EF4444',
+        badgeBg: isDark ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.12)',
+        badgeColor: '#EF4444',
+      };
     }
     if (receivable.status === 'PARTIALLY_PAID') {
-      return <Badge label="PARTIAL" variant="warning" size="sm" />;
+      return {
+        label: 'PARTIAL',
+        stripeColor: '#F59E0B',
+        badgeBg: isDark ? 'rgba(245,158,11,0.2)' : 'rgba(245,158,11,0.12)',
+        badgeColor: '#F59E0B',
+      };
     }
-    return <Badge label="OPEN" variant="primary" size="sm" />;
+    if (receivable.status === 'CANCELLED') {
+      return {
+        label: 'CANCELLED',
+        stripeColor: '#94A3B8',
+        badgeBg: isDark ? 'rgba(148,163,184,0.2)' : 'rgba(148,163,184,0.12)',
+        badgeColor: '#94A3B8',
+      };
+    }
+    return {
+      label: 'OPEN',
+      stripeColor: '#00A581',
+      badgeBg: isDark ? 'rgba(0,165,129,0.2)' : 'rgba(0,165,129,0.12)',
+      badgeColor: '#00A581',
+    };
   };
 
-  const renderReceivableItem = ({ item }: { item: ReceivableItem }) => (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      onPress={() => router.push(`/(app)/receivables/${item.id}` as any)}
-      className="mb-3"
-    >
-      <Card className="p-4">
-        <View className="flex-row items-start justify-between mb-2">
-          <View className="flex-1 mr-3">
-            <Text
-              style={{ color: tokens.textPrimary }}
-              className="text-base font-bold"
-              numberOfLines={1}
-            >
-              {item.customer?.name || 'Customer'}
-            </Text>
-            {item.reference ? (
+  const renderReceivableItem = ({ item }: { item: ReceivableItem }) => {
+    const config = getStatusConfig(item);
+
+    return (
+      <TouchableOpacity
+        activeOpacity={0.75}
+        onPress={() => router.push(`/(app)/receivables/${item.id}` as any)}
+        style={styles.cardWrapper}
+      >
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: tokens.surface,
+              borderColor: item.isOverdue ? 'rgba(239,68,68,0.3)' : tokens.border,
+            },
+          ]}
+        >
+          {/* Left colored stripe */}
+          <View style={[styles.stripe, { backgroundColor: config.stripeColor }]} />
+
+          <View style={styles.cardInner}>
+            <View style={styles.cardHeader}>
+              <View style={styles.cardTitleBlock}>
+                <Text
+                  style={[styles.customerName, { color: tokens.textPrimary }]}
+                  numberOfLines={1}
+                >
+                  {item.customer?.name || 'Customer'}
+                </Text>
+                {item.reference ? (
+                  <Text style={[styles.referenceText, { color: tokens.textMuted }]}>
+                    Ref: {item.reference}
+                  </Text>
+                ) : null}
+              </View>
+
+              <View style={[styles.statusBadge, { backgroundColor: config.badgeBg }]}>
+                <Text style={[styles.statusBadgeText, { color: config.badgeColor }]}>
+                  {config.label}
+                </Text>
+              </View>
+            </View>
+
+            {item.description ? (
               <Text
-                style={{ color: tokens.textSecondary }}
-                className="text-xs mt-0.5"
-                numberOfLines={1}
+                style={[styles.descriptionText, { color: tokens.textSecondary }]}
+                numberOfLines={2}
               >
-                Ref: {item.reference}
+                {item.description}
               </Text>
             ) : null}
-          </View>
-          {renderStatusBadge(item)}
-        </View>
 
-        {item.description ? (
-          <Text
-            style={{ color: tokens.textSecondary }}
-            className="text-xs mb-3"
-            numberOfLines={2}
-          >
-            {item.description}
-          </Text>
-        ) : null}
+            {/* Financial Breakdown */}
+            <View style={[styles.financialRow, { borderTopColor: tokens.border }]}>
+              <View>
+                <Text style={[styles.amountLabel, { color: tokens.textMuted }]}>
+                  Remaining Balance
+                </Text>
+                <Text style={[styles.balanceAmount, { color: item.isOverdue ? tokens.danger : tokens.textPrimary }]}>
+                  {formatMoney(item.balance, item.currency)}
+                </Text>
+              </View>
 
-        {/* Financial Breakdown */}
-        <View className="pt-2 border-t border-slate-100 dark:border-slate-800 flex-row justify-between items-end">
-          <View>
-            <Text style={{ color: tokens.textSecondary }} className="text-xs">
-              Remaining Balance
-            </Text>
-            <Text style={{ color: tokens.primary }} className="text-base font-extrabold mt-0.5">
-              {formatMoney(item.balance, item.currency)}
-            </Text>
-          </View>
-
-          <View className="items-end">
-            <View className="flex-row items-center mb-1">
-              <CalendarIcon size={12} color={item.isOverdue ? tokens.danger : tokens.textSecondary} />
-              <Text
-                style={{
-                  color: item.isOverdue ? tokens.danger : tokens.textSecondary,
-                }}
-                className="text-xs ml-1 font-medium"
-              >
-                Due {formatDate(item.dueDate)}
-              </Text>
+              <View style={styles.dueDateBlock}>
+                <View style={styles.dueDateRow}>
+                  <CalendarIcon
+                    size={12}
+                    color={item.isOverdue ? tokens.danger : tokens.textSecondary}
+                  />
+                  <Text
+                    style={[
+                      styles.dueDateText,
+                      { color: item.isOverdue ? tokens.danger : tokens.textSecondary },
+                    ]}
+                  >
+                    Due {formatDate(item.dueDate)}
+                  </Text>
+                </View>
+                <Text style={[styles.origAmountText, { color: tokens.textMuted }]}>
+                  Orig: {formatMoney(item.originalAmount, item.currency)}
+                </Text>
+              </View>
             </View>
-            <Text style={{ color: tokens.textSecondary }} className="text-xs">
-              Orig: {formatMoney(item.originalAmount, item.currency)}
-            </Text>
           </View>
         </View>
-      </Card>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
+
+  const headerGradient = isDark ? GRADIENTS.darkHero : GRADIENTS.navyHero;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: tokens.background }}>
-      {/* Header */}
-      <View className="px-6 py-4 flex-row items-center justify-between border-b border-slate-100 dark:border-slate-800">
-        <View className="flex-row items-center flex-1">
+    <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: tokens.background }]}>
+      {/* ── PREMIUM HEADER ── */}
+      <LinearGradient
+        colors={headerGradient as [string, string]}
+        start={GRADIENT_DIRECTION.toBottomRight.start}
+        end={GRADIENT_DIRECTION.toBottomRight.end}
+        style={styles.header}
+      >
+        <View style={styles.headerLeft}>
           <TouchableOpacity
             onPress={() => router.back()}
-            className="mr-3 p-1 rounded-full active:opacity-70"
+            style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.15)' }]}
+            activeOpacity={0.7}
           >
-            <ChevronLeftIcon size={24} color={tokens.textPrimary} />
+            <ChevronLeftIcon size={18} color="#FFFFFF" />
           </TouchableOpacity>
           <View>
-            <Text style={{ color: tokens.textPrimary }} className="text-xl font-bold">
-              Receivables
-            </Text>
-            <Text style={{ color: tokens.textSecondary }} className="text-xs">
-              Authoritative Customer Debts & Balances
-            </Text>
+            <Text style={styles.headerTitle}>Receivables</Text>
+            <Text style={styles.headerSubtitle}>Authoritative debts & balances</Text>
           </View>
         </View>
 
         <TouchableOpacity
           onPress={() => router.push('/(app)/receivables/create' as any)}
-          style={{ backgroundColor: tokens.primary }}
-          className="w-10 h-10 rounded-full items-center justify-center shadow-sm active:opacity-90"
+          activeOpacity={0.8}
+          style={styles.addBtnWrap}
         >
-          <PlusIcon size={20} color="#FFFFFF" />
+          <LinearGradient
+            colors={GRADIENTS.tealSheen as [string, string]}
+            start={GRADIENT_DIRECTION.toRight.start}
+            end={GRADIENT_DIRECTION.toRight.end}
+            style={styles.addBtn}
+          >
+            <Feather name="plus" size={16} color="#FFFFFF" />
+            <Text style={styles.addBtnText}>Record</Text>
+          </LinearGradient>
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
 
-      {/* Search Input */}
-      <View className="px-6 pt-4 pb-2">
-        <View
-          style={{
-            backgroundColor: tokens.surface,
-            borderColor: tokens.border,
-          }}
-          className="flex-row items-center px-3 py-2.5 rounded-xl border"
-        >
-          <SearchIcon size={18} color={tokens.textSecondary} />
+      {/* ── SEARCH & FILTER CONTROLS ── */}
+      <View style={[styles.controlsContainer, { backgroundColor: tokens.surface, borderBottomColor: tokens.border }]}>
+        <View style={[styles.searchBar, { backgroundColor: tokens.surfaceMuted, borderColor: tokens.border }]}>
+          <SearchIcon size={16} color={tokens.textMuted} />
           <TextInput
-            placeholder="Search by customer, reference, or description..."
-            placeholderTextColor={tokens.textSecondary}
+            placeholder="Search by customer, reference..."
+            placeholderTextColor={tokens.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            style={{ color: tokens.textPrimary }}
-            className="flex-1 ml-2 text-sm"
-            returnKeyType="search"
+            style={[styles.searchInput, { color: tokens.textPrimary }]}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Text style={{ color: tokens.textSecondary }} className="text-xs font-bold px-1">
-                CLEAR
-              </Text>
+              <Feather name="x" size={16} color={tokens.textMuted} />
             </TouchableOpacity>
           )}
         </View>
-      </View>
 
-      {/* Filter Tabs */}
-      <View className="px-6 py-2 flex-row">
-        {(['ALL', 'OPEN', 'PARTIALLY_PAID', 'OVERDUE', 'PAID'] as StatusFilter[]).map((tab) => {
-          const active = statusFilter === tab;
-          return (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => setStatusFilter(tab)}
-              style={{
-                backgroundColor: active ? tokens.primary : tokens.surface,
-                borderColor: active ? tokens.primary : tokens.border,
-              }}
-              className="mr-2 px-3 py-1.5 rounded-lg border"
-            >
-              <Text
-                style={{
-                  color: active ? '#FFFFFF' : tokens.textSecondary,
-                }}
-                className="text-xs font-bold"
+        {/* Filter Tabs */}
+        <View style={styles.tabsRow}>
+          {(['ALL', 'OPEN', 'PARTIALLY_PAID', 'OVERDUE', 'PAID'] as StatusFilter[]).map((tab) => {
+            const active = statusFilter === tab;
+            return (
+              <TouchableOpacity
+                key={tab}
+                onPress={() => setStatusFilter(tab)}
+                activeOpacity={0.75}
+                style={styles.tabWrap}
               >
-                {tab.replace('_', ' ')}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+                {active ? (
+                  <LinearGradient
+                    colors={GRADIENTS.navyToTeal as [string, string]}
+                    start={GRADIENT_DIRECTION.toRight.start}
+                    end={GRADIENT_DIRECTION.toRight.end}
+                    style={styles.tabActive}
+                  >
+                    <Text style={styles.tabActiveText}>{tab.replace('_', ' ')}</Text>
+                  </LinearGradient>
+                ) : (
+                  <View style={[styles.tabInactive, { backgroundColor: tokens.surfaceMuted, borderColor: tokens.border }]}>
+                    <Text style={[styles.tabInactiveText, { color: tokens.textSecondary }]}>
+                      {tab.replace('_', ' ')}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
-      {/* Content Body */}
-      {loading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={tokens.primary} />
-          <Text style={{ color: tokens.textSecondary }} className="text-sm mt-3 font-medium">
-            Loading receivables...
-          </Text>
-        </View>
-      ) : error ? (
-        <View className="flex-1 px-6 justify-center">
-          <EmptyState
-            icon={<FileTextIcon size={32} color={tokens.danger} />}
-            title="Unable to Load Receivables"
-            description={error}
-            actionLabel="Try Again"
-            onAction={() => fetchReceivables(1)}
-          />
-        </View>
-      ) : (
-        <FlatList
-          data={receivables}
-          keyExtractor={(item) => item.id}
-          renderItem={renderReceivableItem}
-          contentContainerStyle={{
-            paddingHorizontal: 24,
-            paddingTop: 8,
-            paddingBottom: 40,
-          }}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={tokens.primary}
-            />
-          }
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.3}
-          ListFooterComponent={
-            loadingMore ? (
-              <View className="py-4 items-center">
-                <ActivityIndicator size="small" color={tokens.primary} />
+      {/* ── CONTENT BODY ── */}
+      <View style={styles.contentArea}>
+        {loading ? (
+          <View style={styles.skeletonList}>
+            {[0, 1, 2, 3].map((i) => (
+              <View key={i} style={styles.skeletonCard}>
+                <Shimmer width="100%" height={96} borderRadius={18} />
               </View>
-            ) : null
-          }
-          ListEmptyComponent={
-            <View className="flex-1 py-16 justify-center">
-              <EmptyState
-                icon={<FileTextIcon size={32} color={tokens.primary} />}
-                title={searchQuery ? 'No Receivables Found' : 'No Receivables Recorded'}
-                description={
-                  searchQuery
-                    ? `No receivables matched "${searchQuery}".`
-                    : 'Record debt obligations, wholesale credit, or credit sales to begin deterministic balance tracking.'
-                }
-                actionLabel={searchQuery ? undefined : 'Record First Receivable'}
-                onAction={
-                  searchQuery
-                    ? undefined
-                    : () => router.push('/(app)/receivables/create' as any)
-                }
+            ))}
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <MaterialCommunityIcons name="alert-circle-outline" size={38} color={tokens.danger} />
+            <Text style={[styles.errorTitle, { color: tokens.textPrimary }]}>
+              Unable to Load Receivables
+            </Text>
+            <Text style={[styles.errorDesc, { color: tokens.textSecondary }]}>{error}</Text>
+            <Button
+              label="Try Again"
+              variant="secondary"
+              size="sm"
+              style={{ marginTop: 14 }}
+              onPress={() => fetchReceivables(1)}
+            />
+          </View>
+        ) : (
+          <FlatList
+            data={receivables}
+            keyExtractor={(item) => item.id}
+            renderItem={renderReceivableItem}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={tokens.accent}
               />
-            </View>
-          }
-        />
-      )}
+            }
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.3}
+            ListFooterComponent={
+              loadingMore ? (
+                <View style={styles.loadingMoreWrap}>
+                  <ActivityIndicator size="small" color={tokens.accent} />
+                </View>
+              ) : null
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <View style={styles.emptyIconCircle}>
+                  <LinearGradient
+                    colors={GRADIENTS.tealSheen as [string, string]}
+                    style={styles.emptyGradient}
+                  >
+                    <FileTextIcon size={32} color="#FFFFFF" />
+                  </LinearGradient>
+                </View>
+                <Text style={[styles.emptyTitle, { color: tokens.textPrimary }]}>
+                  {searchQuery ? 'No Receivables Found' : 'No Receivables Recorded'}
+                </Text>
+                <Text style={[styles.emptyDesc, { color: tokens.textSecondary }]}>
+                  {searchQuery
+                    ? `No receivables matched "${searchQuery}".`
+                    : 'Record customer debts, invoices, or credit sales to begin deterministic balance and intelligence tracking.'}
+                </Text>
+                {!searchQuery && (
+                  <TouchableOpacity
+                    style={styles.emptyAddBtnWrap}
+                    onPress={() => router.push('/(app)/receivables/create' as any)}
+                    activeOpacity={0.8}
+                  >
+                    <LinearGradient
+                      colors={GRADIENTS.navyToTeal as [string, string]}
+                      start={GRADIENT_DIRECTION.toRight.start}
+                      end={GRADIENT_DIRECTION.toRight.end}
+                      style={styles.emptyAddBtn}
+                    >
+                      <Feather name="plus" size={16} color="#FFFFFF" />
+                      <Text style={styles.emptyAddBtnText}>Record First Receivable</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                )}
+              </View>
+            }
+          />
+        )}
+      </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '500',
+  },
+  addBtnWrap: {
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  addBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  addBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  controlsContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13.5,
+    fontWeight: '500',
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 8,
+  },
+  tabWrap: {
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  tabActive: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  tabActiveText: {
+    color: '#FFFFFF',
+    fontSize: 10.5,
+    fontWeight: '800',
+  },
+  tabInactive: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  tabInactiveText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+  },
+  contentArea: {
+    flex: 1,
+  },
+  skeletonList: {
+    padding: 16,
+  },
+  skeletonCard: {
+    marginBottom: 12,
+  },
+  listContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  cardWrapper: {
+    marginBottom: 12,
+  },
+  card: {
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  stripe: {
+    width: 4,
+  },
+  cardInner: {
+    flex: 1,
+    padding: 14,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  cardTitleBlock: {
+    flex: 1,
+    marginRight: 8,
+  },
+  customerName: {
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  referenceText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  statusBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  descriptionText: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 10,
+  },
+  financialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 10,
+    borderTopWidth: 1,
+  },
+  amountLabel: {
+    fontSize: 10.5,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  balanceAmount: {
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  dueDateBlock: {
+    alignItems: 'flex-end',
+  },
+  dueDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
+  },
+  dueDateText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  origAmountText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  errorTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  errorDesc: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 19,
+  },
+  loadingMoreWrap: {
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    paddingVertical: 48,
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  emptyIconCircle: {
+    marginBottom: 16,
+  },
+  emptyGradient: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  emptyDesc: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  emptyAddBtnWrap: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  emptyAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  emptyAddBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13.5,
+    fontWeight: '800',
+  },
+});

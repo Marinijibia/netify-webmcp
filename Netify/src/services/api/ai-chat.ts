@@ -80,8 +80,8 @@ export const aiChatApi = {
     language?: SupportedLanguage;
     customerId?: string;
   }): Promise<AIChatResponse> => {
-    const res = await apiClient.post<ApiResponse<AIChatResponse>>('/ai/chat', data);
-    return res.data.data;
+    const res = await apiClient.post<AIChatResponse>('/ai/chat', data);
+    return res.data;
   },
 
   /**

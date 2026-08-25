@@ -51,6 +51,8 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanLimits> = {
     features: [
       NetifyFeature.BASIC_COLLECTIONS,
       NetifyFeature.BASIC_MEMORY,
+      NetifyFeature.AI_COLLECTION_COPILOT,   // 20 req/mo quota enforced by recordAIUsage
+      NetifyFeature.DAILY_BRIEFING,           // 20 req/mo shared quota
     ],
   },
   [SubscriptionPlan.PRO]: {

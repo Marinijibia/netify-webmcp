@@ -6,12 +6,13 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  StyleSheet,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../../../src/design/theme';
 import { Button } from '../../../../../src/design/components/Button';
-import { Card } from '../../../../../src/design/components/Card';
 import { Badge } from '../../../../../src/design/components/Badge';
 import {
   ChevronLeftIcon,
@@ -21,6 +22,7 @@ import {
   FileTextIcon,
 } from '../../../../../src/design/icons';
 import { paymentsApi, PaymentItem } from '../../../../../src/services/api/payments';
+import { GRADIENTS } from '../../../../../src/design/tokens/gradients';
 
 export default function PaymentDetailScreen() {
   const { id, paymentId } = useLocalSearchParams<{ id: string; paymentId: string }>();
@@ -111,10 +113,10 @@ export default function PaymentDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: tokens.background }}>
-        <View className="flex-1 items-center justify-center">
+      <SafeAreaView style={[styles.container, { backgroundColor: tokens.background }]}>
+        <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={tokens.primary} />
-          <Text style={{ color: tokens.textSecondary }} className="text-sm mt-3 font-medium">
+          <Text style={[styles.loadingText, { color: tokens.textSecondary }]}>
             Loading payment details...
           </Text>
         </View>
@@ -124,14 +126,21 @@ export default function PaymentDetailScreen() {
 
   if (error || !payment) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: tokens.background }}>
-        <View className="px-6 py-4 flex-row items-center border-b border-slate-100 dark:border-slate-800">
-          <TouchableOpacity onPress={() => router.back()} className="p-1">
-            <ChevronLeftIcon size={24} color={tokens.textPrimary} />
+      <SafeAreaView style={[styles.container, { backgroundColor: tokens.background }]}>
+        <LinearGradient
+          colors={GRADIENTS.navyHero}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
+        >
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.8}>
+            <ChevronLeftIcon size={20} color="#FFFFFF" />
           </TouchableOpacity>
-        </View>
-        <View className="flex-1 p-6 justify-center items-center">
-          <Text style={{ color: tokens.danger }} className="text-base font-bold">
+          <Text style={styles.headerTitle}>Payment Receipt</Text>
+          <View style={{ width: 40 }} />
+        </LinearGradient>
+        <View style={[styles.centerContainer, { padding: 24 }]}>
+          <Text style={{ color: tokens.danger, fontSize: 15, fontWeight: '700' }}>
             {error || 'Payment not found'}
           </Text>
         </View>
@@ -143,102 +152,106 @@ export default function PaymentDetailScreen() {
   const isReversed = payment.status === 'REVERSED';
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: tokens.background }}>
-      {/* Header */}
-      <View className="px-6 py-4 flex-row items-center justify-between border-b border-slate-100 dark:border-slate-800">
-        <View className="flex-row items-center flex-1">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="mr-3 p-1 rounded-full active:opacity-70"
-          >
-            <ChevronLeftIcon size={24} color={tokens.textPrimary} />
-          </TouchableOpacity>
-          <View>
-            <Text style={{ color: tokens.textPrimary }} className="text-xl font-bold">
-              Payment Receipt
-            </Text>
-            <Text style={{ color: tokens.textSecondary }} className="text-xs">
-              Transaction ID: {payment.id.slice(0, 8)}...
-            </Text>
-          </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: tokens.background }]} edges={['top']}>
+      {/* Gradient Header */}
+      <LinearGradient
+        colors={GRADIENTS.navyHero}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.8}>
+          <ChevronLeftIcon size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Payment Receipt</Text>
+          <Text style={styles.headerSubtitle}>
+            ID: {payment.id.slice(0, 8)}...
+          </Text>
         </View>
         <Badge
           label={payment.status}
           variant={isConfirmed ? 'success' : isReversed ? 'danger' : 'neutral'}
           size="sm"
         />
-      </View>
+      </LinearGradient>
 
-      <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 60 }}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Main Amount Card */}
-        <Card className="p-6 items-center mb-5">
-          <Text style={{ color: tokens.textSecondary }} className="text-xs uppercase font-bold tracking-wider mb-1">
-            Amount Received
-          </Text>
+        <LinearGradient
+          colors={
+            isReversed
+              ? ['rgba(107,114,128,0.08)', 'rgba(107,114,128,0.03)']
+              : ['rgba(0,165,129,0.08)', 'rgba(0,48,81,0.04)']
+          }
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.amountCard, { borderColor: isReversed ? tokens.border : 'rgba(0,165,129,0.2)' }]}
+        >
+          <View style={[styles.amountIconCircle, { backgroundColor: isReversed ? tokens.surfaceMuted : 'rgba(0,165,129,0.12)' }]}>
+            {isReversed ? (
+              <RotateCcwIcon size={22} color={tokens.textMuted} />
+            ) : (
+              <CheckCircleIcon size={22} color="#00A581" />
+            )}
+          </View>
+          <Text style={[styles.amountLabel, { color: tokens.textSecondary }]}>Amount Received</Text>
           <Text
-            style={{
-              color: isReversed ? tokens.textSecondary : tokens.primary,
-              textDecorationLine: isReversed ? 'line-through' : 'none',
-            }}
-            className="text-3xl font-extrabold mb-2"
+            style={[
+              styles.amountValue,
+              {
+                color: isReversed ? tokens.textSecondary : tokens.primary,
+                textDecorationLine: isReversed ? 'line-through' : 'none',
+              },
+            ]}
           >
             {formatMoney(payment.amount, payment.currency)}
           </Text>
-          <Text style={{ color: tokens.textSecondary }} className="text-xs font-medium">
+          <Text style={[styles.paidDate, { color: tokens.textSecondary }]}>
             Paid on {formatDate(payment.paidAt)}
           </Text>
-        </Card>
+        </LinearGradient>
 
-        {/* Transaction Details Card */}
-        <Card className="p-4 mb-5">
-          <Text style={{ color: tokens.textPrimary }} className="text-sm font-bold mb-3 uppercase tracking-wider">
-            Payment Breakdown
-          </Text>
+        {/* Transaction Details */}
+        <View style={[styles.detailCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
+          <Text style={[styles.detailCardTitle, { color: tokens.textPrimary }]}>Payment Breakdown</Text>
 
-          <View className="flex-row justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-            <Text style={{ color: tokens.textSecondary }} className="text-xs">
-              Customer
-            </Text>
-            <Text style={{ color: tokens.textPrimary }} className="text-xs font-bold">
+          <View style={[styles.detailRow, { borderBottomColor: tokens.border }]}>
+            <Text style={[styles.detailLabel, { color: tokens.textSecondary }]}>Customer</Text>
+            <Text style={[styles.detailValue, { color: tokens.textPrimary }]}>
               {payment.customer?.name || 'Customer'}
             </Text>
           </View>
 
-          <View className="flex-row justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-            <Text style={{ color: tokens.textSecondary }} className="text-xs">
-              Payment Method
-            </Text>
-            <Text style={{ color: tokens.textPrimary }} className="text-xs font-bold">
+          <View style={[styles.detailRow, { borderBottomColor: tokens.border }]}>
+            <Text style={[styles.detailLabel, { color: tokens.textSecondary }]}>Payment Method</Text>
+            <Text style={[styles.detailValue, { color: tokens.textPrimary }]}>
               {payment.method}
             </Text>
           </View>
 
           {payment.reference ? (
-            <View className="flex-row justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-              <Text style={{ color: tokens.textSecondary }} className="text-xs">
-                Reference
-              </Text>
-              <Text style={{ color: tokens.textPrimary }} className="text-xs font-bold">
+            <View style={[styles.detailRow, { borderBottomColor: tokens.border }]}>
+              <Text style={[styles.detailLabel, { color: tokens.textSecondary }]}>Reference</Text>
+              <Text style={[styles.detailValue, { color: tokens.textPrimary }]}>
                 {payment.reference}
               </Text>
             </View>
           ) : null}
 
           {payment.notes ? (
-            <View className="pt-2">
-              <Text style={{ color: tokens.textSecondary }} className="text-xs mb-1">
-                Notes
-              </Text>
-              <Text style={{ color: tokens.textPrimary }} className="text-xs">
+            <View style={styles.notesRow}>
+              <Text style={[styles.detailLabel, { color: tokens.textSecondary }]}>Notes</Text>
+              <Text style={[styles.notesText, { color: tokens.textPrimary }]}>
                 {payment.notes}
               </Text>
             </View>
           ) : null}
-        </Card>
+        </View>
 
         {/* Reverse Payment Action */}
         {isConfirmed && (
-          <View className="mt-4">
+          <View style={styles.actionContainer}>
             <Button
               label={reversing ? 'Reversing...' : 'Reverse Payment'}
               variant="destructive"
@@ -252,3 +265,134 @@ export default function PaymentDetailScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  centerContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 18,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  headerCenter: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.65)',
+    marginTop: 2,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 60,
+  },
+  amountCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    padding: 24,
+    marginBottom: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+  },
+  amountIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  amountLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  amountValue: {
+    fontSize: 32,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  paidDate: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  detailCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 20,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+  },
+  detailCardTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 12,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  detailLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  detailValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    maxWidth: '55%',
+    textAlign: 'right',
+  },
+  notesRow: {
+    paddingTop: 10,
+  },
+  notesText: {
+    fontSize: 13,
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  actionContainer: {
+    marginTop: 8,
+  },
+});

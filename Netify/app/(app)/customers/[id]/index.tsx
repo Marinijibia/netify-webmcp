@@ -7,31 +7,32 @@ import {
   RefreshControl,
   ActivityIndicator,
   Modal,
-  Alert as NativeAlert,
+  StyleSheet,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/design/theme';
 import {
   Input,
   Button,
-  Card,
   Badge,
   Alert,
   TimelineEventCard,
   MemoryCard,
   CustomerIntelligenceView,
+  Avatar,
 } from '@/design/components';
+import { GRADIENTS, GRADIENT_DIRECTION } from '@/design/tokens/gradients';
 import {
   ChevronLeftIcon,
-  ChevronRightIcon,
   PhoneIcon,
   MailIcon,
   EditIcon,
   TrashIcon,
   PlusIcon,
   AlertCircleIcon,
-  BuildingIcon,
   ActivityIcon,
 } from '@/design/icons';
 import {
@@ -39,14 +40,8 @@ import {
   CustomerItem,
   CustomerContactItem,
 } from '@/services/api/customers';
-import {
-  businessEventsApi,
-  BusinessEventItem,
-} from '@/services/api/business-events';
-import {
-  businessMemoryApi,
-  BusinessMemoryItem,
-} from '@/services/api/business-memory';
+import { businessEventsApi, BusinessEventItem } from '@/services/api/business-events';
+import { businessMemoryApi, BusinessMemoryItem } from '@/services/api/business-memory';
 
 export default function CustomerDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -60,7 +55,7 @@ export default function CustomerDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Add Contact Modal State
+  // Add Contact Modal
   const [showAddContactModal, setShowAddContactModal] = useState(false);
   const [contactType, setContactType] = useState<'PHONE' | 'EMAIL' | 'WHATSAPP' | 'OTHER'>('PHONE');
   const [contactValue, setContactValue] = useState('');
@@ -69,31 +64,48 @@ export default function CustomerDetailScreen() {
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
+  // Delete Contact Confirm Modal
+  const [deleteContactId, setDeleteContactId] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Archive Confirm Modal
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [archiveLoading, setArchiveLoading] = useState(false);
+
   const fetchCustomerDetails = useCallback(async () => {
     if (!id) return;
     try {
       setLoading(true);
       setErrorMessage(null);
-
       const [custResponse, timelineResponse, memoriesResponse] = await Promise.all([
         customersApi.getById(id),
         businessEventsApi.getCustomerTimeline(id).catch(() => ({ success: false, data: [] as BusinessEventItem[] })),
         businessMemoryApi.getCustomerMemories(id).catch(() => ({ success: false, data: [] as BusinessMemoryItem[] })),
       ]);
-
       if (custResponse.success && custResponse.data) {
         setCustomer(custResponse.data);
       } else {
         setErrorMessage(custResponse.error?.message || 'Failed to fetch customer profile');
       }
 
-      if (timelineResponse.success && timelineResponse.data) {
-        setTimelineEvents(timelineResponse.data);
-      }
+      // Guard: backend may return null, undefined, or a paginated object instead of a plain array
+      const eventsData = timelineResponse.data;
+      setTimelineEvents(
+        Array.isArray(eventsData)
+          ? eventsData
+          : Array.isArray((eventsData as any)?.items)
+          ? (eventsData as any).items
+          : []
+      );
 
-      if (memoriesResponse.success && memoriesResponse.data) {
-        setMemories(memoriesResponse.data);
-      }
+      const memoriesData = memoriesResponse.data;
+      setMemories(
+        Array.isArray(memoriesData)
+          ? memoriesData
+          : Array.isArray((memoriesData as any)?.items)
+          ? (memoriesData as any).items
+          : []
+      );
     } catch (err: any) {
       setErrorMessage(err?.message || 'An unexpected error occurred');
     } finally {
@@ -102,349 +114,262 @@ export default function CustomerDetailScreen() {
     }
   }, [id]);
 
-  useEffect(() => {
-    fetchCustomerDetails();
-  }, [fetchCustomerDetails]);
+  useEffect(() => { fetchCustomerDetails(); }, [fetchCustomerDetails]);
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchCustomerDetails();
-  };
+  const handleRefresh = () => { setRefreshing(true); fetchCustomerDetails(); };
 
   const handleAddContactSubmit = async () => {
-    if (!contactValue.trim()) {
-      setModalError('Contact value is required');
-      return;
-    }
-
+    if (!contactValue.trim()) { setModalError('Contact value is required'); return; }
     try {
-      setModalLoading(true);
-      setModalError(null);
-
+      setModalLoading(true); setModalError(null);
       const response = await customersApi.addContact(id!, {
-        type: contactType,
-        value: contactValue.trim(),
-        label: contactLabel.trim() || undefined,
-        isPrimary: contactIsPrimary,
+        type: contactType, value: contactValue.trim(),
+        label: contactLabel.trim() || undefined, isPrimary: contactIsPrimary,
       });
-
       if (response.success) {
         setShowAddContactModal(false);
-        setContactValue('');
-        setContactLabel('');
-        setContactIsPrimary(false);
+        setContactValue(''); setContactLabel(''); setContactIsPrimary(false);
         fetchCustomerDetails();
-      } else {
-        setModalError(response.error?.message || 'Failed to add contact');
-      }
-    } catch (err: any) {
-      setModalError(err?.message || 'Failed to add contact');
-    } finally {
-      setModalLoading(false);
-    }
+      } else { setModalError(response.error?.message || 'Failed to add contact'); }
+    } catch (err: any) { setModalError(err?.message || 'Failed to add contact'); }
+    finally { setModalLoading(false); }
   };
 
-  const handleDeleteContact = (contactId: string) => {
-    NativeAlert.alert(
-      'Delete Contact',
-      'Are you sure you want to remove this contact entry?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const res = await customersApi.deleteContact(id!, contactId);
-              if (res.success) {
-                fetchCustomerDetails();
-              }
-            } catch (err: any) {
-              setErrorMessage(err?.message || 'Failed to delete contact');
-            }
-          },
-        },
-      ]
-    );
+  const handleConfirmDeleteContact = async () => {
+    if (!deleteContactId) return;
+    try {
+      setDeleteLoading(true);
+      const res = await customersApi.deleteContact(id!, deleteContactId);
+      if (res.success) { setDeleteContactId(null); fetchCustomerDetails(); }
+    } catch (err: any) { setErrorMessage(err?.message || 'Failed to delete contact'); }
+    finally { setDeleteLoading(false); }
   };
 
-  const handleArchiveCustomer = () => {
-    NativeAlert.alert(
-      'Archive Customer',
-      'Archiving will deactivate this customer while safely preserving all historical invoices and communications.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Archive',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const res = await customersApi.archive(id!);
-              if (res.success) {
-                fetchCustomerDetails();
-              }
-            } catch (err: any) {
-              setErrorMessage(err?.message || 'Failed to archive customer');
-            }
-          },
-        },
-      ]
-    );
+  const handleConfirmArchive = async () => {
+    try {
+      setArchiveLoading(true);
+      const res = await customersApi.archive(id!);
+      if (res.success) { setShowArchiveModal(false); fetchCustomerDetails(); }
+    } catch (err: any) { setErrorMessage(err?.message || 'Failed to archive customer'); }
+    finally { setArchiveLoading(false); }
   };
 
-  const renderStatusBadge = (status: CustomerItem['status']) => {
+  const statusColor = (status: CustomerItem['status']) => {
     switch (status) {
-      case 'ACTIVE':
-        return <Badge label="ACTIVE" variant="primary" size="sm" />;
-      case 'INACTIVE':
-        return <Badge label="INACTIVE" variant="neutral" size="sm" />;
-      case 'ARCHIVED':
-        return <Badge label="ARCHIVED" variant="danger" size="sm" />;
-      case 'BLOCKED':
-        return <Badge label="BLOCKED" variant="danger" size="sm" />;
-      default:
-        return <Badge label={status} variant="neutral" size="sm" />;
+      case 'ACTIVE': return '#00A581';
+      case 'INACTIVE': return '#64748B';
+      case 'ARCHIVED': return '#EF4444';
+      case 'BLOCKED': return '#EF4444';
+      default: return '#64748B';
     }
   };
+
+  const headerGradient = isDark ? GRADIENTS.darkHero : GRADIENTS.navyHero;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: tokens.background }}>
-      {/* Header */}
-      <View className="px-6 py-4 flex-row items-center justify-between border-b border-slate-100 dark:border-slate-800">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="w-10 h-10 rounded-xl items-center justify-center"
-          style={{ backgroundColor: isDark ? tokens.surface : '#F1F5F9' }}
-        >
-          <ChevronLeftIcon size={20} color={tokens.textPrimary} />
-        </TouchableOpacity>
-
-        <Text style={{ color: tokens.textPrimary }} className="text-lg font-bold">
-          Customer Profile
-        </Text>
-
+    <SafeAreaView style={[styles.safe, { backgroundColor: tokens.background }]}>
+      {/* ── HEADER ── */}
+      <LinearGradient
+        colors={headerGradient as [string, string]}
+        start={GRADIENT_DIRECTION.toBottomRight.start}
+        end={GRADIENT_DIRECTION.toBottomRight.end}
+        style={styles.header}
+      >
+        <View style={styles.headerLeft}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.headerBtn}
+            activeOpacity={0.7}
+          >
+            <ChevronLeftIcon size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View>
+            <Text style={styles.headerTitle}>Customer Profile</Text>
+            {customer?.name ? (
+              <Text style={styles.headerSub}>{customer.name}</Text>
+            ) : null}
+          </View>
+        </View>
         <TouchableOpacity
           onPress={() => router.push(`/(app)/customers/${id}/edit` as any)}
-          className="w-10 h-10 rounded-xl items-center justify-center"
-          style={{ backgroundColor: isDark ? tokens.surface : '#F1F5F9' }}
+          style={styles.headerBtn}
+          activeOpacity={0.7}
         >
-          <EditIcon size={18} color={tokens.primary} />
+          <EditIcon size={16} color="#FFFFFF" />
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
 
+      {/* ── LOADING ── */}
       {loading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={tokens.primary} />
-          <Text style={{ color: tokens.textSecondary }} className="text-sm mt-3 font-medium">
+        <View style={styles.centreState}>
+          <ActivityIndicator size="large" color="#00A581" />
+          <Text style={[styles.centreStateText, { color: tokens.textSecondary }]}>
             Loading customer profile...
           </Text>
         </View>
       ) : errorMessage || !customer ? (
-        <View className="flex-1 items-center justify-center px-6">
+        <View style={styles.centreState}>
           <AlertCircleIcon size={36} color={tokens.danger} />
-          <Text style={{ color: tokens.danger }} className="text-base font-bold mt-2 text-center">
+          <Text style={[styles.centreStateText, { color: tokens.danger }]}>
             {errorMessage || 'Customer not found'}
           </Text>
-          <Button
-            label="Go Back"
-            variant="secondary"
-            size="sm"
-            className="mt-4"
+          <TouchableOpacity
+            style={[styles.backBtn, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
             onPress={() => router.back()}
-          />
+          >
+            <Text style={[styles.backBtnText, { color: tokens.textPrimary }]}>Go Back</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <ScrollView
-          className="flex-1 px-6 py-4"
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={tokens.primary}
-            />
-          }
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#00A581" />}
           showsVerticalScrollIndicator={false}
         >
-          {/* Identity Overview Card */}
-          <Card
-            style={{
-              backgroundColor: isDark ? tokens.surface : '#FFFFFF',
-              borderColor: tokens.border,
-              borderWidth: 1,
-            }}
-            className="p-5 mb-4"
-          >
-            <View className="flex-row items-center justify-between mb-3">
-              <View
-                style={{ backgroundColor: tokens.primarySoft }}
-                className="w-12 h-12 rounded-2xl items-center justify-center"
-              >
-                <Text style={{ color: tokens.primary }} className="font-black text-xl">
-                  {customer.name.charAt(0).toUpperCase()}
+          {/* ── IDENTITY HERO CARD ── */}
+          <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
+            <View style={styles.heroRow}>
+              <Avatar name={customer.name} size="lg" />
+              <View style={styles.heroInfo}>
+                <Text style={[styles.heroName, { color: tokens.textPrimary }]} numberOfLines={2}>
+                  {customer.name}
+                </Text>
+                {customer.address ? (
+                  <Text style={[styles.heroAddress, { color: tokens.textSecondary }]} numberOfLines={2}>
+                    {customer.address}
+                  </Text>
+                ) : null}
+              </View>
+              <View style={[styles.statusDot, { backgroundColor: statusColor(customer.status) + '20', borderColor: statusColor(customer.status) }]}>
+                <View style={[styles.statusDotInner, { backgroundColor: statusColor(customer.status) }]} />
+                <Text style={[styles.statusLabel, { color: statusColor(customer.status) }]}>
+                  {customer.status}
                 </Text>
               </View>
-              {renderStatusBadge(customer.status)}
             </View>
 
-            <Text style={{ color: tokens.textPrimary }} className="text-xl font-bold mb-1">
-              {customer.name}
-            </Text>
+            <View style={[styles.heroDivider, { borderColor: tokens.border }]} />
 
-            {customer.address && (
-              <Text style={{ color: tokens.textSecondary }} className="text-xs mb-3">
-                {customer.address}
-              </Text>
-            )}
-
-            <View className="pt-3 border-t border-slate-100 dark:border-slate-800 flex-row items-center justify-between">
-              <Text style={{ color: tokens.textMuted }} className="text-xs">
-                Member since {new Date(customer.createdAt).toLocaleDateString()}
-              </Text>
-              <Text style={{ color: tokens.textMuted }} className="text-xs">
-                Country: {customer.country} • Currency: {customer.currency}
-              </Text>
+            <View style={styles.heroMeta}>
+              <View style={styles.heroMetaItem}>
+                <MaterialCommunityIcons name="calendar-outline" size={13} color={tokens.textMuted} />
+                <Text style={[styles.heroMetaText, { color: tokens.textMuted }]}>
+                  Since {new Date(customer.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </Text>
+              </View>
+              <View style={styles.heroMetaItem}>
+                <MaterialCommunityIcons name="currency-usd" size={13} color={tokens.textMuted} />
+                <Text style={[styles.heroMetaText, { color: tokens.textMuted }]}>
+                  {customer.currency} · {customer.country}
+                </Text>
+              </View>
             </View>
-          </Card>
+          </View>
 
-          {/* Contact Details Section */}
-          <Card
-            style={{
-              backgroundColor: isDark ? tokens.surface : '#FFFFFF',
-              borderColor: tokens.border,
-              borderWidth: 1,
-            }}
-            className="p-4 mb-4"
-          >
-            <View className="flex-row items-center justify-between mb-3">
-              <Text style={{ color: tokens.textPrimary }} className="text-sm font-bold uppercase tracking-wider">
+          {/* ── CONTACTS SECTION ── */}
+          <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: tokens.textPrimary }]}>
                 Contacts ({customer.contacts?.length || 0})
               </Text>
               <TouchableOpacity
                 onPress={() => setShowAddContactModal(true)}
-                style={{ backgroundColor: tokens.accentSoft }}
-                className="flex-row items-center px-2.5 py-1 rounded-lg"
+                style={styles.addContactBtn}
+                activeOpacity={0.8}
               >
-                <PlusIcon size={14} color={tokens.accent} />
-                <Text style={{ color: tokens.accent }} className="text-xs font-bold ml-1">
-                  Add Contact
-                </Text>
+                <LinearGradient
+                  colors={GRADIENTS.tealSheen as unknown as [string, string]}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={styles.addContactGradient}
+                >
+                  <PlusIcon size={13} color="#FFFFFF" />
+                  <Text style={styles.addContactText}>Add</Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
 
             {customer.contacts && customer.contacts.length > 0 ? (
-              customer.contacts.map((c) => (
+              customer.contacts.map((c, idx) => (
                 <View
                   key={c.id}
-                  className="py-3 border-b border-slate-100 dark:border-slate-800 flex-row items-center justify-between last:border-b-0"
+                  style={[
+                    styles.contactRow,
+                    idx < customer.contacts!.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: tokens.border },
+                  ]}
                 >
-                  <View className="flex-row items-center flex-1 mr-2">
-                    <View
-                      style={{ backgroundColor: isDark ? tokens.background : '#F8FAFC' }}
-                      className="w-8 h-8 rounded-lg items-center justify-center mr-3"
-                    >
-                      {c.type === 'EMAIL' ? (
-                        <MailIcon size={14} color={tokens.primary} />
-                      ) : (
-                        <PhoneIcon size={14} color={tokens.primary} />
-                      )}
-                    </View>
-                    <View className="flex-1">
-                      <View className="flex-row items-center">
-                        <Text
-                          style={{ color: tokens.textPrimary }}
-                          className="text-sm font-bold mr-2"
-                        >
-                          {c.value}
-                        </Text>
-                        {c.isPrimary && (
-                          <Badge label="PRIMARY" variant="primary" size="sm" />
-                        )}
-                      </View>
-                      <Text style={{ color: tokens.textSecondary }} className="text-xs mt-0.5">
-                        {c.label || c.type}
-                      </Text>
-                    </View>
+                  <View style={[styles.contactIconWrap, { backgroundColor: 'rgba(0,165,129,0.1)' }]}>
+                    {c.type === 'EMAIL'
+                      ? <MailIcon size={14} color="#00A581" />
+                      : c.type === 'WHATSAPP'
+                      ? <Ionicons name="logo-whatsapp" size={14} color="#00A581" />
+                      : <PhoneIcon size={14} color="#00A581" />}
                   </View>
-
+                  <View style={styles.contactInfo}>
+                    <Text style={[styles.contactValue, { color: tokens.textPrimary }]}>{c.value}</Text>
+                    <Text style={[styles.contactMeta, { color: tokens.textMuted }]}>
+                      {c.label || c.type}{c.isPrimary ? ' · PRIMARY' : ''}
+                    </Text>
+                  </View>
                   <TouchableOpacity
-                    onPress={() => handleDeleteContact(c.id)}
-                    className="p-2 rounded-lg"
+                    onPress={() => setDeleteContactId(c.id)}
+                    style={styles.deleteContactBtn}
                   >
-                    <TrashIcon size={16} color={tokens.danger} />
+                    <TrashIcon size={15} color={tokens.danger} />
                   </TouchableOpacity>
                 </View>
               ))
             ) : (
-              <Text style={{ color: tokens.textMuted }} className="text-xs italic py-2">
-                No contacts registered for this customer yet.
+              <Text style={[styles.emptyNote, { color: tokens.textMuted }]}>
+                No contacts registered yet.
               </Text>
             )}
-          </Card>
+          </View>
 
-          {/* Operational Debt & Collection History */}
-          <Card
-            style={{
-              backgroundColor: isDark ? tokens.surface : '#FFFFFF',
-              borderColor: tokens.border,
-              borderWidth: 1,
-            }}
-            className="p-4 mb-4"
-          >
-            <Text style={{ color: tokens.textPrimary }} className="text-sm font-bold mb-3 uppercase tracking-wider">
-              Debts & Operational History
+          {/* ── RECEIVABLES & COMMITMENTS ── */}
+          <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
+            <Text style={[styles.sectionTitle, { color: tokens.textPrimary, marginBottom: 12 }]}>
+              Debts & History
             </Text>
-            
             <TouchableOpacity
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingVertical: 10,
-                borderBottomWidth: 1,
-                borderBottomColor: isDark ? '#334155' : '#F1F5F9',
-              }}
+              style={[styles.navRow, { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: tokens.border }]}
               onPress={() => router.push('/(app)/receivables' as any)}
+              activeOpacity={0.7}
             >
-              <Text style={{ color: tokens.textPrimary, fontSize: 14, fontWeight: '600' }}>
-                View Customer Receivables
-              </Text>
-              <ChevronRightIcon size={18} color={tokens.textSecondary} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingVertical: 10,
-              }}
-              onPress={() => router.push('/(app)/commitments' as any)}
-            >
-              <Text style={{ color: tokens.textPrimary, fontSize: 14, fontWeight: '600' }}>
-                View Payment Promises
-              </Text>
-              <ChevronRightIcon size={18} color={tokens.textSecondary} />
-            </TouchableOpacity>
-          </Card>
-
-          {/* AI Intelligence & Collection Copilot (Domain 07) */}
-          <Card
-            style={{
-              backgroundColor: isDark ? tokens.surface : '#FFFFFF',
-              borderColor: tokens.border,
-              borderWidth: 1,
-            }}
-            className="p-4 mb-4"
-          >
-            <View className="flex-row items-center justify-between mb-3">
-              <View className="flex-row items-center">
-                <Text style={{ color: tokens.textPrimary }} className="text-sm font-bold uppercase tracking-wider">
-                  AI Collection Copilot
-                </Text>
+              <View style={styles.navRowLeft}>
+                <View style={[styles.navIcon, { backgroundColor: 'rgba(239,68,68,0.1)' }]}>
+                  <MaterialCommunityIcons name="receipt" size={15} color="#EF4444" />
+                </View>
+                <Text style={[styles.navLabel, { color: tokens.textPrimary }]}>View Receivables</Text>
               </View>
-              <Badge label="COPILOT ACTIVE" variant="primary" size="sm" />
-            </View>
+              <Feather name="chevron-right" size={16} color={tokens.textMuted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.navRow}
+              onPress={() => router.push('/(app)/commitments' as any)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.navRowLeft}>
+                <View style={[styles.navIcon, { backgroundColor: 'rgba(245,158,11,0.1)' }]}>
+                  <MaterialCommunityIcons name="handshake-outline" size={15} color="#F59E0B" />
+                </View>
+                <Text style={[styles.navLabel, { color: tokens.textPrimary }]}>View Payment Promises</Text>
+              </View>
+              <Feather name="chevron-right" size={16} color={tokens.textMuted} />
+            </TouchableOpacity>
+          </View>
 
+          {/* ── AI COPILOT ── */}
+          <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: tokens.textPrimary }]}>
+                AI Collection Copilot
+              </Text>
+              <View style={styles.copilotBadge}>
+                <MaterialCommunityIcons name="robot-outline" size={11} color="#00A581" />
+                <Text style={styles.copilotBadgeText}>ACTIVE</Text>
+              </View>
+            </View>
             <CustomerIntelligenceView
               customerId={id!}
               customerName={customer.name}
@@ -452,80 +377,47 @@ export default function CustomerDetailScreen() {
               currency={customer.currency}
               totalOutstanding={0}
             />
-          </Card>
+          </View>
 
-          {/* Business Memory (Domain 06) */}
-          <Card
-            style={{
-              backgroundColor: isDark ? tokens.surface : '#FFFFFF',
-              borderColor: tokens.border,
-              borderWidth: 1,
-            }}
-            className="p-4 mb-4"
-          >
-            <View className="flex-row items-center justify-between mb-3">
-              <View className="flex-row items-center">
-                <Text style={{ color: tokens.textPrimary }} className="text-sm font-bold uppercase tracking-wider">
-                  Business Memory ({memories.length})
-                </Text>
-              </View>
-              <Text style={{ color: tokens.textSecondary }} className="text-xs font-semibold">
-                Behavioral Knowledge
+          {/* ── BUSINESS MEMORY ── */}
+          <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: tokens.textPrimary }]}>
+                Business Memory ({memories.length})
               </Text>
+              <Text style={[styles.sectionSub, { color: tokens.textMuted }]}>Behavioural</Text>
             </View>
-
             {memories.length === 0 ? (
-              <View
-                style={{
-                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
-                  borderRadius: 10,
-                  padding: 14,
-                  borderWidth: 1,
-                  borderColor: tokens.border,
-                }}
-              >
-                <Text style={{ color: tokens.textPrimary, fontSize: 13, fontWeight: '700', marginBottom: 4 }}>
+              <View style={[styles.emptyMemory, { backgroundColor: tokens.background, borderColor: tokens.border }]}>
+                <MaterialCommunityIcons name="brain" size={20} color={tokens.textMuted} />
+                <Text style={[styles.emptyMemoryTitle, { color: tokens.textPrimary }]}>
                   Not enough history yet
                 </Text>
-                <Text style={{ color: tokens.textSecondary, fontSize: 12, lineHeight: 17 }}>
-                  Netify requires at least two completed commitments or interactions before deriving behavioral patterns.
+                <Text style={[styles.emptyMemoryDesc, { color: tokens.textSecondary }]}>
+                  Netify needs at least two completed commitments before deriving behavioural patterns.
                 </Text>
               </View>
             ) : (
               memories.map((mem) => (
-                <MemoryCard
-                  key={mem.id}
-                  memory={mem}
-                  customerId={id}
-                />
+                <MemoryCard key={mem.id} memory={mem} customerId={id} />
               ))
             )}
-          </Card>
+          </View>
 
-          {/* Activity & Evidence Timeline (Domain 05) */}
-          <Card
-            style={{
-              backgroundColor: isDark ? tokens.surface : '#FFFFFF',
-              borderColor: tokens.border,
-              borderWidth: 1,
-            }}
-            className="p-4 mb-4"
-          >
-            <View className="flex-row items-center justify-between mb-4">
-              <View className="flex-row items-center">
-                <ActivityIcon size={16} color={tokens.primary} />
-                <Text style={{ color: tokens.textPrimary }} className="text-sm font-bold uppercase tracking-wider ml-2">
+          {/* ── ACTIVITY TIMELINE ── */}
+          <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionHeaderLeft}>
+                <ActivityIcon size={15} color="#00A581" />
+                <Text style={[styles.sectionTitle, { color: tokens.textPrimary }]}>
                   Activity Timeline ({timelineEvents.length})
                 </Text>
               </View>
-              <Text style={{ color: tokens.textSecondary }} className="text-xs font-semibold">
-                Evidence Stream
-              </Text>
+              <Text style={[styles.sectionSub, { color: tokens.textMuted }]}>Evidence</Text>
             </View>
-
             {timelineEvents.length === 0 ? (
-              <Text style={{ color: tokens.textMuted }} className="text-xs italic py-2">
-                No business events recorded for this customer yet.
+              <Text style={[styles.emptyNote, { color: tokens.textMuted }]}>
+                No business events recorded yet.
               </Text>
             ) : (
               timelineEvents.map((evt, idx) => (
@@ -536,165 +428,349 @@ export default function CustomerDetailScreen() {
                 />
               ))
             )}
-          </Card>
+          </View>
 
-          {/* Internal Business Notes */}
-          <Card
-            style={{
-              backgroundColor: isDark ? tokens.surface : '#FFFFFF',
-              borderColor: tokens.border,
-              borderWidth: 1,
-            }}
-            className="p-4 mb-4"
-          >
-            <Text style={{ color: tokens.textPrimary }} className="text-sm font-bold mb-2 uppercase tracking-wider">
-              Internal Business Notes
+          {/* ── INTERNAL NOTES ── */}
+          <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
+            <Text style={[styles.sectionTitle, { color: tokens.textPrimary, marginBottom: 8 }]}>
+              Internal Notes
             </Text>
-            <Text style={{ color: tokens.textSecondary }} className="text-xs leading-relaxed">
+            <Text style={[styles.notesText, { color: tokens.textSecondary }]}>
               {customer.notes || 'No internal notes recorded.'}
             </Text>
-          </Card>
+          </View>
 
-          {/* Customer Lifecycle Actions */}
-          <Card
-            style={{
-              backgroundColor: isDark ? tokens.surface : '#FFFFFF',
-              borderColor: tokens.border,
-              borderWidth: 1,
-            }}
-            className="p-4 mb-8"
-          >
-            <Text style={{ color: tokens.textPrimary }} className="text-sm font-bold mb-3 uppercase tracking-wider">
+          {/* ── MANAGE RECORD ── */}
+          <View style={[styles.card, { backgroundColor: tokens.surface, borderColor: tokens.border, marginBottom: 32 }]}>
+            <Text style={[styles.sectionTitle, { color: tokens.textPrimary, marginBottom: 12 }]}>
               Manage Record
             </Text>
-
-            <Button
-              label={customer.status === 'ARCHIVED' ? 'Customer Archived' : 'Archive Customer'}
-              variant="destructive"
-              size="md"
+            <TouchableOpacity
+              style={[
+                styles.archiveBtn,
+                customer.status === 'ARCHIVED' && { opacity: 0.5 },
+              ]}
+              onPress={() => setShowArchiveModal(true)}
               disabled={customer.status === 'ARCHIVED'}
-              onPress={handleArchiveCustomer}
-            />
-          </Card>
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons name="archive-outline" size={16} color="#EF4444" />
+              <Text style={styles.archiveBtnText}>
+                {customer.status === 'ARCHIVED' ? 'Customer Archived' : 'Archive Customer'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       )}
 
-      {/* Add Contact Modal */}
-      <Modal
-        visible={showAddContactModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowAddContactModal(false)}
-      >
-        <View className="flex-1 bg-black/60 items-center justify-center px-6">
-          <Card
-            style={{
-              backgroundColor: isDark ? tokens.surface : '#FFFFFF',
-              borderColor: tokens.border,
-              borderWidth: 1,
-              width: '100%',
-            }}
-            className="p-5 rounded-3xl"
-          >
-            <Text style={{ color: tokens.textPrimary }} className="text-lg font-bold mb-3">
-              Add New Contact Point
-            </Text>
-
-            {modalError && (
-              <Alert variant="danger" title="Error" message={modalError} className="mb-3" />
-            )}
-
-            {/* Type selector */}
-            <View className="flex-row items-center mb-3">
-              {(['PHONE', 'EMAIL', 'WHATSAPP', 'OTHER'] as const).map((t) => {
-                const isSelected = contactType === t;
-                return (
-                  <TouchableOpacity
-                    key={t}
-                    onPress={() => setContactType(t)}
-                    style={{
-                      backgroundColor: isSelected ? tokens.primary : isDark ? tokens.background : '#F1F5F9',
-                    }}
-                    className="px-2.5 py-1.5 rounded-lg mr-2"
-                  >
-                    <Text
-                      style={{
-                        color: isSelected ? '#FFFFFF' : tokens.textSecondary,
-                        fontWeight: isSelected ? '700' : '500',
-                      }}
-                      className="text-xs"
-                    >
-                      {t}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <Input
-              label="Contact Value *"
-              placeholder={
-                contactType === 'EMAIL'
-                  ? 'e.g. accounts@netify-client.ng'
-                  : contactType === 'WHATSAPP'
-                  ? 'e.g. +234 812 345 6789 (WhatsApp)'
-                  : 'e.g. +234 802 345 6789 (Direct phone)'
-              }
-              value={contactValue}
-              onChangeText={setContactValue}
-              autoCapitalize="none"
-              keyboardType={contactType === 'EMAIL' ? 'email-address' : 'phone-pad'}
-              className="mb-3"
-            />
-
-            <Input
-              label="Label / Department"
-              placeholder="e.g. Netify Collections Lead, Accounts Payable, Storefront Manager"
-              value={contactLabel}
-              onChangeText={setContactLabel}
-              className="mb-3"
-            />
-
-            {/* Primary Toggle */}
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => setContactIsPrimary(!contactIsPrimary)}
-              className="flex-row items-center mb-4"
+      {/* ── ADD CONTACT MODAL ── */}
+      <Modal visible={showAddContactModal} transparent animationType="slide" onRequestClose={() => setShowAddContactModal(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalSheet, { backgroundColor: tokens.background, borderColor: tokens.border }]}>
+            <LinearGradient
+              colors={GRADIENTS.navyHero as unknown as [string, string]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={styles.modalHeader}
             >
-              <View
-                style={{
-                  backgroundColor: contactIsPrimary ? tokens.primary : 'transparent',
-                  borderColor: contactIsPrimary ? tokens.primary : tokens.border,
-                  borderWidth: 1.5,
-                }}
-                className="w-5 h-5 rounded-md items-center justify-center mr-2.5"
-              >
-                {contactIsPrimary && <Text className="text-white text-xs font-bold">✓</Text>}
-              </View>
-              <Text style={{ color: tokens.textPrimary }} className="text-xs font-medium">
-                Set as primary {contactType.toLowerCase()} contact
-              </Text>
-            </TouchableOpacity>
+              <Text style={styles.modalHeaderTitle}>Add Contact Point</Text>
+              <TouchableOpacity onPress={() => setShowAddContactModal(false)} style={styles.modalCloseBtn}>
+                <Feather name="x" size={18} color="rgba(255,255,255,0.8)" />
+              </TouchableOpacity>
+            </LinearGradient>
 
-            <View className="flex-row items-center justify-end space-x-2">
-              <Button
-                label="Cancel"
-                variant="tertiary"
-                size="sm"
-                onPress={() => setShowAddContactModal(false)}
-                className="mr-2"
+            <ScrollView contentContainerStyle={styles.modalBody}>
+              {modalError && <Alert variant="danger" title="Error" message={modalError} />}
+
+              {/* Type chips */}
+              <Text style={[styles.inputLabel, { color: tokens.textSecondary }]}>Contact Type</Text>
+              <View style={styles.typeRow}>
+                {(['PHONE', 'EMAIL', 'WHATSAPP', 'OTHER'] as const).map((t) => {
+                  const isSelected = contactType === t;
+                  return (
+                    <TouchableOpacity
+                      key={t}
+                      onPress={() => setContactType(t)}
+                      style={[
+                        styles.typeChip,
+                        {
+                          backgroundColor: isSelected ? '#00A581' : tokens.surface,
+                          borderColor: isSelected ? '#00A581' : tokens.border,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.typeChipText, { color: isSelected ? '#FFFFFF' : tokens.textSecondary }]}>
+                        {t}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Input
+                label="Contact Value *"
+                placeholder={
+                  contactType === 'EMAIL' ? 'accounts@business.com'
+                  : contactType === 'WHATSAPP' ? '+234 812 345 6789'
+                  : '+234 802 345 6789'
+                }
+                value={contactValue}
+                onChangeText={setContactValue}
+                autoCapitalize="none"
+                keyboardType={contactType === 'EMAIL' ? 'email-address' : 'phone-pad'}
               />
-              <Button
-                label="Save Contact"
-                variant="primary"
-                size="sm"
-                loading={modalLoading}
-                onPress={handleAddContactSubmit}
+
+              <View style={styles.inputSpacer} />
+              <Input
+                label="Label / Department"
+                placeholder="e.g. Accounts Payable, Storefront"
+                value={contactLabel}
+                onChangeText={setContactLabel}
               />
+              <View style={styles.inputSpacer} />
+
+              {/* Primary toggle */}
+              <TouchableOpacity
+                style={styles.primaryToggle}
+                onPress={() => setContactIsPrimary(!contactIsPrimary)}
+                activeOpacity={0.8}
+              >
+                <View style={[
+                  styles.checkbox,
+                  { backgroundColor: contactIsPrimary ? '#00A581' : 'transparent', borderColor: contactIsPrimary ? '#00A581' : tokens.border },
+                ]}>
+                  {contactIsPrimary && <Feather name="check" size={11} color="#FFFFFF" />}
+                </View>
+                <Text style={[styles.primaryToggleText, { color: tokens.textPrimary }]}>
+                  Set as primary {contactType.toLowerCase()} contact
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.cancelBtn, { borderColor: tokens.border }]}
+                  onPress={() => setShowAddContactModal(false)}
+                >
+                  <Text style={[styles.cancelBtnText, { color: tokens.textSecondary }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.saveWrapper, modalLoading && { opacity: 0.7 }]}
+                  onPress={handleAddContactSubmit}
+                  disabled={modalLoading}
+                  activeOpacity={0.85}
+                >
+                  <LinearGradient
+                    colors={GRADIENTS.navyToTeal as unknown as [string, string]}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                    style={styles.saveGradient}
+                  >
+                    {modalLoading
+                      ? <ActivityIndicator color="#FFFFFF" size="small" />
+                      : <Text style={styles.saveBtnText}>Save Contact</Text>}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── DELETE CONTACT CONFIRM ── */}
+      <Modal visible={!!deleteContactId} transparent animationType="fade" onRequestClose={() => setDeleteContactId(null)}>
+        <View style={styles.confirmBackdrop}>
+          <View style={[styles.confirmModal, { backgroundColor: tokens.background, borderColor: tokens.border }]}>
+            <View style={[styles.confirmIcon, { backgroundColor: 'rgba(239,68,68,0.1)' }]}>
+              <TrashIcon size={24} color="#EF4444" />
             </View>
-          </Card>
+            <Text style={[styles.confirmTitle, { color: tokens.textPrimary }]}>Remove Contact?</Text>
+            <Text style={[styles.confirmDesc, { color: tokens.textSecondary }]}>
+              This contact entry will be permanently removed from the customer record.
+            </Text>
+            <TouchableOpacity
+              style={styles.confirmDestructBtn}
+              onPress={handleConfirmDeleteContact}
+              disabled={deleteLoading}
+            >
+              {deleteLoading
+                ? <ActivityIndicator color="#FFFFFF" size="small" />
+                : <Text style={styles.confirmDestructText}>Yes, Remove</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.confirmCancelBtn, { borderColor: tokens.border }]}
+              onPress={() => setDeleteContactId(null)}
+            >
+              <Text style={[styles.confirmCancelText, { color: tokens.textPrimary }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── ARCHIVE CONFIRM ── */}
+      <Modal visible={showArchiveModal} transparent animationType="fade" onRequestClose={() => setShowArchiveModal(false)}>
+        <View style={styles.confirmBackdrop}>
+          <View style={[styles.confirmModal, { backgroundColor: tokens.background, borderColor: tokens.border }]}>
+            <View style={[styles.confirmIcon, { backgroundColor: 'rgba(239,68,68,0.1)' }]}>
+              <MaterialCommunityIcons name="archive-outline" size={24} color="#EF4444" />
+            </View>
+            <Text style={[styles.confirmTitle, { color: tokens.textPrimary }]}>Archive Customer?</Text>
+            <Text style={[styles.confirmDesc, { color: tokens.textSecondary }]}>
+              Archiving deactivates this customer while safely preserving all historical invoices and communications.
+            </Text>
+            <TouchableOpacity
+              style={styles.confirmDestructBtn}
+              onPress={handleConfirmArchive}
+              disabled={archiveLoading}
+            >
+              {archiveLoading
+                ? <ActivityIndicator color="#FFFFFF" size="small" />
+                : <Text style={styles.confirmDestructText}>Yes, Archive</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.confirmCancelBtn, { borderColor: tokens.border }]}
+              onPress={() => setShowArchiveModal(false)}
+            >
+              <Text style={[styles.confirmCancelText, { color: tokens.textPrimary }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safe: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  headerBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.3 },
+  headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: '500', marginTop: 1 },
+
+  centreState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 10 },
+  centreStateText: { fontSize: 14, fontWeight: '600', textAlign: 'center' },
+  backBtn: {
+    paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, borderWidth: 1, marginTop: 6,
+  },
+  backBtnText: { fontSize: 14, fontWeight: '700' },
+
+  scroll: { flex: 1 },
+  scrollContent: { padding: 16, paddingBottom: 32 },
+
+  card: {
+    borderRadius: 18, borderWidth: 1, padding: 16, marginBottom: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+  },
+
+  // Hero identity
+  heroRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 14, marginBottom: 14 },
+  heroInfo: { flex: 1 },
+  heroName: { fontSize: 18, fontWeight: '800', marginBottom: 4 },
+  heroAddress: { fontSize: 12, lineHeight: 17 },
+  statusDot: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: 8, borderWidth: 1,
+  },
+  statusDotInner: { width: 6, height: 6, borderRadius: 3 },
+  statusLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.3 },
+  heroDivider: { borderTopWidth: StyleSheet.hairlineWidth, marginBottom: 12 },
+  heroMeta: { flexDirection: 'row', justifyContent: 'space-between' },
+  heroMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  heroMetaText: { fontSize: 11, fontWeight: '500' },
+
+  // Section headers
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  sectionHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  sectionTitle: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
+  sectionSub: { fontSize: 11, fontWeight: '600' },
+
+  // Add contact button
+  addContactBtn: { borderRadius: 10, overflow: 'hidden' },
+  addContactGradient: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6 },
+  addContactText: { fontSize: 12, fontWeight: '700', color: '#FFFFFF' },
+
+  // Contact rows
+  contactRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 12 },
+  contactIconWrap: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  contactInfo: { flex: 1 },
+  contactValue: { fontSize: 14, fontWeight: '700', marginBottom: 2 },
+  contactMeta: { fontSize: 11, fontWeight: '500' },
+  deleteContactBtn: { padding: 6 },
+
+  emptyNote: { fontSize: 12, fontStyle: 'italic', paddingVertical: 6 },
+
+  // Nav rows
+  navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
+  navRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  navIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  navLabel: { fontSize: 14, fontWeight: '600' },
+
+  // Copilot badge
+  copilotBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(0,165,129,0.1)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  copilotBadgeText: { fontSize: 10, fontWeight: '800', color: '#00A581', letterSpacing: 0.3 },
+
+  // Memory empty
+  emptyMemory: { borderRadius: 12, borderWidth: 1, padding: 14, gap: 6 },
+  emptyMemoryTitle: { fontSize: 13, fontWeight: '700' },
+  emptyMemoryDesc: { fontSize: 12, lineHeight: 17 },
+
+  // Notes
+  notesText: { fontSize: 13, lineHeight: 19 },
+
+  // Archive
+  archiveBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, paddingVertical: 14, borderRadius: 14,
+    backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.25)',
+  },
+  archiveBtnText: { fontSize: 14, fontWeight: '800', color: '#EF4444' },
+
+  // Add contact modal
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalSheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, borderWidth: 1, maxHeight: '90%', overflow: 'hidden' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 },
+  modalHeaderTitle: { fontSize: 17, fontWeight: '800', color: '#FFFFFF' },
+  modalCloseBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+  modalBody: { padding: 20, paddingBottom: 32 },
+
+  inputLabel: { fontSize: 11, fontWeight: '600', marginBottom: 8, letterSpacing: 0.3 },
+  typeRow: { flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' },
+  typeChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 10, borderWidth: 1 },
+  typeChipText: { fontSize: 12, fontWeight: '700' },
+  inputSpacer: { height: 12 },
+
+  primaryToggle: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
+  checkbox: { width: 20, height: 20, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  primaryToggleText: { fontSize: 13, fontWeight: '500' },
+
+  modalActions: { flexDirection: 'row', gap: 10 },
+  cancelBtn: { flex: 1, height: 48, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  cancelBtnText: { fontSize: 14, fontWeight: '700' },
+  saveWrapper: { flex: 1, borderRadius: 12, overflow: 'hidden' },
+  saveGradient: { height: 48, alignItems: 'center', justifyContent: 'center' },
+  saveBtnText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
+
+  // Confirm modals (delete / archive)
+  confirmBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 32 },
+  confirmModal: { width: '100%', borderRadius: 24, borderWidth: 1, padding: 24, alignItems: 'center', gap: 10 },
+  confirmIcon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  confirmTitle: { fontSize: 20, fontWeight: '800', textAlign: 'center' },
+  confirmDesc: { fontSize: 13, lineHeight: 19, textAlign: 'center', marginBottom: 8 },
+  confirmDestructBtn: {
+    width: '100%', height: 50, borderRadius: 14,
+    backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center',
+  },
+  confirmDestructText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  confirmCancelBtn: { width: '100%', height: 50, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  confirmCancelText: { fontSize: 15, fontWeight: '700' },
+});

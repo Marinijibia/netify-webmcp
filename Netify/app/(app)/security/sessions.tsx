@@ -4,15 +4,18 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
+  StyleSheet,
   Alert as NativeAlert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Card, Button, Badge, Alert, Spinner } from '@/design/components';
 import { ChevronLeftIcon, SmartphoneIcon } from '@/design/icons';
 import { authApi, SessionItem } from '@/services/api/auth';
 import { useAuthStore } from '@/store/auth-store';
 import { useTheme } from '@/design/theme';
+import { GRADIENTS } from '@/design/tokens/gradients';
 
 export default function ActiveSessionsScreen() {
   const router = useRouter();
@@ -83,71 +86,65 @@ export default function ActiveSessionsScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: tokens.background }}>
-      <View className="flex-1 px-5 pt-3">
-        {/* Top Bar */}
-        <View className="flex-row items-center justify-between mb-6">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{
-              backgroundColor: isDark ? tokens.surface : '#FFFFFF',
-              borderColor: tokens.border,
-              borderWidth: 1,
-            }}
-            className="h-10 w-10 rounded-xl items-center justify-center"
-          >
-            <ChevronLeftIcon size={20} color={tokens.textPrimary} />
-          </TouchableOpacity>
-          <Text
-            style={{ color: tokens.textPrimary }}
-            className="text-lg font-bold"
-          >
-            Active Sessions
-          </Text>
-          <View className="w-10" />
-        </View>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: tokens.background }]} edges={['top']}>
+      {/* Gradient Header */}
+      <LinearGradient
+        colors={GRADIENTS.navyHero}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+          activeOpacity={0.8}
+        >
+          <ChevronLeftIcon size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Active Sessions</Text>
+        <View style={{ width: 40 }} />
+      </LinearGradient>
 
+      <View style={styles.content}>
         {errorMessage ? (
-          <Alert variant="danger" message={errorMessage} className="mb-4" />
+          <Alert variant="danger" message={errorMessage} style={styles.errorAlert} />
         ) : null}
 
         {isLoading ? (
-          <View className="flex-1 items-center justify-center">
+          <View style={styles.loadingContainer}>
             <Spinner size="small" color={tokens.accent} label="Loading active sessions..." />
           </View>
         ) : (
           <ScrollView
-            contentContainerStyle={{ paddingBottom: 40 }}
+            contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            <View className="mb-4">
-              <Text
-                style={{ color: tokens.textMuted }}
-                className="text-xs font-semibold uppercase tracking-wider mb-2"
-              >
-                Devices Signed Into Your Account ({sessions.length})
-              </Text>
-            </View>
+            <Text style={[styles.sectionLabel, { color: tokens.textMuted }]}>
+              Devices Signed Into Your Account ({sessions.length})
+            </Text>
 
             {sessions.map((session) => {
               const isCurrent = session.isCurrent;
               return (
-                <Card
+                <View
                   key={session.id}
-                  className="p-4 mb-3"
+                  style={[
+                    styles.sessionCard,
+                    {
+                      backgroundColor: tokens.surface,
+                      borderColor: isCurrent ? tokens.accent : tokens.border,
+                      borderLeftWidth: isCurrent ? 4 : 1,
+                    },
+                  ]}
                 >
-                  <View className="flex-row items-center justify-between mb-2.5">
-                    <View className="flex-row items-center">
+                  <View style={styles.sessionHeader}>
+                    <View style={styles.sessionLeft}>
                       <View
-                        style={{ backgroundColor: tokens.accentSoft }}
-                        className="w-8 h-8 rounded-lg items-center justify-center mr-2.5"
+                        style={[styles.deviceIcon, { backgroundColor: tokens.accentSoft }]}
                       >
                         <SmartphoneIcon size={16} color={tokens.accent} />
                       </View>
-                      <Text
-                        style={{ color: tokens.textPrimary }}
-                        className="text-sm font-bold mr-2"
-                      >
+                      <Text style={[styles.deviceName, { color: tokens.textPrimary }]}>
                         {session.deviceName || 'Mobile / Client Device'}
                       </Text>
                       {isCurrent ? (
@@ -159,43 +156,42 @@ export default function ActiveSessionsScreen() {
                       <TouchableOpacity
                         onPress={() => handleRevokeSession(session.id)}
                         disabled={revokingId === session.id}
-                        style={{
-                          backgroundColor: tokens.dangerSoft,
-                          borderColor: tokens.danger,
-                          borderWidth: 1,
-                        }}
-                        className="px-2.5 py-1 rounded-lg"
+                        style={[
+                          styles.revokeButton,
+                          {
+                            backgroundColor: tokens.dangerSoft,
+                            borderColor: tokens.danger,
+                          },
+                        ]}
+                        activeOpacity={0.8}
                       >
-                        <Text
-                          style={{ color: tokens.danger }}
-                          className="text-xs font-semibold"
-                        >
+                        <Text style={[styles.revokeText, { color: tokens.danger }]}>
                           {revokingId === session.id ? 'Revoking...' : 'Revoke'}
                         </Text>
                       </TouchableOpacity>
                     ) : null}
                   </View>
 
-                  <View className="gap-1">
-                    <Text style={{ color: tokens.textSecondary }} className="text-xs">
+                  <View style={styles.sessionMeta}>
+                    <Text style={[styles.metaText, { color: tokens.textSecondary }]}>
                       Platform:{' '}
-                      <Text style={{ color: tokens.textPrimary }}>
+                      <Text style={{ color: tokens.textPrimary, fontWeight: '600' }}>
                         {session.platform || 'Unknown'}
                       </Text>
                     </Text>
                     {session.ipAddress ? (
-                      <Text style={{ color: tokens.textSecondary }} className="text-xs">
+                      <Text style={[styles.metaText, { color: tokens.textSecondary }]}>
                         IP Address:{' '}
-                        <Text style={{ color: tokens.textPrimary }}>
+                        <Text style={{ color: tokens.textPrimary, fontWeight: '600' }}>
                           {session.ipAddress}
                         </Text>
                       </Text>
                     ) : null}
-                    <Text style={{ color: tokens.textMuted }} className="text-xs">
+                    <Text style={[styles.metaText, { color: tokens.textMuted }]}>
                       Last active: {new Date(session.lastUsedAt).toLocaleString()}
                     </Text>
                   </View>
-                </Card>
+                </View>
               );
             })}
 
@@ -205,7 +201,7 @@ export default function ActiveSessionsScreen() {
                 variant="destructive"
                 size="md"
                 onPress={handleSignOutAllOther}
-                className="mt-4"
+                style={styles.signOutBtn}
               />
             ) : null}
           </ScrollView>
@@ -214,3 +210,108 @@ export default function ActiveSessionsScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 18,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  errorAlert: {
+    marginBottom: 12,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 14,
+  },
+  sessionCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+  },
+  sessionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  sessionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  deviceIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deviceName: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  revokeButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginLeft: 8,
+  },
+  revokeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  sessionMeta: {
+    gap: 3,
+  },
+  metaText: {
+    fontSize: 12,
+  },
+  signOutBtn: {
+    marginTop: 16,
+  },
+});

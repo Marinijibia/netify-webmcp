@@ -13,8 +13,9 @@ export class GeminiProvider implements AIProvider {
 
   constructor(apiKey?: string, modelName: string = 'gemini-1.5-flash') {
     this.modelName = modelName;
-    if (apiKey && apiKey !== 'mock_dev_gemini_key') {
-      this.genAI = new GoogleGenerativeAI(apiKey);
+    const isPlaceholder = !apiKey || apiKey === 'mock_dev_gemini_key' || apiKey.startsWith('your_');
+    if (!isPlaceholder) {
+      this.genAI = new GoogleGenerativeAI(apiKey!);
     }
   }
 

@@ -36,3 +36,7 @@ export * from './SubscriptionCard';
 export * from './LanguageSelectorModal';
 export * from './EvidenceDrawer';
 export * from './ActionProposalCard';
+// Phase 1 — Premium UI additions
+export * from './Avatar';
+export * from './AnimatedNumber';
+export * from './SkeletonLoader';

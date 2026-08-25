@@ -7,12 +7,46 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Linking,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@/design/theme';
 import { useBillingStore } from '@/store/billing-store';
 import { BillingPackage, BillingPlan } from '@/services/billing/billing.types';
+import { GRADIENTS } from '@/design/tokens/gradients';
+
+const PRO_FEATURES = [
+  {
+    icon: 'robot-outline' as const,
+    title: 'AI Collection Copilot',
+    desc: '250 AI requests/month — predictive collection prioritisation & actions',
+  },
+  {
+    icon: 'newspaper-variant-outline' as const,
+    title: 'Daily Business Briefing',
+    desc: 'Executive-grade morning breakdown of overdue accounts & collection forecast',
+  },
+  {
+    icon: 'brain' as const,
+    title: 'Customer 360° Memory',
+    desc: 'Behavioural reliability history, promise patterns & smart context summaries',
+  },
+  {
+    icon: 'whatsapp' as const,
+    title: 'AI WhatsApp Drafting',
+    desc: 'Culturally-attuned payment reminders with verified amounts in any language',
+  },
+  {
+    icon: 'chart-line' as const,
+    title: 'Customer Risk Scoring',
+    desc: 'Behavioural AI scores ranked by risk — focus on who matters most',
+  },
+  {
+    icon: 'account-group-outline' as const,
+    title: '500 Customers · 250 AI req/mo',
+    desc: 'Serious capacity for growing trade credit businesses',
+  },
+];
 
 export function ProPaywallModal() {
   const { tokens, isDark } = useTheme();
@@ -51,182 +85,171 @@ export function ProPaywallModal() {
       <View style={styles.backdrop}>
         <View
           style={[
-            styles.container,
-            {
-              backgroundColor: tokens.background,
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#E2E8F0',
-            },
+            styles.sheet,
+            { backgroundColor: tokens.background, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0' },
           ]}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.badgeRow}>
-              <View style={styles.proBadge}>
-                <Text style={styles.proBadgeText}>NETIFY PRO</Text>
-              </View>
-            </View>
-            <TouchableOpacity style={styles.closeButton} onPress={closeProPaywall}>
-              <Feather name="x" size={20} color={tokens.textSecondary} />
+          {/* ── Gradient Hero Banner ── */}
+          <LinearGradient
+            colors={GRADIENTS.navyToTeal as unknown as [string, string]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.heroBanner}
+          >
+            <TouchableOpacity style={styles.closeBtn} onPress={closeProPaywall} activeOpacity={0.8}>
+              <Feather name="x" size={18} color="rgba(255,255,255,0.8)" />
             </TouchableOpacity>
-          </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            {/* Title & Subtitle */}
-            <Text style={[styles.title, { color: tokens.textPrimary }]}>
+            <View style={styles.heroIcon}>
+              <MaterialCommunityIcons name="lightning-bolt" size={28} color="#FFFFFF" />
+            </View>
+            <View style={styles.heroPill}>
+              <Text style={styles.heroPillText}>NETIFY PRO</Text>
+            </View>
+            <Text style={styles.heroTitle}>
               Your business has a memory.{'\n'}Now let it work for you.
             </Text>
-            <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>
-              Unlock autonomous collection intelligence, behavioral risk analysis, and automated customer follow-ups.
+            <Text style={styles.heroSub}>
+              Autonomous AI collections · Risk scoring · WhatsApp drafting
             </Text>
+          </LinearGradient>
 
-            {/* Feature Checklist */}
-            <View
-              style={[
-                styles.featuresCard,
-                {
-                  backgroundColor: tokens.surface,
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9',
-                },
-              ]}
-            >
-              {[
-                { title: 'AI Collection Copilot', desc: 'Predictive collection prioritization and action recommendations' },
-                { title: 'Daily Business Briefing', desc: 'Every morning executive attention breakdown & overdue forecast' },
-                { title: 'Customer Intelligence & 360 Memory', desc: 'Reliability history, promise patterns, and context summaries' },
-                { title: 'AI WhatsApp Message Drafting', desc: 'Culturally-attuned reminder templates with verified amounts' },
-                { title: 'Conversational Business Q&A', desc: 'Natural language ledger queries with grounded evidence citations' },
-                { title: 'High-Volume Capacity', desc: '250 AI intelligence requests/month and up to 500 customers' },
-              ].map((feat, idx) => (
-                <View key={idx} style={styles.featureRow}>
-                  <View style={styles.checkCircle}>
-                    <Feather name="check" size={13} color="#FFFFFF" />
-                  </View>
-                  <View style={styles.featureTextCol}>
-                    <Text style={[styles.featureTitle, { color: tokens.textPrimary }]}>
-                      {feat.title}
-                    </Text>
-                    <Text style={[styles.featureDesc, { color: tokens.textSecondary }]}>
-                      {feat.desc}
-                    </Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-
-            {/* Pricing Packages from RevenueCat */}
-            <Text style={[styles.sectionLabel, { color: tokens.textSecondary }]}>
-              SELECT PLAN:
-            </Text>
-
-            {proPackages.length > 0 ? (
-              <View style={styles.packagesRow}>
-                {proPackages.map((pkg, idx) => {
-                  const isSelected = idx === selectedPkgIndex;
-                  const isAnnual = pkg.packageType === 'ANNUAL';
-                  return (
-                    <TouchableOpacity
-                      key={pkg.identifier}
-                      style={[
-                        styles.packageCard,
-                        {
-                          backgroundColor: tokens.surface,
-                          borderColor: isSelected ? '#00A581' : isDark ? 'rgba(255, 255, 255, 0.1)' : '#E2E8F0',
-                          borderWidth: isSelected ? 2 : 1,
-                        },
-                      ]}
-                      onPress={() => setSelectedPkgIndex(idx)}
-                    >
-                      {isAnnual && (
-                        <View style={styles.saveBadge}>
-                          <Text style={styles.saveBadgeText}>SAVE 20%</Text>
-                        </View>
-                      )}
-                      <Text style={[styles.packageTitle, { color: tokens.textPrimary }]}>
-                        {isAnnual ? 'Annual Pro' : 'Monthly Pro'}
-                      </Text>
-                      <Text style={styles.packagePrice}>
-                        {pkg.product.priceString || `${pkg.product.currencyCode} ${pkg.product.price}`}
-                      </Text>
-                      <Text style={[styles.packagePeriod, { color: tokens.textSecondary }]}>
-                        {isAnnual ? 'per year (best value)' : 'per month'}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            ) : (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {/* ── Feature List ── */}
+            <Text style={[styles.sectionLabel, { color: tokens.textMuted }]}>WHAT YOU GET</Text>
+            {PRO_FEATURES.map((feat, idx) => (
               <View
-                style={[
-                  styles.packageCard,
-                  {
-                    backgroundColor: tokens.surface,
-                    borderColor: '#00A581',
-                    borderWidth: 2,
-                    alignItems: 'center',
-                  },
-                ]}
+                key={idx}
+                style={[styles.featureRow, { borderBottomColor: tokens.border }]}
               >
-                <Text style={[styles.packageTitle, { color: tokens.textPrimary }]}>
-                  Netify Pro Tier
-                </Text>
-                <Text style={[styles.packagePeriod, { color: tokens.textSecondary }]}>
-                  Pricing localized upon checkout from app store
-                </Text>
+                <LinearGradient
+                  colors={GRADIENTS.tealSheen as [string, string]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.featureIconWrap}
+                >
+                  <MaterialCommunityIcons name={feat.icon} size={15} color="#FFFFFF" />
+                </LinearGradient>
+                <View style={styles.featureText}>
+                  <Text style={[styles.featureTitle, { color: tokens.textPrimary }]}>
+                    {feat.title}
+                  </Text>
+                  <Text style={[styles.featureDesc, { color: tokens.textSecondary }]}>
+                    {feat.desc}
+                  </Text>
+                </View>
               </View>
+            ))}
+
+            {/* ── Pricing Packages ── */}
+            {proPackages.length > 0 && (
+              <>
+                <Text style={[styles.sectionLabel, { color: tokens.textMuted, marginTop: 20 }]}>
+                  SELECT PLAN
+                </Text>
+                <View style={styles.packagesRow}>
+                  {proPackages.map((pkg, idx) => {
+                    const isSelected = idx === selectedPkgIndex;
+                    const isAnnual = pkg.packageType === 'ANNUAL';
+                    return (
+                      <TouchableOpacity
+                        key={pkg.identifier}
+                        style={[
+                          styles.pkgCard,
+                          {
+                            backgroundColor: tokens.surface,
+                            borderColor: isSelected ? '#00A581' : tokens.border,
+                            borderWidth: isSelected ? 2 : 1,
+                          },
+                        ]}
+                        onPress={() => setSelectedPkgIndex(idx)}
+                        activeOpacity={0.8}
+                      >
+                        {isAnnual && (
+                          <View style={styles.saveBadge}>
+                            <Text style={styles.saveBadgeText}>SAVE 20%</Text>
+                          </View>
+                        )}
+                        <Text style={[styles.pkgType, { color: tokens.textSecondary }]}>
+                          {isAnnual ? 'Annual' : 'Monthly'}
+                        </Text>
+                        <Text style={styles.pkgPrice}>
+                          {pkg.product.priceString || `${pkg.product.currencyCode} ${pkg.product.price}`}
+                        </Text>
+                        <Text style={[styles.pkgPeriod, { color: tokens.textMuted }]}>
+                          {isAnnual ? 'per year · best value' : 'per month'}
+                        </Text>
+                        {isSelected && (
+                          <View style={styles.selectedDot} />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
             )}
 
-            {/* Error Message */}
-            {error && (
-              <View style={styles.errorContainer}>
-                <Feather name="alert-circle" size={16} color="#EF4444" />
+            {/* ── Error ── */}
+            {error ? (
+              <View style={styles.errorBox}>
+                <Feather name="alert-circle" size={15} color="#EF4444" />
                 <Text style={styles.errorText}>{error}</Text>
               </View>
-            )}
+            ) : null}
 
-            {/* CTA Subscribe Button */}
+            {/* ── CTA ── */}
             <TouchableOpacity
-              style={[
-                styles.ctaButton,
-                { backgroundColor: '#00A581' },
-                isPurchasing && { opacity: 0.7 },
-              ]}
+              style={[styles.ctaWrapper, isPurchasing && { opacity: 0.7 }]}
               onPress={handlePurchase}
               disabled={isPurchasing || isLoading}
+              activeOpacity={0.85}
             >
-              {isPurchasing ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <>
-                  <MaterialCommunityIcons name="lightning-bolt" size={18} color="#FFFFFF" />
-                  <Text style={styles.ctaButtonText}>
-                    {selectedPackage?.product?.introPrice ? 'Start 14-Day Free Trial' : 'Unlock Netify Pro'}
-                  </Text>
-                </>
-              )}
+              <LinearGradient
+                colors={GRADIENTS.navyToTeal as [string, string]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.ctaGradient}
+              >
+                {isPurchasing ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <>
+                    <MaterialCommunityIcons name="lightning-bolt" size={20} color="#FFFFFF" />
+                    <Text style={styles.ctaText}>
+                      {selectedPackage?.product?.introPrice
+                        ? 'Start 14-Day Free Trial'
+                        : 'Unlock Netify Pro'}
+                    </Text>
+                  </>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
 
-            {/* Restore Purchases */}
+            {/* ── Restore ── */}
             <TouchableOpacity
-              style={styles.restoreButton}
+              style={styles.restoreBtn}
               onPress={restorePurchases}
               disabled={isLoading || isPurchasing}
             >
-              <Text style={[styles.restoreText, { color: tokens.textSecondary }]}>
-                Restore Existing Store Purchases
+              <Text style={[styles.restoreText, { color: tokens.textMuted }]}>
+                Restore existing purchases
               </Text>
             </TouchableOpacity>
 
-            {/* Social Impact Commitment */}
-            <View style={styles.impactBox}>
-              <MaterialCommunityIcons name="heart-multiple" size={16} color="#00A581" />
-              <Text style={[styles.impactText, { color: tokens.textSecondary }]}>
-                20% of Netify subscription proceeds support the Netify Foundation for out-of-school children across Africa.
+            {/* ── Foundation ── */}
+            <View style={[styles.foundationBox, { backgroundColor: isDark ? 'rgba(0,165,129,0.1)' : 'rgba(0,165,129,0.06)', borderColor: 'rgba(0,165,129,0.2)' }]}>
+              <MaterialCommunityIcons name="heart-multiple" size={18} color="#00A581" />
+              <Text style={[styles.foundationText, { color: tokens.textSecondary }]}>
+                <Text style={{ fontWeight: '700', color: tokens.textPrimary }}>20% of every subscription</Text> goes to the Netify Foundation supporting education for out-of-school children across Africa.
               </Text>
             </View>
 
-            {/* Footer Legal Terms */}
-            <Text style={[styles.legalText, { color: tokens.textMuted }]}>
-              Subscribing grants access to Pro features. Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period. Manage or cancel in App Store / Google Play account settings.
+            {/* ── Legal ── */}
+            <Text style={[styles.legal, { color: tokens.textMuted }]}>
+              Subscriptions auto-renew unless cancelled 24+ hours before renewal. Manage in App Store / Google Play settings.
             </Text>
           </ScrollView>
         </View>
@@ -238,83 +261,96 @@ export function ProPaywallModal() {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0,0,0,0.65)',
     justifyContent: 'flex-end',
   },
-  container: {
+  sheet: {
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     borderWidth: 1,
-    maxHeight: '92%',
-    paddingBottom: 28,
+    maxHeight: '93%',
+    overflow: 'hidden',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  heroBanner: {
+    paddingTop: 20,
+    paddingBottom: 24,
     paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 10,
-  },
-  badgeRow: {
-    flexDirection: 'row',
     alignItems: 'center',
   },
-  proBadge: {
-    backgroundColor: '#00A581',
-    paddingHorizontal: 10,
+  closeBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  heroPill: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 8,
+    marginBottom: 10,
   },
-  proBadgeText: {
+  heroPillText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: 1.2,
   },
-  closeButton: {
-    padding: 6,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  title: {
+  heroTitle: {
     fontSize: 22,
     fontWeight: '800',
-    lineHeight: 28,
-    marginTop: 8,
-    marginBottom: 6,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    lineHeight: 30,
+    marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 18,
+  heroSub: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.75)',
+    textAlign: 'center',
+    lineHeight: 18,
   },
-  featuresCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 20,
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 32,
+  },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    marginBottom: 12,
   },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    paddingBottom: 12,
     marginBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 12,
   },
-  checkCircle: {
-    width: 20,
-    height: 20,
+  featureIconWrap: {
+    width: 34,
+    height: 34,
     borderRadius: 10,
-    backgroundColor: '#00A581',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
-    marginTop: 2,
+    flexShrink: 0,
   },
-  featureTextCol: {
-    flex: 1,
-  },
+  featureText: { flex: 1 },
   featureTitle: {
     fontSize: 14,
     fontWeight: '700',
@@ -322,107 +358,118 @@ const styles = StyleSheet.create({
   },
   featureDesc: {
     fontSize: 12,
-    lineHeight: 16,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    marginBottom: 10,
+    lineHeight: 17,
   },
   packagesRow: {
     flexDirection: 'row',
     gap: 12,
     marginBottom: 18,
   },
-  packageCard: {
+  pkgCard: {
     flex: 1,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 14,
     position: 'relative',
+    overflow: 'visible',
   },
   saveBadge: {
     position: 'absolute',
     top: -10,
-    right: 10,
+    right: 8,
     backgroundColor: '#F59E0B',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 6,
+    zIndex: 1,
   },
   saveBadgeText: {
     color: '#FFFFFF',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
+    letterSpacing: 0.5,
   },
-  packageTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 4,
+  pkgType: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  packagePrice: {
-    fontSize: 18,
+  pkgPrice: {
+    fontSize: 22,
     fontWeight: '800',
     color: '#00A581',
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  packagePeriod: {
+  pkgPeriod: {
     fontSize: 11,
   },
-  errorContainer: {
+  selectedDot: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#00A581',
+  },
+  errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    gap: 8,
+    backgroundColor: 'rgba(239,68,68,0.1)',
     padding: 12,
     borderRadius: 10,
     marginBottom: 14,
-    gap: 8,
   },
   errorText: {
     color: '#EF4444',
     fontSize: 13,
     flex: 1,
   },
-  ctaButton: {
-    height: 52,
-    borderRadius: 14,
+  ctaWrapper: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  ctaGradient: {
+    height: 54,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginBottom: 12,
   },
-  ctaButtonText: {
+  ctaText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
   },
-  restoreButton: {
+  restoreBtn: {
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
     marginBottom: 16,
   },
   restoreText: {
     fontSize: 13,
     textDecorationLine: 'underline',
   },
-  impactBox: {
+  foundationBox: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 165, 129, 0.08)',
-    padding: 12,
-    borderRadius: 12,
+    alignItems: 'flex-start',
     gap: 10,
-    marginBottom: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 14,
   },
-  impactText: {
-    fontSize: 12,
-    lineHeight: 16,
+  foundationText: {
     flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
   },
-  legalText: {
-    fontSize: 11,
-    lineHeight: 15,
+  legal: {
+    fontSize: 10,
+    lineHeight: 14,
     textAlign: 'center',
   },
 });

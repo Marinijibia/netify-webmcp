@@ -7,16 +7,15 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  StyleSheet,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../../src/design/theme';
 import { Button } from '../../../../src/design/components/Button';
-import { Card } from '../../../../src/design/components/Card';
-import { Badge } from '../../../../src/design/components/Badge';
 import {
   ChevronLeftIcon,
-  CheckCircleIcon,
   CreditCardIcon,
 } from '../../../../src/design/icons';
 import {
@@ -24,6 +23,7 @@ import {
   ReceivableItem,
 } from '../../../../src/services/api/receivables';
 import { paymentsApi } from '../../../../src/services/api/payments';
+import { GRADIENTS } from '../../../../src/design/tokens/gradients';
 
 export default function RecordPaymentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -48,7 +48,6 @@ export default function RecordPaymentScreen() {
         const res = await receivablesApi.getById(id);
         if (res.data) {
           setReceivable(res.data);
-          // Default amount to full remaining balance
           setAmount(res.data.balance);
         }
       } catch (err: any) {
@@ -87,7 +86,6 @@ export default function RecordPaymentScreen() {
       return;
     }
 
-    // Confirmation Alert
     Alert.alert(
       'Confirm Payment',
       `Record payment of ${formatMoney(numPaymentAmount, receivable.currency)} from ${receivable.customer?.name}?\n\nRemaining Balance: ${formatMoney(remainingBalanceAfter, receivable.currency)}`,
@@ -132,10 +130,10 @@ export default function RecordPaymentScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: tokens.background }}>
-        <View className="flex-1 items-center justify-center">
+      <SafeAreaView style={[styles.container, { backgroundColor: tokens.background }]}>
+        <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={tokens.primary} />
-          <Text style={{ color: tokens.textSecondary }} className="text-sm mt-3 font-medium">
+          <Text style={[styles.loadingText, { color: tokens.textSecondary }]}>
             Loading...
           </Text>
         </View>
@@ -145,8 +143,8 @@ export default function RecordPaymentScreen() {
 
   if (!receivable) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: tokens.background }}>
-        <View className="p-6">
+      <SafeAreaView style={[styles.container, { backgroundColor: tokens.background }]}>
+        <View style={styles.centerContainer}>
           <Text style={{ color: tokens.danger }}>Receivable not found</Text>
         </View>
       </SafeAreaView>
@@ -154,126 +152,135 @@ export default function RecordPaymentScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: tokens.background }}>
-      {/* Header */}
-      <View className="px-6 py-4 flex-row items-center border-b border-slate-100 dark:border-slate-800">
+    <SafeAreaView style={[styles.container, { backgroundColor: tokens.background }]} edges={['top']}>
+      {/* Gradient Header */}
+      <LinearGradient
+        colors={GRADIENTS.navyHero}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
         <TouchableOpacity
           onPress={() => router.back()}
-          className="mr-3 p-1 rounded-full active:opacity-70"
+          style={styles.backButton}
+          activeOpacity={0.8}
         >
-          <ChevronLeftIcon size={24} color={tokens.textPrimary} />
+          <ChevronLeftIcon size={20} color="#FFFFFF" />
         </TouchableOpacity>
-        <View>
-          <Text style={{ color: tokens.textPrimary }} className="text-xl font-bold">
-            Record Payment
-          </Text>
-          <Text style={{ color: tokens.textSecondary }} className="text-xs">
-            For {receivable.customer?.name || 'Customer'}
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Record Payment</Text>
+          <Text style={styles.headerSubtitle}>
+            {receivable.customer?.name || 'Customer'}
           </Text>
         </View>
-      </View>
+        <View style={styles.headerIcon}>
+          <CreditCardIcon size={20} color="rgba(255,255,255,0.7)" />
+        </View>
+      </LinearGradient>
 
       <ScrollView
-        contentContainerStyle={{ padding: 24, paddingBottom: 60 }}
+        contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
         {error ? (
-          <View className="mb-4 p-3 bg-red-50 dark:bg-red-950/30 rounded-xl border border-red-200 dark:border-red-800">
-            <Text className="text-xs font-semibold text-red-600 dark:text-red-400">
-              {error}
-            </Text>
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : null}
 
         {/* Balance Preview Card */}
-        <Card className="p-4 mb-5">
-          <Text style={{ color: tokens.textSecondary }} className="text-xs uppercase font-bold tracking-wider mb-1">
-            Current Outstanding Balance
+        <View style={[styles.balanceCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
+          <Text style={[styles.balanceLabel, { color: tokens.textSecondary }]}>
+            CURRENT OUTSTANDING BALANCE
           </Text>
-          <Text style={{ color: tokens.primary }} className="text-2xl font-extrabold mb-3">
+          <Text style={[styles.balanceAmount, { color: tokens.primary }]}>
             {formatMoney(receivable.balance, receivable.currency)}
           </Text>
 
           {numPaymentAmount > 0 && (
-            <View className="pt-3 border-t border-slate-100 dark:border-slate-800 flex-row justify-between">
+            <View style={[styles.balancePreview, { borderTopColor: tokens.border }]}>
               <View>
-                <Text style={{ color: tokens.textSecondary }} className="text-xs font-medium">
+                <Text style={[styles.previewLabel, { color: tokens.textSecondary }]}>
                   Payment Amount
                 </Text>
-                <Text style={{ color: tokens.success }} className="text-sm font-bold mt-0.5">
-                  - {formatMoney(numPaymentAmount, receivable.currency)}
+                <Text style={[styles.previewDeduction, { color: tokens.success }]}>
+                  − {formatMoney(numPaymentAmount, receivable.currency)}
                 </Text>
               </View>
-              <View className="items-end">
-                <Text style={{ color: tokens.textSecondary }} className="text-xs font-medium">
-                  Balance After Payment
+              <View style={styles.previewRight}>
+                <Text style={[styles.previewLabel, { color: tokens.textSecondary }]}>
+                  Balance After
                 </Text>
                 <Text
-                  style={{
-                    color: isOverpaying ? tokens.danger : tokens.textPrimary,
-                  }}
-                  className="text-sm font-bold mt-0.5"
+                  style={[
+                    styles.previewBalance,
+                    { color: isOverpaying ? tokens.danger : tokens.textPrimary },
+                  ]}
                 >
                   {formatMoney(remainingBalanceAfter, receivable.currency)}
                 </Text>
               </View>
             </View>
           )}
-        </Card>
+        </View>
 
         {/* Payment Amount Input */}
-        <View className="mb-5">
-          <Text style={{ color: tokens.textPrimary }} className="text-sm font-semibold mb-1.5">
+        <View style={styles.fieldGroup}>
+          <Text style={[styles.fieldLabel, { color: tokens.textPrimary }]}>
             Payment Amount *
           </Text>
           <View
-            style={{
-              backgroundColor: tokens.surface,
-              borderColor: isOverpaying ? tokens.danger : tokens.border,
-            }}
-            className="flex-row items-center px-3.5 py-3 rounded-xl border"
+            style={[
+              styles.amountInput,
+              {
+                backgroundColor: tokens.surface,
+                borderColor: isOverpaying ? tokens.danger : tokens.border,
+              },
+            ]}
           >
-            <Text style={{ color: tokens.primary }} className="text-base font-bold mr-2">
-              ₦
-            </Text>
+            <Text style={[styles.currencySymbol, { color: tokens.primary }]}>₦</Text>
             <TextInput
               placeholder="e.g. 200000.00"
               placeholderTextColor={tokens.textSecondary}
               value={amount}
               onChangeText={setAmount}
               keyboardType="decimal-pad"
-              style={{ color: tokens.textPrimary }}
-              className="flex-1 text-base font-semibold"
+              style={[styles.amountTextInput, { color: tokens.textPrimary }]}
             />
           </View>
           {isOverpaying ? (
-            <Text className="text-xs text-red-500 mt-1 font-semibold">
+            <Text style={styles.overpayWarning}>
               Payment cannot exceed outstanding balance of {formatMoney(currentBalance, receivable.currency)}.
             </Text>
           ) : null}
         </View>
 
         {/* Payment Method Selector */}
-        <View className="mb-5">
-          <Text style={{ color: tokens.textPrimary }} className="text-sm font-semibold mb-1.5">
+        <View style={styles.fieldGroup}>
+          <Text style={[styles.fieldLabel, { color: tokens.textPrimary }]}>
             Payment Method
           </Text>
-          <View className="flex-row flex-wrap">
+          <View style={styles.methodGrid}>
             {(['BANK_TRANSFER', 'CASH', 'MOBILE_MONEY', 'POS', 'CARD', 'OTHER'] as const).map((m) => {
               const active = method === m;
               return (
                 <TouchableOpacity
                   key={m}
                   onPress={() => setMethod(m)}
-                  style={{
-                    backgroundColor: active ? tokens.primary : tokens.surface,
-                    borderColor: active ? tokens.primary : tokens.border,
-                  }}
-                  className="mr-2 mb-2 px-3 py-2 rounded-xl border items-center justify-center"
+                  style={[
+                    styles.methodChip,
+                    {
+                      backgroundColor: active ? tokens.primary : tokens.surface,
+                      borderColor: active ? tokens.primary : tokens.border,
+                    },
+                  ]}
+                  activeOpacity={0.8}
                 >
                   <Text
-                    style={{ color: active ? '#FFFFFF' : tokens.textPrimary }}
-                    className="text-xs font-bold"
+                    style={[
+                      styles.methodChipText,
+                      { color: active ? '#FFFFFF' : tokens.textPrimary },
+                    ]}
                   >
                     {m.replace('_', ' ')}
                   </Text>
@@ -284,8 +291,8 @@ export default function RecordPaymentScreen() {
         </View>
 
         {/* Payment Reference */}
-        <View className="mb-5">
-          <Text style={{ color: tokens.textPrimary }} className="text-sm font-semibold mb-1.5">
+        <View style={styles.fieldGroup}>
+          <Text style={[styles.fieldLabel, { color: tokens.textPrimary }]}>
             Transaction Reference / Receipt # (Optional)
           </Text>
           <TextInput
@@ -293,18 +300,20 @@ export default function RecordPaymentScreen() {
             placeholderTextColor={tokens.textSecondary}
             value={reference}
             onChangeText={setReference}
-            style={{
-              backgroundColor: tokens.surface,
-              borderColor: tokens.border,
-              color: tokens.textPrimary,
-            }}
-            className="px-3.5 py-3 rounded-xl border text-sm"
+            style={[
+              styles.textInput,
+              {
+                backgroundColor: tokens.surface,
+                borderColor: tokens.border,
+                color: tokens.textPrimary,
+              },
+            ]}
           />
         </View>
 
         {/* Business Notes */}
-        <View className="mb-8">
-          <Text style={{ color: tokens.textPrimary }} className="text-sm font-semibold mb-1.5">
+        <View style={styles.fieldGroupLast}>
+          <Text style={[styles.fieldLabel, { color: tokens.textPrimary }]}>
             Payment Notes (Optional)
           </Text>
           <TextInput
@@ -315,13 +324,14 @@ export default function RecordPaymentScreen() {
             multiline
             numberOfLines={3}
             textAlignVertical="top"
-            style={{
-              backgroundColor: tokens.surface,
-              borderColor: tokens.border,
-              color: tokens.textPrimary,
-              minHeight: 80,
-            }}
-            className="px-3.5 py-3 rounded-xl border text-sm"
+            style={[
+              styles.textArea,
+              {
+                backgroundColor: tokens.surface,
+                borderColor: tokens.border,
+                color: tokens.textPrimary,
+              },
+            ]}
           />
         </View>
 
@@ -337,3 +347,186 @@ export default function RecordPaymentScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  centerContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 15,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 18,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  headerCenter: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 19,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.65)',
+    marginTop: 2,
+  },
+  headerIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 60,
+  },
+  errorBanner: {
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#FDE8E8',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F87171',
+  },
+  errorText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#991B1B',
+  },
+  balanceCard: {
+    padding: 18,
+    borderRadius: 18,
+    borderWidth: 1,
+    marginBottom: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+  },
+  balanceLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  balanceAmount: {
+    fontSize: 26,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  balancePreview: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 12,
+    marginTop: 12,
+    borderTopWidth: 1,
+  },
+  previewLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  previewDeduction: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  previewRight: {
+    alignItems: 'flex-end',
+  },
+  previewBalance: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  fieldGroup: {
+    marginBottom: 18,
+  },
+  fieldGroupLast: {
+    marginBottom: 24,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  amountInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
+  currencySymbol: {
+    fontSize: 16,
+    fontWeight: '800',
+    marginRight: 8,
+  },
+  amountTextInput: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  overpayWarning: {
+    fontSize: 12,
+    color: '#EF4444',
+    marginTop: 6,
+    fontWeight: '600',
+  },
+  methodGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  methodChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  methodChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  textInput: {
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderRadius: 14,
+    borderWidth: 1,
+    fontSize: 14,
+  },
+  textArea: {
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderRadius: 14,
+    borderWidth: 1,
+    fontSize: 14,
+    minHeight: 90,
+    textAlignVertical: 'top',
+  },
+});

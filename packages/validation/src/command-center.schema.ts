@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const AppLanguageEnum = z.enum(['en', 'ha', 'yo', 'ig', 'pcm']);
+export const AppLanguageEnum = z.enum(['en', 'ha', 'yo', 'ig', 'pcm', 'ff']);
 export type AppLanguage = z.infer<typeof AppLanguageEnum>;
 
 export const UpdateLanguagePreferenceSchema = z.object({
