@@ -1,6 +1,8 @@
 import React from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { Navbar } from '../components/Navbar';
+import { WebMCPInspector } from '../components/WebMCPInspector';
+import { AuthProvider } from '../lib/auth-context';
 import '../styles/globals.css';
 
 export const metadata = {
@@ -15,14 +17,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#0B0F19' }}>
-        <Sidebar />
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <Navbar />
-          <main style={{ flex: 1, padding: '32px 36px', overflowY: 'auto' }}>
-            {children}
-          </main>
-        </div>
+      <body style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#001D31', color: '#FFFFFF' }}>
+        <AuthProvider>
+          <Sidebar />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh' }}>
+            <Navbar />
+            <main style={{ flex: 1, padding: '32px 36px', overflowY: 'auto', backgroundColor: '#001D31' }}>
+              {children}
+            </main>
+          </div>
+          <WebMCPInspector />
+        </AuthProvider>
       </body>
     </html>
   );

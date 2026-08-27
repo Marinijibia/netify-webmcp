@@ -40,3 +40,5 @@ export * from './ActionProposalCard';
 export * from './Avatar';
 export * from './AnimatedNumber';
 export * from './SkeletonLoader';
+export * from './VoiceCopilotOverlay';
+

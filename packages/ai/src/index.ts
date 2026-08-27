@@ -12,3 +12,5 @@ export * from './capabilities/memory.capability';
 export * from './capabilities/intent-routing.capability';
 export * from './prompts';
 export * from './ai.service';
+export * from './interfaces/voice-provider.interface';
+export * from './providers/elevenlabs.provider';

@@ -392,6 +392,7 @@ model Organization {
   aiConversations      AIConversation[]
   aiMessages           AIMessage[]
   aiActionProposals    AIActionProposal[]
+  voiceUsages          VoiceUsage[]
 
   @@map("organizations")
 }
@@ -434,6 +435,7 @@ model User {
   auditLogs               AuditLog[]
   aiConversations         AIConversation[]
   aiActionProposals       AIActionProposal[]
+  voiceUsages             VoiceUsage[]
 
   @@map("users")
 }
@@ -1403,3 +1405,26 @@ model AIActionProposal {
   @@index([userId, status])
   @@map("ai_action_proposals")
 }
+
+model VoiceUsage {
+  id             String   @id @default(uuid())
+  organizationId String
+  userId         String
+  operation      String   // 'STT' | 'TTS'
+  language       String
+  provider       String   // 'elevenlabs'
+  success        Boolean
+  durationMs     Int
+  characterCount Int?     // for TTS: number of chars synthesized
+  errorMessage   String?  // sanitized error message if failed
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([organizationId, userId])
+  @@index([createdAt])
+  @@map("voice_usage")
+}
+

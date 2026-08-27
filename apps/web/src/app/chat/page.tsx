@@ -1,6 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { useAuth } from '@/lib/auth-context';
+import { aiChatApi, AIChatResponse } from '@/lib/api';
 import { 
   BrainCircuit, 
   Send, 
@@ -10,333 +13,396 @@ import {
   FileText, 
   Clock, 
   HelpCircle,
-  ShieldCheck
+  ShieldCheck,
+  Loader2,
+  AlertCircle,
+  ArrowRight
 } from 'lucide-react';
 
-interface Message {
+interface ChatMessage {
   id: string;
-  sender: 'user' | 'ai';
+  sender: 'user' | 'copilot';
   text: string;
   timestamp: string;
-  citations?: Array<{ type: string; label: string; ref: string }>;
-  tags?: Array<{ label: string; type: 'known' | 'observed' | 'predicted' | 'recommended' }>;
+  facts?: Array<{ title: string; detail: string; metric?: string | number }>;
+  inferences?: Array<{ title: string; reason: string; urgency?: string }>;
+  evidence?: {
+    memoryIds: string[];
+    eventIds: string[];
+    customerIds: string[];
+    receivableIds: string[];
+  };
+  suggestedActions?: Array<{
+    id?: string;
+    actionType: string;
+    title: string;
+    description: string;
+    payload: Record<string, any>;
+    isConsequential: boolean;
+  }>;
 }
 
-export default function BusinessMemoryChatPage() {
+export default function CopilotChatPage() {
+  const { user, organization } = useAuth();
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      sender: 'ai',
-      text: "Good day Alhaji Tunde! I am your Netify Business Memory Assistant for Apex Trading Ltd. I have full context of your customer ledgers, invoices, WhatsApp payment commitments, and bank records. What would you like to investigate?",
-      timestamp: '10:00 AM',
-    },
-    {
-      id: '2',
-      sender: 'user',
-      text: "Who promised to pay this week, and what is their current status?",
-      timestamp: '10:02 AM',
-    },
-    {
-      id: '3',
-      sender: 'ai',
-      text: "According to your business memory records, you have two notable payment commitments:\n\n1. **ABC Stores (Segun Adebayo)**: Promised **₦300,000** for Friday morning towards invoice INV-102. **Status: MISSED (Elapsed)**. Total overdue balance remains **₦850,000**.\n\n2. **Musa Enterprises**: Invoice INV-103 for **₦450,000** is due tomorrow with an active commitment to settle upon goods inspection. **Status: PENDING (On Track)**.",
-      timestamp: '10:02 AM',
-      tags: [
-        { label: 'KNOWN: Invoices INV-102, INV-103', type: 'known' },
-        { label: 'OBSERVED: Missed Friday Deadline', type: 'observed' },
-        { label: 'RECOMMENDED: Send Firm Follow-up to ABC Stores', type: 'recommended' },
-      ],
-      citations: [
-        { type: 'COMMITMENT', label: 'COM-001 (ABC Stores)', ref: '/customers/cust-abc-1' },
-        { type: 'INVOICE', label: 'INV-102 (₦500k)', ref: '/customers/cust-abc-1' },
-        { type: 'INVOICE', label: 'INV-103 (₦450k)', ref: '/customers/cust-musa-2' },
-      ],
-    },
-  ]);
+  const [conversationId, setConversationId] = useState<string | undefined>(undefined);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  useEffect(() => {
+    // Initial welcome message
+    const welcome: ChatMessage = {
+      id: 'welcome',
+      sender: 'copilot',
+      text: `Good day ${user?.firstName || 'Business Owner'}! I am your Netify Business Memory Copilot for ${organization?.name || 'your workspace'}. I have live context of your customer accounts, receivables, payment commitments, and collections history. Ask me to investigate a customer or rank who needs attention today.`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    setMessages([welcome]);
+  }, [user?.firstName, organization?.name]);
 
-    const userMsg: Message = {
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleSend = async (textToSend?: string) => {
+    const text = textToSend || input;
+    if (!text.trim() || isSending) return;
+
+    const userMsg: ChatMessage = {
       id: Date.now().toString(),
       sender: 'user',
-      text: input,
+      text: text,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
     setMessages((prev) => [...prev, userMsg]);
-    const currentInput = input;
     setInput('');
+    setIsSending(true);
+    setError(null);
 
-    setTimeout(() => {
-      let aiText = "I checked our database records and vector memory.";
-      let citations: Array<{ type: string; label: string; ref: string }> = [];
+    try {
+      const res = await aiChatApi.sendMessage({
+        content: text,
+        conversationId,
+      });
 
-      if (currentInput.toLowerCase().includes('abc')) {
-        aiText = "ABC Stores currently has **₦850,000** overdue across invoices INV-102 (₦500,000, 21d overdue) and INV-101 (₦350,000, 14d overdue). A payment commitment of ₦300,000 was made via WhatsApp for Friday morning but remains unpaid. Their composite risk score is **78/100 (HIGH RISK)**.";
-        citations = [
-          { type: 'INVOICE', label: 'INV-102 (₦500k)', ref: '/customers/cust-abc-1' },
-          { type: 'COMMITMENT', label: 'COM-001 (₦300k Friday)', ref: '/customers/cust-abc-1' },
-        ];
-      } else if (currentInput.toLowerCase().includes('total') || currentInput.toLowerCase().includes('overdue')) {
-        aiText = "Total outstanding across all 5 active accounts is **₦4,700,000**, with **₦1,200,000** classified as immediately needing attention due to overdue status (ABC Stores ₦850k and Northern Distribution ₦1.2M).";
-        citations = [
-          { type: 'ORGANIZATION', label: 'Apex Trading Ltd Ledger', ref: '/collections' },
-        ];
-      } else {
-        aiText = `Based on our multi-tenant business memory index, I analyzed your inquiry regarding "${currentInput}". All supporting database records and payment ledgers have been cross-referenced.`;
-        citations = [
-          { type: 'MEMORY', label: 'Apex Trading Vector Index', ref: '/customers' },
-        ];
+      if (res.conversationId) {
+        setConversationId(res.conversationId);
       }
 
-      const aiMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        sender: 'ai',
-        text: aiText,
+      const copilotMsg: ChatMessage = {
+        id: res.messageId || (Date.now() + 1).toString(),
+        sender: 'copilot',
+        text: res.content,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        citations,
-        tags: [
-          { label: 'KNOWN: Verified DB Ledger', type: 'known' },
-          { label: 'OBSERVED: Real-time calculation', type: 'observed' },
-        ],
+        facts: res.facts,
+        inferences: res.inferences,
+        evidence: res.evidence,
+        suggestedActions: res.suggestedActions,
       };
 
-      setMessages((prev) => [...prev, aiMsg]);
-    }, 600);
+      setMessages((prev) => [...prev, copilotMsg]);
+    } catch (err: any) {
+      console.warn('AI Chat API Error:', err);
+      setError(err?.message || 'Unable to communicate with the live AI engine. Please ensure your backend is reachable.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 128px)', gap: '16px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <BrainCircuit size={24} color="#10B981" />
-            <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#F9FAFB' }}>
-              AI Business Memory Copilot
-            </h2>
+            <BrainCircuit size={24} color="#00A581" />
+            <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#FFFFFF' }}>AI Copilot & Business Memory</h2>
           </div>
-          <p style={{ color: '#9CA3AF', fontSize: '13px', marginTop: '2px' }}>
-            Natural language investigation grounded strictly in authoritative SME ledgers and vector embeddings.
+          <p style={{ color: '#8FB7C7', fontSize: '13px', marginTop: '2px' }}>
+            Investigate customer debts, examine payment promises, and prepare safe action proposals.
           </p>
         </div>
 
         <div style={{
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
-          border: '1px solid rgba(16, 185, 129, 0.3)',
-          padding: '6px 14px',
-          borderRadius: '20px',
-          fontSize: '12px',
-          color: '#34D399',
           display: 'flex',
           alignItems: 'center',
-          gap: '6px'
+          gap: '6px',
+          backgroundColor: 'rgba(0, 165, 129, 0.12)',
+          border: '1px solid rgba(0, 165, 129, 0.3)',
+          padding: '6px 12px',
+          borderRadius: '20px',
+          fontSize: '12px',
+          color: '#3AD0A9',
+          fontWeight: '500',
         }}>
           <Sparkles size={14} />
-          <span>Hybrid pgvector RAG Active</span>
+          <span>Live Context Grounded</span>
         </div>
       </div>
 
-      {/* Suggested Quick Prompts */}
-      <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
-        {[
-          'Who promised to pay this Friday?',
-          'Why is ABC Stores marked as high risk?',
-          'Summarize total overdue balance',
-          'What did Musa say about invoice INV-103?',
-        ].map((prompt) => (
-          <button
-            key={prompt}
-            onClick={() => {
-              setInput(prompt);
-            }}
-            style={{
-              backgroundColor: '#111827',
-              border: '1px solid #1F2937',
-              color: '#D1D5DB',
-              padding: '6px 12px',
-              borderRadius: '16px',
-              fontSize: '12px',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            💬 {prompt}
-          </button>
-        ))}
-      </div>
+      {/* Error alert */}
+      {error && (
+        <div style={{
+          backgroundColor: 'rgba(239, 68, 68, 0.15)',
+          border: '1px solid #EF4444',
+          borderRadius: '8px',
+          padding: '10px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          color: '#FCA5A5',
+          fontSize: '12.5px',
+        }}>
+          <AlertCircle size={16} color="#EF4444" />
+          <span>{error}</span>
+        </div>
+      )}
 
-      {/* Chat Messages Feed */}
+      {/* Messages Feed */}
       <div style={{
         flex: 1,
-        backgroundColor: '#111827',
-        borderRadius: '14px',
-        border: '1px solid #1F2937',
+        backgroundColor: '#003051',
+        borderRadius: '12px',
+        border: '1px solid #0F5470',
         padding: '24px',
         overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
-        gap: '20px'
+        gap: '20px',
       }}>
-        {messages.map((m) => (
-          <div
-            key={m.id}
-            style={{
-              display: 'flex',
-              gap: '12px',
-              alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start',
-              maxWidth: '80%'
-            }}
-          >
-            {m.sender === 'ai' && (
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                backgroundColor: '#10B981',
+        {messages.map((m) => {
+          const isUser = m.sender === 'user';
+
+          return (
+            <div
+              key={m.id}
+              style={{
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FFFFFF',
-                flexShrink: 0
-              }}>
-                <Bot size={18} />
-              </div>
-            )}
+                gap: '12px',
+                alignSelf: isUser ? 'flex-end' : 'flex-start',
+                maxWidth: '85%',
+              }}
+            >
+              {!isUser && (
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  backgroundColor: '#00A581',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#FFFFFF',
+                  flexShrink: 0,
+                }}>
+                  <Bot size={18} />
+                </div>
+              )}
 
-            <div>
               <div style={{
-                backgroundColor: m.sender === 'user' ? '#10B981' : '#1A2234',
-                color: m.sender === 'user' ? '#FFFFFF' : '#F9FAFB',
-                padding: '16px 20px',
+                backgroundColor: isUser ? '#00A581' : '#001D31',
+                border: `1px solid ${isUser ? '#008B6E' : '#0F5470'}`,
                 borderRadius: '12px',
-                border: m.sender === 'ai' ? '1px solid #283548' : 'none',
-                fontSize: '14px',
-                lineHeight: '22px',
-                whiteSpace: 'pre-line'
+                padding: '16px 18px',
+                color: '#FFFFFF',
               }}>
-                {m.text}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '11px', color: isUser ? '#D3F8ED' : '#8FB7C7' }}>
+                  <span style={{ fontWeight: '600' }}>{isUser ? 'You' : 'Netify Copilot'}</span>
+                  <span>{m.timestamp}</span>
+                </div>
 
-                {/* Knowledge Classification Tags */}
-                {m.tags && m.tags.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #283548' }}>
-                    {m.tags.map((t, idx) => (
-                      <span
-                        key={idx}
-                        style={{
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          backgroundColor: t.type === 'known' ? 'rgba(56, 189, 248, 0.15)' : t.type === 'observed' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                          color: t.type === 'known' ? '#38BDF8' : t.type === 'observed' ? '#F59E0B' : '#10B981',
-                        }}
-                      >
-                        {t.label}
-                      </span>
+                <div style={{ fontSize: '13.5px', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                  {m.text}
+                </div>
+
+                {/* Facts Cards if present */}
+                {m.facts && m.facts.length > 0 && (
+                  <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#8FB7C7', textTransform: 'uppercase' }}>
+                      Verified Data Facts:
+                    </span>
+                    {m.facts.map((f, i) => (
+                      <div key={i} style={{ backgroundColor: '#003051', padding: '8px 12px', borderRadius: '6px', border: '1px solid #0F5470', fontSize: '12px' }}>
+                        <span style={{ fontWeight: '600', color: '#3AD0A9' }}>{f.title}: </span>
+                        <span style={{ color: '#DCEAF0' }}>{f.detail}</span>
+                      </div>
                     ))}
                   </div>
                 )}
 
-                {/* Citations Footer */}
-                {m.citations && m.citations.length > 0 && (
-                  <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px dashed #334155' }}>
-                    <span style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 'bold' }}>Supporting Evidence:</span>
-                    <div style={{ display: 'flex', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
-                      {m.citations.map((c, i) => (
-                        <a
-                          key={i}
-                          href={c.ref}
-                          style={{
-                            fontSize: '11px',
-                            backgroundColor: '#1E293B',
-                            color: '#38BDF8',
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            border: '1px solid #334155',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <FileText size={10} />
-                          <span>{c.label}</span>
-                        </a>
-                      ))}
-                    </div>
+                {/* Inferences if present */}
+                {m.inferences && m.inferences.length > 0 && (
+                  <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#8FB7C7', textTransform: 'uppercase' }}>
+                      Behavioral Inferences:
+                    </span>
+                    {m.inferences.map((inf, i) => (
+                      <div key={i} style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '8px 12px', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.3)', fontSize: '12px', color: '#FCD34D' }}>
+                        <strong>{inf.title}</strong> — {inf.reason}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Suggested Actions if present */}
+                {m.suggestedActions && m.suggestedActions.length > 0 && (
+                  <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {m.suggestedActions.map((act, i) => (
+                      <Link
+                        key={i}
+                        href={act.payload?.customerId ? `/messages/draft?customerId=${act.payload.customerId}` : '/messages/draft'}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          backgroundColor: '#00A581',
+                          color: '#FFFFFF',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                        }}
+                      >
+                        <span>{act.title}</span>
+                        <ArrowRight size={12} />
+                      </Link>
+                    ))}
                   </div>
                 )}
               </div>
-              <span style={{ fontSize: '11px', color: '#6B7280', marginTop: '4px', display: 'block', textAlign: m.sender === 'user' ? 'right' : 'left' }}>
-                {m.timestamp}
-              </span>
-            </div>
 
-            {m.sender === 'user' && (
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                backgroundColor: '#1F2937',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#9CA3AF',
-                flexShrink: 0
-              }}>
-                <User size={18} />
-              </div>
-            )}
+              {isUser && (
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  backgroundColor: '#003051',
+                  border: '1px solid #0F5470',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#FFFFFF',
+                  flexShrink: 0,
+                }}>
+                  <User size={18} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {isSending && (
+          <div style={{ display: 'flex', gap: '12px', alignSelf: 'flex-start' }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              backgroundColor: '#00A581',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#FFFFFF',
+            }}>
+              <Bot size={18} />
+            </div>
+            <div style={{
+              backgroundColor: '#001D31',
+              border: '1px solid #0F5470',
+              borderRadius: '12px',
+              padding: '14px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: '#8FB7C7',
+              fontSize: '13px',
+            }}>
+              <Loader2 size={16} className="animate-spin text-teal-400" />
+              <span>Analyzing live ledgers & business memory...</span>
+            </div>
           </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Suggested Quick Inquiries */}
+      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', flexShrink: 0 }}>
+        {[
+          'Who owes the most past 30 days?',
+          'Who has broken a payment promise recently?',
+          'Draft a respectful follow-up for overdue customers',
+          'Give me today’s total collection priority summary',
+        ].map((q) => (
+          <button
+            key={q}
+            onClick={() => handleSend(q)}
+            style={{
+              whiteSpace: 'nowrap',
+              backgroundColor: '#003051',
+              border: '1px solid #0F5470',
+              color: '#DCEAF0',
+              padding: '6px 12px',
+              borderRadius: '16px',
+              fontSize: '12px',
+            }}
+          >
+            {q}
+          </button>
         ))}
       </div>
 
       {/* Input Bar */}
-      <div style={{
-        display: 'flex',
-        gap: '12px',
-        backgroundColor: '#111827',
-        borderRadius: '10px',
-        border: '1px solid #1F2937',
-        padding: '8px 12px'
-      }}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSend();
+        }}
+        style={{
+          display: 'flex',
+          gap: '10px',
+          flexShrink: 0,
+        }}
+      >
         <input
           type="text"
-          placeholder="Ask Business Memory anything about customer balances, promises, or invoices..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSend();
-          }}
+          placeholder="Ask Copilot about receivables, customer risk, or draft action..."
           style={{
             flex: 1,
-            backgroundColor: 'transparent',
-            border: 'none',
-            outline: 'none',
-            color: '#F9FAFB',
+            padding: '14px 18px',
+            backgroundColor: '#003051',
+            border: '1px solid #0F5470',
+            borderRadius: '10px',
+            color: '#FFFFFF',
             fontSize: '14px',
-            padding: '8px'
+            outline: 'none',
           }}
         />
+
         <button
-          onClick={handleSend}
+          type="submit"
+          disabled={!input.trim() || isSending}
           style={{
-            backgroundColor: '#10B981',
+            backgroundColor: '#00A581',
             color: '#FFFFFF',
-            padding: '8px 18px',
-            borderRadius: '6px',
+            padding: '0 24px',
+            borderRadius: '10px',
+            fontWeight: '600',
+            fontSize: '14px',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            fontSize: '13px',
-            fontWeight: 'bold'
+            gap: '8px',
+            opacity: !input.trim() || isSending ? 0.6 : 1,
           }}
         >
-          <Send size={14} />
           <span>Send</span>
+          <Send size={16} />
         </button>
-      </div>
+      </form>
     </div>
   );
 }

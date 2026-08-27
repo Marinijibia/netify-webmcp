@@ -22,6 +22,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.netify.app",
       "icon": "./assets/images/icon.png",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Netify uses the microphone so you can ask business questions and manage receivables using voice."
+      },
       "splash": {
         "image": "./assets/images/splash.png",
         "resizeMode": "contain",
@@ -47,10 +50,13 @@
       },
       "permissions": [
         "CAMERA",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
         "USE_BIOMETRIC",
         "USE_FINGERPRINT",
         "INTERNET"
       ],
+
       "allowBackup": false,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false

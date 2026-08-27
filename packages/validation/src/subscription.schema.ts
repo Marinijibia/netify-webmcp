@@ -30,6 +30,7 @@ export enum NetifyFeature {
   ADVANCED_REPORTING = 'ADVANCED_REPORTING',
   CROSS_BUSINESS_OVERVIEW = 'CROSS_BUSINESS_OVERVIEW',
   ENTERPRISE_ADMIN = 'ENTERPRISE_ADMIN',
+  AI_VOICE_ASSISTANT = 'AI_VOICE_ASSISTANT',
 }
 
 export interface PlanLimits {
@@ -70,6 +71,7 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanLimits> = {
       NetifyFeature.AI_MESSAGE_DRAFTING,
       NetifyFeature.BUSINESS_QA,
       NetifyFeature.BUSINESS_MEMORY_FULL,
+      NetifyFeature.AI_VOICE_ASSISTANT,
     ],
   },
   [SubscriptionPlan.BUSINESS]: {
@@ -90,6 +92,7 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanLimits> = {
       NetifyFeature.MULTI_BUSINESS,
       NetifyFeature.ADVANCED_REPORTING,
       NetifyFeature.CROSS_BUSINESS_OVERVIEW,
+      NetifyFeature.AI_VOICE_ASSISTANT,
     ],
   },
   [SubscriptionPlan.ENTERPRISE]: {
@@ -111,6 +114,7 @@ export const PLAN_CONFIG: Record<SubscriptionPlan, PlanLimits> = {
       NetifyFeature.ADVANCED_REPORTING,
       NetifyFeature.CROSS_BUSINESS_OVERVIEW,
       NetifyFeature.ENTERPRISE_ADMIN,
+      NetifyFeature.AI_VOICE_ASSISTANT,
     ],
   },
 };

@@ -23,6 +23,8 @@ import { BusinessEventModule } from './modules/business-event/business-event.mod
 import { BusinessMemoryModule } from './modules/business-memory/business-memory.module';
 import { CommandCenterModule } from './modules/command-center/command-center.module';
 import { SignalModule } from './modules/signal/signal.module';
+import { VoiceModule } from './modules/voice/voice.module';
+
 
 @Module({
   imports: [
@@ -63,7 +65,9 @@ import { SignalModule } from './modules/signal/signal.module';
     CollectionsModule,
     MemoryModule,
     AIModule,
+    VoiceModule,
     CommandCenterModule,
+
     DocumentModule,
     NotificationModule,
     SignalModule,

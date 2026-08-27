@@ -26,11 +26,15 @@ import {
   EvidenceDrawer,
   ActionProposalCard,
   ProPaywallModal,
+  VoiceCopilotOverlay,
 } from '@/design/components';
+import { useVoiceAssistant } from '@/hooks/useVoiceAssistant';
 import { useTheme } from '@/design/theme';
 import Feather from '@expo/vector-icons/Feather';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { GRADIENTS, GRADIENT_DIRECTION } from '@/design/tokens/gradients';
+
 
 interface ChatMessage {
   id: string;
@@ -114,25 +118,7 @@ export default function MultilingualCopilotScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const langInfo = LANGUAGE_REGISTRY[currentLanguage] || LANGUAGE_REGISTRY.en;
 
-  useEffect(() => {
-    const welcomeText = langInfo.greeting + '! ' + t('copilot.placeholder');
-    setMessages([
-      {
-        id: 'welcome-0',
-        sender: 'COPILOT',
-        content: welcomeText,
-        suggestedFollowUps: [
-          t('copilot.q1'),
-          t('copilot.q2'),
-          t('copilot.q3'),
-        ],
-        createdAt: new Date().toISOString(),
-      },
-    ]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only on mount — do NOT re-run on language change or it wipes conversation history
-
-  const handleSendMessage = async (queryText?: string) => {
+  const handleSendMessage = async (queryText?: string, isVoiceInitiated = false) => {
     const text = (queryText || inputQuery).trim();
     if (!text) return;
 
@@ -173,6 +159,11 @@ export default function MultilingualCopilotScreen() {
       };
 
       setMessages((prev) => [...prev, copilotMsg]);
+
+      // If requested by voice, speak the answer
+      if (isVoiceInitiated && response.content) {
+        voice.speakText(response.content);
+      }
     } catch (err: any) {
       // 429 = monthly AI quota exhausted (20 req/mo on FREE)
       // ApiError uses .statusCode not .status
@@ -207,7 +198,6 @@ export default function MultilingualCopilotScreen() {
       if (isQuotaError || isFeatureGateError) {
         setTimeout(() => openProPaywall(), 800);
       }
-
     } finally {
       setLoading(false);
       setTimeout(() => {
@@ -215,6 +205,40 @@ export default function MultilingualCopilotScreen() {
       }, 150);
     }
   };
+
+  const voice = useVoiceAssistant({
+    language: currentLanguage,
+    onTranscript: async (transcriptText: string) => {
+      await handleSendMessage(transcriptText, true);
+    },
+  });
+
+  const handleMicPress = () => {
+    if (!canAccessFeature('AI_VOICE_ASSISTANT')) {
+      openProPaywall();
+      return;
+    }
+    voice.startListening();
+  };
+
+  useEffect(() => {
+    const welcomeText = langInfo.greeting + '! ' + t('copilot.placeholder');
+    setMessages([
+      {
+        id: 'welcome-0',
+        sender: 'COPILOT',
+        content: welcomeText,
+        suggestedFollowUps: [
+          t('copilot.q1'),
+          t('copilot.q2'),
+          t('copilot.q3'),
+        ],
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only on mount — do NOT re-run on language change or it wipes conversation history
+
 
   const handleOpenEvidence = (msg: ChatMessage) => {
     setActiveEvidence({
@@ -479,6 +503,28 @@ export default function MultilingualCopilotScreen() {
           />
 
           <TouchableOpacity
+            onPress={handleMicPress}
+            disabled={loading}
+            activeOpacity={0.8}
+            style={styles.micButtonWrap}
+          >
+            <LinearGradient
+              colors={
+                voice.voiceState === 'LISTENING'
+                  ? (['#EF4444', '#B91C1C'] as [string, string])
+                  : (GRADIENTS.navyToTeal as [string, string])
+              }
+              style={styles.micButton}
+            >
+              <Ionicons
+                name={voice.voiceState === 'LISTENING' ? 'mic' : 'mic-outline'}
+                size={18}
+                color="#FFFFFF"
+              />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             onPress={() => handleSendMessage()}
             disabled={!inputQuery.trim() || loading}
             activeOpacity={0.8}
@@ -513,11 +559,24 @@ export default function MultilingualCopilotScreen() {
           facts={activeEvidence.facts}
           inferences={activeEvidence.inferences}
         />
+        <VoiceCopilotOverlay
+          visible={voice.voiceState !== 'IDLE'}
+          voiceState={voice.voiceState}
+          transcript={voice.transcript}
+          errorMessage={voice.errorMessage}
+          recordingDurationMs={voice.recordingDurationMs}
+          onStopListening={voice.stopListening}
+          onCancel={voice.cancelRecording}
+          onStopPlayback={voice.stopPlayback}
+          onRetry={voice.startListening}
+          onDismiss={voice.reset}
+        />
         <ProPaywallModal />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -746,6 +805,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  micButtonWrap: {
+    borderRadius: 22,
+    overflow: 'hidden',
+  },
+  micButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   sendButtonWrap: {
     borderRadius: 22,
     overflow: 'hidden',
@@ -758,3 +828,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
