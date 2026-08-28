@@ -49,7 +49,17 @@ export interface CreateCommitmentPayload {
 }
 
 export const commitmentsApi = {
-  getCommitments: async (params?: { customerId?: string; status?: string }): Promise<PaymentCommitmentItem[]> => {
+  getCommitments: async (params?: { customerId?: string; receivableId?: string; status?: string }): Promise<PaymentCommitmentItem[]> => {
+    if (params?.receivableId) {
+      const res = await apiClient.get<ApiResponse<any>>(`/receivables/${params.receivableId}/commitments`, { params });
+      const payload = res.data?.data || res.data;
+      return Array.isArray(payload) ? payload : (payload?.items || []);
+    }
+    if (params?.customerId) {
+      const res = await apiClient.get<ApiResponse<any>>(`/customers/${params.customerId}/commitments`, { params });
+      const payload = res.data?.data || res.data;
+      return Array.isArray(payload) ? payload : (payload?.items || []);
+    }
     const res = await apiClient.get<ApiResponse<any>>('/commitments', { params });
     const payload = res.data?.data || res.data;
     return Array.isArray(payload) ? payload : (payload?.items || []);
@@ -68,7 +78,8 @@ export const commitmentsApi = {
   },
 
   createCommitment: async (data: CreateCommitmentPayload): Promise<PaymentCommitmentItem> => {
-    const res = await apiClient.post<ApiResponse<PaymentCommitmentItem>>('/commitments', data);
+    const url = data.receivableId ? `/receivables/${data.receivableId}/commitments` : '/commitments';
+    const res = await apiClient.post<ApiResponse<PaymentCommitmentItem>>(url, data);
     return res.data?.data || (res.data as unknown as PaymentCommitmentItem);
   },
 };

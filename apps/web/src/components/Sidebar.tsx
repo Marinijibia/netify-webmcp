@@ -10,17 +10,24 @@ import {
   Users, 
   MessageSquareQuote, 
   BrainCircuit, 
-  LogOut,
+  FileText,
+  Clock,
+  Bell,
+  Settings,
   Building,
-  ShieldCheck
+  LogOut
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Command Center', href: '/', icon: LayoutDashboard },
+  { name: 'Receivables & Invoices', href: '/receivables', icon: FileText },
+  { name: 'Payment Commitments', href: '/commitments', icon: Clock },
   { name: 'Collections Queue', href: '/collections', icon: Layers },
   { name: 'Customer Directory', href: '/customers', icon: Users },
   { name: 'AI Action Drafts', href: '/messages/draft', icon: MessageSquareQuote },
   { name: 'Copilot Chat', href: '/chat', icon: BrainCircuit },
+  { name: 'Notifications', href: '/notifications', icon: Bell },
+  { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export function Sidebar() {

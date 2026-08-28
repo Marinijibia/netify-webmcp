@@ -4,11 +4,19 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { Sparkles, Globe, User, LogIn } from 'lucide-react';
+import { Sparkles, Globe, User, LogIn, Bell } from 'lucide-react';
+import { notificationApi } from '@/lib/api';
 
 export function Navbar() {
   const pathname = usePathname();
   const { user, organization, isAuthenticated } = useAuth();
+  const [unreadCount, setUnreadCount] = React.useState(0);
+
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      notificationApi.getUnreadCount().then(setUnreadCount).catch(() => {});
+    }
+  }, [isAuthenticated, pathname]);
 
   // Hide navbar on auth pages
   if (pathname === '/login' || pathname === '/register') {
@@ -69,6 +77,44 @@ export function Navbar() {
           <Globe size={14} color="#00A581" />
           <span>Currency: {organization?.currency || 'NGN'}</span>
         </div>
+
+        {/* Notifications Icon Button */}
+        <Link
+          href="/notifications"
+          style={{
+            position: 'relative',
+            width: '36px',
+            height: '36px',
+            borderRadius: '8px',
+            backgroundColor: '#003051',
+            border: '1px solid #0F5470',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#8FB7C7',
+          }}
+        >
+          <Bell size={16} />
+          {unreadCount > 0 && (
+            <span style={{
+              position: 'absolute',
+              top: '-4px',
+              right: '-4px',
+              backgroundColor: '#EF4444',
+              color: '#FFFFFF',
+              borderRadius: '50%',
+              width: '16px',
+              height: '16px',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </Link>
 
         {/* User Session Avatar / Login Link */}
         {isAuthenticated ? (

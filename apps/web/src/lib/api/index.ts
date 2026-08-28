@@ -12,3 +12,4 @@ export * from './collection-activities';
 export * from './ai';
 export * from './ai-chat';
 export * from './business-memory';
+export * from './notifications';

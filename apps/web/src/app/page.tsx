@@ -57,14 +57,105 @@ export default function DashboardPage() {
   const facts = attention?.facts;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      {/* Marketing Product Overview Banner */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(0, 48, 81, 0.9) 0%, rgba(0, 29, 49, 1) 100%)',
+        border: '1px solid #00A581',
+        borderRadius: '16px',
+        padding: '24px 28px',
+        boxShadow: '0 10px 30px rgba(0, 165, 129, 0.12)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '20px',
+      }}>
+        <div style={{ maxWidth: '720px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <span style={{
+              backgroundColor: 'rgba(0, 165, 129, 0.2)',
+              color: '#3AD0A9',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              padding: '2px 10px',
+              borderRadius: '20px',
+              border: '1px solid rgba(0, 165, 129, 0.4)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}>
+              <Sparkles size={12} />
+              <span>WebMCP Challenge Official Submission • 8 Live Tools Active</span>
+            </span>
+          </div>
+          <h1 style={{ fontSize: '24px', fontWeight: '900', color: '#FFFFFF', letterSpacing: '-0.5px', margin: '0 0 6px' }}>
+            The Agent-Ready Collections Workspace for African SMEs
+          </h1>
+          <p style={{ color: '#8FB7C7', fontSize: '13.5px', lineHeight: '1.5', margin: 0 }}>
+            Netify gives African business owners and autonomous AI agents a unified business memory to track trade receivables, remember WhatsApp promises, and collect payments respectfully.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <Link
+            href="/landing"
+            style={{
+              padding: '10px 16px',
+              backgroundColor: '#00A581',
+              color: '#FFFFFF',
+              borderRadius: '8px',
+              fontSize: '12.5px',
+              fontWeight: 'bold',
+              textDecoration: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>Marketing Tour</span>
+            <ArrowUpRight size={14} />
+          </Link>
+          <Link
+            href="/webmcp"
+            style={{
+              padding: '10px 16px',
+              backgroundColor: '#003051',
+              border: '1px solid #0F5470',
+              color: '#3AD0A9',
+              borderRadius: '8px',
+              fontSize: '12.5px',
+              fontWeight: '600',
+              textDecoration: 'none',
+            }}
+          >
+            WebMCP Specs
+          </Link>
+          <Link
+            href="/pricing"
+            style={{
+              padding: '10px 16px',
+              backgroundColor: '#003051',
+              border: '1px solid #0F5470',
+              color: '#DCEAF0',
+              borderRadius: '8px',
+              fontSize: '12.5px',
+              fontWeight: '600',
+              textDecoration: 'none',
+            }}
+          >
+            Pricing (₦, KSh, GH₵, $)
+          </Link>
+        </div>
+      </div>
+
       {/* Header Banner */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h2 style={{ fontSize: '26px', fontWeight: 'bold', color: '#FFFFFF' }}>
-            Command Center
+          <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#FFFFFF' }}>
+            Live Command Center
           </h2>
-          <p style={{ color: '#8FB7C7', fontSize: '14px', marginTop: '4px' }}>
+          <p style={{ color: '#8FB7C7', fontSize: '13.5px', marginTop: '4px' }}>
             Real-time financial exposure, overdue risks, and collections priorities for <strong style={{ color: '#DCEAF0' }}>{organization?.name || 'Workspace'}</strong>.
           </p>
         </div>

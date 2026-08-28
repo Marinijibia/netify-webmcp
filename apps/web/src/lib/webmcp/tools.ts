@@ -273,4 +273,104 @@ export const webMCPTools: WebMCPToolDefinition[] = [
       };
     },
   },
+
+  {
+    name: 'list_receivables',
+    description: 'Query live invoices and receivables filtered by status (OPEN, OVERDUE, PAID) or customer ID.',
+    category: 'READ_ONLY',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        customerId: {
+          type: 'string',
+          description: 'Filter receivables by customer ID',
+        },
+        status: {
+          type: 'string',
+          description: 'Status filter: OPEN, OVERDUE, PARTIALLY_PAID, PAID',
+          enum: ['OPEN', 'OVERDUE', 'PARTIALLY_PAID', 'PAID'],
+        },
+        isOverdue: {
+          type: 'boolean',
+          description: 'Filter only overdue receivables',
+        },
+      },
+    },
+    execute: async (input: any = {}) => {
+      const data = await receivablesApi.list(input);
+      return {
+        count: data.length,
+        receivables: data.map((r) => ({
+          id: r.id,
+          reference: r.reference,
+          customerId: r.customerId,
+          customerName: r.customer?.name,
+          balance: r.balance,
+          originalAmount: r.originalAmount,
+          currency: r.currency,
+          dueDate: r.dueDate,
+          isOverdue: r.isOverdue,
+          daysOverdue: r.daysOverdue,
+          status: r.status,
+          detailRoute: `/receivables/${r.id}`,
+        })),
+      };
+    },
+  },
+
+  {
+    name: 'create_payment_commitment',
+    description: 'Record a customer promise-to-pay date and amount into the live database. Requires human confirmation.',
+    category: 'MUTATING',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        customerId: {
+          type: 'string',
+          description: 'The unique customer ID',
+        },
+        amount: {
+          type: 'number',
+          description: 'Amount the customer promised to pay',
+        },
+        promisedFor: {
+          type: 'string',
+          description: 'Date customer promised to pay (ISO 8601 string e.g. 2026-09-05T00:00:00Z)',
+        },
+        notes: {
+          type: 'string',
+          description: 'Notes regarding the commitment agreement',
+        },
+      },
+      required: ['customerId', 'amount', 'promisedFor'],
+    },
+    execute: async (input: any) => {
+      let recId = input.receivableId;
+      if (!recId) {
+        const openRecs = await receivablesApi.list({ customerId: input.customerId, status: 'OPEN' });
+        recId = openRecs.length > 0 ? openRecs[0].id : undefined;
+      }
+      if (!recId) {
+        throw new Error(`Cannot schedule commitment: Customer ${input.customerId} has no active open receivables.`);
+      }
+
+      const commitment = await commitmentsApi.createCommitment({
+        receivableId: recId,
+        customerId: input.customerId,
+        amount: input.amount,
+        promisedFor: input.promisedFor,
+        notes: input.notes,
+      });
+
+      return {
+        success: true,
+        commitmentId: commitment.id,
+        customerId: commitment.customerId,
+        amount: commitment.amount,
+        promisedFor: commitment.promisedFor,
+        status: commitment.status,
+        message: 'Payment commitment successfully scheduled in live database.',
+      };
+    },
+  },
 ];

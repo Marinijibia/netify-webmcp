@@ -104,6 +104,24 @@ export default function CustomersPage() {
             <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
             <span>Refresh</span>
           </button>
+
+          <Link
+            href="/customers/create"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#00A581',
+              color: '#FFFFFF',
+              padding: '10px 18px',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: 'bold',
+            }}
+          >
+            <Plus size={15} />
+            <span>Add Customer</span>
+          </Link>
         </div>
       </div>
 

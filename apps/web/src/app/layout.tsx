@@ -1,8 +1,6 @@
 import React from 'react';
-import { Sidebar } from '../components/Sidebar';
-import { Navbar } from '../components/Navbar';
-import { WebMCPInspector } from '../components/WebMCPInspector';
 import { AuthProvider } from '../lib/auth-context';
+import { AppShell } from '../components/AppShell';
 import '../styles/globals.css';
 
 export const metadata = {
@@ -17,16 +15,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#001D31', color: '#FFFFFF' }}>
+      <body style={{ backgroundColor: '#001D31', color: '#FFFFFF', margin: 0, padding: 0 }}>
         <AuthProvider>
-          <Sidebar />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh' }}>
-            <Navbar />
-            <main style={{ flex: 1, padding: '32px 36px', overflowY: 'auto', backgroundColor: '#001D31' }}>
-              {children}
-            </main>
-          </div>
-          <WebMCPInspector />
+          <AppShell>
+            {children}
+          </AppShell>
         </AuthProvider>
       </body>
     </html>
