@@ -13,6 +13,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../src/design/theme';
+import { useLanguageStore } from '../../../src/store/language-store';
 import {
   commitmentsApi,
   PaymentCommitmentItem,
@@ -38,6 +39,7 @@ export default function CommitmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { tokens } = useTheme();
+  const { t } = useLanguageStore();
 
   const [commitment, setCommitment] = useState<PaymentCommitmentItem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -141,7 +143,7 @@ export default function CommitmentDetailScreen() {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.8}>
           <ChevronLeftIcon size={20} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Promise Details</Text>
+        <Text style={styles.headerTitle}>{t('commitments.title')}</Text>
         <View style={{ width: 40 }} />
       </LinearGradient>
 
@@ -153,7 +155,7 @@ export default function CommitmentDetailScreen() {
           end={{ x: 1, y: 1 }}
           style={[styles.heroCard, { borderColor: 'rgba(0,165,129,0.2)' }]}
         >
-          <Text style={[styles.heroLabel, { color: tokens.textSecondary }]}>Committed Payment</Text>
+          <Text style={[styles.heroLabel, { color: tokens.textSecondary }]}>{t('commitments.promisedAmount')}</Text>
           <Text style={[styles.heroAmount, { color: tokens.primary }]}>{formattedAmount}</Text>
 
           <View style={styles.promiseDateRow}>

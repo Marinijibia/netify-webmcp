@@ -1,4 +1,20 @@
-import { PrismaClient, UserRole, CustomerStatus, InvoiceStatus, PaymentMethod, CommitmentStatus, CommitmentSource, ConfidenceLevel, RiskLevel, CommunicationChannel, MessageSenderType, BusinessEventType } from '@prisma/client';
+import {
+  PrismaClient,
+  UserRole,
+  CustomerStatus,
+  InvoiceStatus,
+  PaymentMethod,
+  PaymentStatus,
+  ReceivableStatus,
+  ReceivableSource,
+  CommitmentStatus,
+  CommitmentSource,
+  ConfidenceLevel,
+  RiskLevel,
+  CommunicationChannel,
+  MessageSenderType,
+  BusinessEventType,
+} from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -13,13 +29,16 @@ async function main() {
   await prisma.aIInsight.deleteMany({});
   await prisma.memoryItem.deleteMany({});
   await prisma.riskAssessment.deleteMany({});
+  await prisma.businessMemory.deleteMany({});
   await prisma.businessEvent.deleteMany({});
   await prisma.document.deleteMany({});
   await prisma.message.deleteMany({});
   await prisma.conversation.deleteMany({});
+  await prisma.paymentCommitment.deleteMany({});
   await prisma.commitment.deleteMany({});
   await prisma.transaction.deleteMany({});
   await prisma.payment.deleteMany({});
+  await prisma.receivable.deleteMany({});
   await prisma.invoiceItem.deleteMany({});
   await prisma.invoice.deleteMany({});
   await prisma.customer.deleteMany({});
@@ -33,11 +52,11 @@ async function main() {
   const daysAgo = (d: number) => new Date(now.getTime() - d * 24 * 60 * 60 * 1000);
   const daysAhead = (d: number) => new Date(now.getTime() + d * 24 * 60 * 60 * 1000);
 
-  // 1. Create Organization: Apex Trading Ltd
+  // 1. Create Organization: Netify
   const org = await prisma.organization.create({
     data: {
-      name: 'Apex Trading Ltd',
-      slug: 'apex-trading',
+      name: 'Netify',
+      slug: 'netify',
       currency: 'NGN',
       country: 'Nigeria',
       settings: {
@@ -52,11 +71,14 @@ async function main() {
   const passwordHash = await bcrypt.hash('Password123!', 10);
   const user = await prisma.user.create({
     data: {
-      email: 'owner@apextrading.ng',
+      email: 'owner@netify.ng',
       passwordHash,
       firstName: 'Tunde',
       lastName: 'Balogun',
       phone: '+2348031234567',
+      isEmailVerified: true,
+      emailVerifiedAt: now,
+      onboardingCompleted: true,
     },
   });
 
@@ -68,6 +90,28 @@ async function main() {
     },
   });
 
+  // 2b. Create Web Demo User (for Hackathon Judges - auto-verified)
+  const demoUser = await prisma.user.create({
+    data: {
+      email: 'merchant@netify.ng',
+      passwordHash,
+      firstName: 'Demo',
+      lastName: 'Merchant',
+      phone: '+2348000000000',
+      isEmailVerified: true,
+      emailVerifiedAt: now,
+      onboardingCompleted: true,
+    },
+  });
+
+  await prisma.membership.create({
+    data: {
+      organizationId: org.id,
+      userId: demoUser.id,
+      role: UserRole.ADMIN,
+    },
+  });
+
   // Subscriptions & Entitlements
   await prisma.subscription.create({
     data: {
@@ -76,7 +120,7 @@ async function main() {
       status: 'ACTIVE',
       currentPeriodStart: daysAgo(10),
       currentPeriodEnd: daysAhead(20),
-      revenueCatId: 'rc_sub_apex_trading_pro',
+      revenueCatId: 'rc_sub_netify_pro',
     },
   });
 
@@ -153,8 +197,8 @@ async function main() {
     },
   });
 
-  // 4. Create Invoices
-  // ABC Stores Invoices: Total Outstanding = 850,000 NGN
+  // 4. Create Invoices & Authoritative Receivables
+  // ABC Stores: Total Outstanding = 850,000 NGN (Overdue 21d and 6d)
   const invABC1 = await prisma.invoice.create({
     data: {
       organizationId: org.id,
@@ -176,6 +220,22 @@ async function main() {
           { description: 'Premium Cooking Oil 25L x 50 cartons', quantity: 50, unitPrice: 10000, amount: 500000 },
         ],
       },
+    },
+  });
+
+  const recABC1 = await prisma.receivable.create({
+    data: {
+      organizationId: org.id,
+      customerId: abcStores.id,
+      reference: 'INV-102',
+      description: 'Supply of 50 cartons of premium vegetable oil',
+      originalAmount: 500000,
+      currency: 'NGN',
+      issuedAt: daysAgo(35),
+      dueDate: daysAgo(21),
+      status: ReceivableStatus.OPEN,
+      source: ReceivableSource.INVOICE,
+      notes: 'Supply of 50 cartons of premium vegetable oil',
     },
   });
 
@@ -203,14 +263,30 @@ async function main() {
     },
   });
 
-  // Musa Enterprises: Total Outstanding = 450,000 NGN (due tomorrow)
+  const recABC2 = await prisma.receivable.create({
+    data: {
+      organizationId: org.id,
+      customerId: abcStores.id,
+      reference: 'INV-115',
+      description: 'Supply of packaged flour and grains',
+      originalAmount: 350000,
+      currency: 'NGN',
+      issuedAt: daysAgo(20),
+      dueDate: daysAgo(6),
+      status: ReceivableStatus.OPEN,
+      source: ReceivableSource.INVOICE,
+      notes: 'Supply of packaged flour and grains',
+    },
+  });
+
+  // Musa Enterprises: Total Outstanding = 450,000 NGN (due today!)
   const invMusa1 = await prisma.invoice.create({
     data: {
       organizationId: org.id,
       customerId: musaEnt.id,
       invoiceNumber: 'INV-120',
       issueDate: daysAgo(13),
-      dueDate: daysAhead(1), // due tomorrow
+      dueDate: now, // due today
       subtotal: 450000,
       discount: 0,
       tax: 0,
@@ -228,7 +304,23 @@ async function main() {
     },
   });
 
-  // Northern Distribution: Total Outstanding = 1,200,000 NGN
+  const recMusa1 = await prisma.receivable.create({
+    data: {
+      organizationId: org.id,
+      customerId: musaEnt.id,
+      reference: 'INV-120',
+      description: 'Beverages and canned goods bulk consignment',
+      originalAmount: 450000,
+      currency: 'NGN',
+      issuedAt: daysAgo(13),
+      dueDate: now, // due today
+      status: ReceivableStatus.OPEN,
+      source: ReceivableSource.INVOICE,
+      notes: 'Beverages and canned goods bulk consignment',
+    },
+  });
+
+  // Northern Distribution: Total Outstanding = 1,200,000 NGN (with partial payment)
   const invNorth1 = await prisma.invoice.create({
     data: {
       organizationId: org.id,
@@ -253,6 +345,22 @@ async function main() {
     },
   });
 
+  const recNorth1 = await prisma.receivable.create({
+    data: {
+      organizationId: org.id,
+      customerId: northernDist.id,
+      reference: 'INV-098',
+      description: 'Industrial Grain Supply 10 Tons',
+      originalAmount: 1200000,
+      currency: 'NGN',
+      issuedAt: daysAgo(50),
+      dueDate: daysAgo(36),
+      status: ReceivableStatus.PARTIALLY_PAID,
+      source: ReceivableSource.INVOICE,
+      notes: 'Direct consignment for Kaduna warehouse',
+    },
+  });
+
   const invNorth2 = await prisma.invoice.create({
     data: {
       organizationId: org.id,
@@ -274,6 +382,22 @@ async function main() {
           { description: 'Food Seasoning Packs x 100 cartons', quantity: 100, unitPrice: 4000, amount: 400000 },
         ],
       },
+    },
+  });
+
+  const recNorth2 = await prisma.receivable.create({
+    data: {
+      organizationId: org.id,
+      customerId: northernDist.id,
+      reference: 'INV-118',
+      description: 'Seasoning and condiments batch',
+      originalAmount: 400000,
+      currency: 'NGN',
+      issuedAt: daysAgo(18),
+      dueDate: daysAgo(4),
+      status: ReceivableStatus.OPEN,
+      source: ReceivableSource.INVOICE,
+      notes: 'Seasoning and condiments batch',
     },
   });
 
@@ -302,18 +426,36 @@ async function main() {
     },
   });
 
+  const recGreen1 = await prisma.receivable.create({
+    data: {
+      organizationId: org.id,
+      customerId: greenfield.id,
+      reference: 'INV-110',
+      description: 'Catering Supplies Grade A',
+      originalAmount: 900000,
+      currency: 'NGN',
+      issuedAt: daysAgo(25),
+      dueDate: daysAgo(11),
+      status: ReceivableStatus.PAID,
+      source: ReceivableSource.INVOICE,
+      notes: 'Port Harcourt hospital canteen supply contract',
+    },
+  });
+
   // 5. Create Payments & Ledger Transactions
   await prisma.payment.create({
     data: {
       organizationId: org.id,
       customerId: northernDist.id,
+      receivableId: recNorth1.id,
       invoiceId: invNorth1.id,
       amount: 400000,
       currency: 'NGN',
       paidAt: daysAgo(20),
       method: PaymentMethod.BANK_TRANSFER,
+      status: PaymentStatus.CONFIRMED,
       reference: 'GTB-TRF-299104882',
-      notes: 'Part-payment for INV-098 via GTBank transfer',
+      notes: 'Part-payment for INV-098 / REC-098 via GTBank transfer',
       source: 'Bank Transfer',
     },
   });
@@ -322,18 +464,20 @@ async function main() {
     data: {
       organizationId: org.id,
       customerId: greenfield.id,
+      receivableId: recGreen1.id,
       invoiceId: invGreen1.id,
       amount: 900000,
       currency: 'NGN',
       paidAt: daysAgo(15),
       method: PaymentMethod.BANK_TRANSFER,
+      status: PaymentStatus.CONFIRMED,
       reference: 'ZENITH-NIP-88192019',
-      notes: 'Full payment for INV-110 via Zenith Bank NIP',
+      notes: 'Full payment for INV-110 / REC-110 via Zenith Bank NIP',
       source: 'Direct Transfer',
     },
   });
 
-  // 6. Create Commitments (Promises to Pay)
+  // 6. Create Commitments (Promises to Pay) & PaymentCommitments
   // ABC Stores: Promised 300,000 NGN on Friday (MISSED)
   const commABC = await prisma.commitment.create({
     data: {
@@ -351,7 +495,21 @@ async function main() {
     },
   });
 
-  // Musa Enterprises: Promised 450,000 NGN tomorrow (PENDING)
+  await prisma.paymentCommitment.create({
+    data: {
+      organizationId: org.id,
+      customerId: abcStores.id,
+      receivableId: recABC1.id,
+      createdByUserId: user.id,
+      amount: 300000,
+      currency: 'NGN',
+      promisedFor: daysAgo(3),
+      status: CommitmentStatus.MISSED,
+      notes: "Manager promised: 'I will send ₦300,000 on Friday once directors sign off.'",
+    },
+  });
+
+  // Musa Enterprises: Promised 450,000 NGN TODAY (PENDING)
   await prisma.commitment.create({
     data: {
       organizationId: org.id,
@@ -359,12 +517,26 @@ async function main() {
       invoiceId: invMusa1.id,
       amount: 450000,
       currency: 'NGN',
-      promisedDate: daysAhead(1),
+      promisedDate: now,
       description: "Alhaji Musa confirmed: 'Goods arrived safely. Transfer will be done by noon Friday.'",
       source: CommitmentSource.CONVERSATION,
       sourceReference: 'WhatsApp Message Chat',
       confidence: ConfidenceLevel.HIGH,
       status: CommitmentStatus.PENDING,
+    },
+  });
+
+  await prisma.paymentCommitment.create({
+    data: {
+      organizationId: org.id,
+      customerId: musaEnt.id,
+      receivableId: recMusa1.id,
+      createdByUserId: user.id,
+      amount: 450000,
+      currency: 'NGN',
+      promisedFor: now,
+      status: CommitmentStatus.PENDING,
+      notes: "Alhaji Musa confirmed: 'Goods arrived safely. Transfer will be done by noon Friday.'",
     },
   });
 
@@ -382,6 +554,20 @@ async function main() {
       sourceReference: 'Phone call log',
       confidence: ConfidenceLevel.MEDIUM,
       status: CommitmentStatus.MISSED,
+    },
+  });
+
+  await prisma.paymentCommitment.create({
+    data: {
+      organizationId: org.id,
+      customerId: northernDist.id,
+      receivableId: recNorth1.id,
+      createdByUserId: user.id,
+      amount: 800000,
+      currency: 'NGN',
+      promisedFor: daysAgo(10),
+      status: CommitmentStatus.MISSED,
+      notes: 'Agreed to settle balance before month end',
     },
   });
 
@@ -506,7 +692,7 @@ async function main() {
     },
   });
 
-  console.log('✅ African SME Seed data successfully loaded for Apex Trading Ltd!');
+  console.log('✅ African SME Seed data successfully loaded for Netify!');
 }
 
 main()

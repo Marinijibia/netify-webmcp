@@ -14,6 +14,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@/design/theme';
 import { useAuthStore } from '@/store/auth-store';
 import { useBillingStore } from '@/store/billing-store';
+import { useLanguageStore } from '@/store/language-store';
 import {
   SubscriptionCard,
   ProPaywallModal,
@@ -70,6 +71,7 @@ export default function SubscriptionScreen() {
   const router = useRouter();
   const { tokens, isDark } = useTheme();
   const { organization } = useAuthStore();
+  const { t } = useLanguageStore();
   const {
     plan,
     subscription,
@@ -111,7 +113,7 @@ export default function SubscriptionScreen() {
           <Feather name="arrow-left" size={18} color="#FFFFFF" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Subscription & Billing</Text>
+          <Text style={styles.headerTitle}>{t('settings.subscriptionBilling')}</Text>
           <Text style={styles.headerSub}>
             {organization?.name || 'My Workspace'}
           </Text>

@@ -6,6 +6,7 @@ import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { TodayAttentionData } from '../../services/api/ai';
 import { GRADIENTS, GRADIENT_DIRECTION } from '../tokens/gradients';
+import { useLanguageStore } from '../../store/language-store';
 
 interface DailyBriefingCardProps {
   data?: TodayAttentionData | null;
@@ -25,6 +26,7 @@ export function DailyBriefingCard({
   onRefresh,
 }: DailyBriefingCardProps) {
   const { tokens, isDark } = useTheme();
+  const { t } = useLanguageStore();
 
   // Sparkle dot pulse animation
   const dotOpacity = useRef(new Animated.Value(0.5)).current;
@@ -64,7 +66,7 @@ export function DailyBriefingCard({
             {/* Animated pulse dot */}
             <Animated.View style={[styles.pulseDot, { opacity: dotOpacity }]} />
             <MaterialCommunityIcons name="robot-outline" size={15} color="#00A581" />
-            <Text style={styles.badgeText}>AI BUSINESS BRIEFING</Text>
+            <Text style={styles.badgeText}>{t('commandCenter.businessBriefing').toUpperCase()}</Text>
           </View>
 
           {onAskCopilot && (
@@ -76,7 +78,7 @@ export function DailyBriefingCard({
                 style={styles.copilotButton}
               >
                 <Feather name="message-square" size={12} color="#FFFFFF" />
-                <Text style={styles.copilotButtonText}>Ask Copilot</Text>
+                <Text style={styles.copilotButtonText}>{t('common.askCopilot')}</Text>
               </LinearGradient>
             </TouchableOpacity>
           )}
@@ -91,14 +93,14 @@ export function DailyBriefingCard({
         {data && (
           <View style={[styles.metricsRow, { borderTopColor: isDark ? 'rgba(0,185,148,0.15)' : 'rgba(0,165,129,0.12)' }]}>
             <View style={styles.metricItem}>
-              <Text style={[styles.metricLabel, { color: tokens.textSecondary }]}>Overdue</Text>
+              <Text style={[styles.metricLabel, { color: tokens.textSecondary }]}>{t('commandCenter.overdueExposure')}</Text>
               <Text style={[styles.metricValue, { color: data.totalOverdue > 0 ? '#EF4444' : '#10B981' }]}>
                 {data.currency} {data.totalOverdue.toLocaleString()}
               </Text>
             </View>
             <View style={[styles.metricDivider, { backgroundColor: borderColor }]} />
             <View style={styles.metricItem}>
-              <Text style={[styles.metricLabel, { color: tokens.textSecondary }]}>Promises Due</Text>
+              <Text style={[styles.metricLabel, { color: tokens.textSecondary }]}>{t('commandCenter.dueToday')}</Text>
               <Text style={[styles.metricValue, { color: '#00A581' }]}>
                 {data.commitmentsDueCount}{' '}
                 <Text style={styles.metricUnit}>({data.currency} {data.commitmentsDueAmount.toLocaleString()})</Text>
@@ -106,7 +108,7 @@ export function DailyBriefingCard({
             </View>
             <View style={[styles.metricDivider, { backgroundColor: borderColor }]} />
             <View style={styles.metricItem}>
-              <Text style={[styles.metricLabel, { color: tokens.textSecondary }]}>High Risk</Text>
+              <Text style={[styles.metricLabel, { color: tokens.textSecondary }]}>{t('commandCenter.highRiskCases')}</Text>
               <Text style={[styles.metricValue, { color: data.highPriorityCount > 0 ? '#F59E0B' : '#10B981' }]}>
                 {data.highPriorityCount}
               </Text>
@@ -127,7 +129,7 @@ export function DailyBriefingCard({
             {onRefresh && (
               <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
                 <Feather name="refresh-cw" size={11} color="#00A581" />
-                <Text style={styles.refreshText}>Refresh</Text>
+                <Text style={styles.refreshText}>{t('common.refresh')}</Text>
               </TouchableOpacity>
             )}
           </View>

@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import Feather from '@expo/vector-icons/Feather';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Ionicons from '@expo/vector-icons/Ionicons';
+
+
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -16,6 +22,7 @@ import {
   KeyboardAwareContainer,
   FaceRecognitionScanner,
   FingerprintScannerModal,
+  LanguageSelectorModal,
 } from '@/design/components';
 import {
   MailIcon,
@@ -27,6 +34,8 @@ import {
 import { authApi } from '@/services/api/auth';
 import { NetworkError, TimeoutError, ValidationError } from '@/services/api/errors';
 import { useAuthStore } from '@/store/auth-store';
+import { useLanguageStore } from '@/store/language-store';
+import { LANGUAGE_REGISTRY } from '@/i18n';
 import { BiometricService, DeviceBiometricCapabilities } from '@/services/biometrics/biometric.service';
 import { SecureStorageService } from '@/services/storage/secure-storage';
 import { useTheme } from '@/design/theme';
@@ -42,6 +51,8 @@ export default function LoginScreen() {
   const router = useRouter();
   const { setAuthSession, loginWithFaceScan } = useAuthStore();
   const { tokens, isDark } = useTheme();
+  const { currentLanguage, isLanguageModalOpen, openLanguageModal, closeLanguageModal, t } = useLanguageStore();
+  const langInfo = LANGUAGE_REGISTRY[currentLanguage] || LANGUAGE_REGISTRY.en;
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [capabilities, setCapabilities] = useState<DeviceBiometricCapabilities>({
@@ -58,11 +69,13 @@ export default function LoginScreen() {
   const [showFingerprintModal, setShowFingerprintModal] = useState(false);
   const [isBioAuthenticating, setIsBioAuthenticating] = useState(false);
   const [rememberedEmail, setRememberedEmail] = useState<string | null>(null);
+  const [isDemoFilled, setIsDemoFilled] = useState(false);
 
   const {
     control,
     handleSubmit,
     setValue,
+    clearErrors,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
@@ -71,6 +84,23 @@ export default function LoginScreen() {
       password: '',
     },
   });
+
+  const fillDemoCredentials = async () => {
+    try {
+      const Haptics = await import('expo-haptics');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    } catch {
+      // Haptics fallback
+    }
+
+    setValue('email', 'merchant@netify.ng', { shouldDirty: true });
+    setValue('password', 'Password123!', { shouldDirty: true });
+    clearErrors();
+    setErrorMessage(null);
+    setIsDemoFilled(true);
+    setTimeout(() => setIsDemoFilled(false), 2500);
+  };
+
 
   useEffect(() => {
     async function initBiometrics() {
@@ -215,6 +245,29 @@ export default function LoginScreen() {
           paddingVertical: 20,
         }}
       >
+        {/* Language Selector Pill */}
+        <View className="flex-row justify-end mb-2">
+          <TouchableOpacity
+            onPress={openLanguageModal}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: isDark ? 'rgba(0,185,148,0.18)' : 'rgba(0,185,148,0.12)',
+              borderColor: '#00A581',
+              borderWidth: 1,
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+              borderRadius: 20,
+              gap: 5,
+            }}
+            activeOpacity={0.75}
+          >
+            <Text style={{ fontSize: 13 }}>{langInfo.flag}</Text>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#00A581' }}>{langInfo.name}</Text>
+            <Feather name="chevron-down" size={12} color="#00A581" />
+          </TouchableOpacity>
+        </View>
+
         {/* Brand Header */}
         <View className="items-center mb-5">
           <NetifyLogo size="md" showTagline={true} />
@@ -366,8 +419,53 @@ export default function LoginScreen() {
           </View>
         )}
 
+        {/* Quick Demo Credentials Fill Card for Judges */}
+        <View style={styles.demoCard}>
+          <View style={styles.demoHeaderRow}>
+            <View style={styles.demoTitleGroup}>
+              <Ionicons name="sparkles" size={16} color="#00A581" />
+              <Text style={styles.demoTitleText}>Hackathon Judge Fast-Track</Text>
+            </View>
+
+            <View style={styles.demoBadge}>
+              <Text style={styles.demoBadgeText}>To be removed after judging</Text>
+            </View>
+          </View>
+
+          <View style={styles.demoAccountRow}>
+            <Text style={styles.demoAccountLabel}>Pre-fills seeded merchant account</Text>
+            <View style={styles.demoCodePill}>
+              <Text style={styles.demoCodeText}>merchant@netify.ng</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={fillDemoCredentials}
+            style={styles.demoButtonWrap}
+          >
+            <LinearGradient
+              colors={isDemoFilled ? ['#16A34A', '#22C55E'] : ['#00A581', '#00B994']}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={styles.demoButtonGradient}
+            >
+              <Feather
+                name={isDemoFilled ? 'check' : 'zap'}
+                size={14}
+                color="#FFFFFF"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.demoButtonText}>
+                {isDemoFilled ? 'Demo Credentials Loaded!' : 'Fill Demo Login Details'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
         {/* Password Login Card */}
         <Card className="p-6 shadow-sm">
+
           <View className="gap-4">
             <View className="flex-row items-center justify-between pb-1">
               <Text
@@ -388,7 +486,7 @@ export default function LoginScreen() {
               name="email"
               render={({ field: { onChange, onBlur, value } }) => (
                 <Input
-                  label="Work Email"
+                  label={t('auth.emailOrPhone')}
                   placeholder="name@company.com"
                   keyboardType="email-address"
                   autoCapitalize="none"
@@ -408,7 +506,7 @@ export default function LoginScreen() {
                 name="password"
                 render={({ field: { onChange, onBlur, value } }) => (
                   <PasswordInput
-                    label="Password"
+                    label={t('auth.password')}
                     placeholder="Enter your password"
                     value={value}
                     onBlur={onBlur}
@@ -433,7 +531,7 @@ export default function LoginScreen() {
             </View>
 
             <Button
-              label="Sign In to Workspace"
+              label={t('auth.loginButton')}
               loadingLabel="Authenticating..."
               onPress={handleSubmit(onSubmit)}
               loading={isSubmitting}
@@ -446,7 +544,7 @@ export default function LoginScreen() {
         {/* Create Account Link */}
         <View className="flex-row items-center justify-center mt-6">
           <Text style={{ color: tokens.textSecondary }} className="text-sm">
-            Don't have an account?{' '}
+            {t('auth.registerPrompt')}{' '}
           </Text>
           <TouchableOpacity
             onPress={() => router.push('/(auth)/register')}
@@ -456,7 +554,7 @@ export default function LoginScreen() {
               style={{ color: tokens.accent }}
               className="text-sm font-bold"
             >
-              Create Account
+              {t('auth.signUp')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -471,6 +569,107 @@ export default function LoginScreen() {
           </Text>
         </View>
       </KeyboardAwareContainer>
+
+      <LanguageSelectorModal
+        visible={isLanguageModalOpen}
+        onClose={closeLanguageModal}
+      />
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  demoCard: {
+    backgroundColor: '#00253E',
+    borderColor: 'rgba(0, 165, 129, 0.45)',
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#00A581',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  demoHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 8,
+  },
+  demoTitleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  demoTitleText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  demoBadge: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderColor: 'rgba(245, 158, 11, 0.35)',
+    borderWidth: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  demoBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FCD34D',
+    letterSpacing: 0.2,
+  },
+  demoAccountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 12,
+  },
+  demoAccountLabel: {
+    fontSize: 11.5,
+    color: '#8FB7C7',
+  },
+  demoCodePill: {
+    backgroundColor: '#00192B',
+    borderColor: '#0F5470',
+    borderWidth: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  demoCodeText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#3AD0A9',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  demoButtonWrap: {
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  demoButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  demoButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+});
+

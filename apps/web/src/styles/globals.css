@@ -2,23 +2,115 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --bg-main: #0B0F19;
-  --bg-card: #111827;
-  --bg-card-hover: #1F2937;
-  --bg-card-subtle: #1E293B;
-  --border: #1F2937;
-  --border-active: #374151;
-  --primary: #10B981;
-  --primary-hover: #059669;
-  --primary-subtle: rgba(16, 185, 129, 0.1);
+/* ==========================================================================
+   NETIFY DESIGN SYSTEM: LIGHT & DARK CSS VARIABLES
+   ========================================================================== */
+
+:root,
+[data-theme='light'] {
+  /* Backgrounds */
+  --bg-app: #F8FAFC;
+  --bg-surface: #FFFFFF;
+  --bg-surface-raised: #FFFFFF;
+  --bg-surface-muted: #F1F5F9;
+  --bg-surface-subtle: #F8FAFC;
+  --bg-nav: rgba(255, 255, 255, 0.95);
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F8FAFC;
+  --bg-card-inner: #F1F5F9;
+
+  /* Typography (Netify Deep Navy) */
+  --text-primary: #003051;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  --text-disabled: #94A3B8;
+  --text-inverse: #FFFFFF;
+
+  /* Borders */
+  --border-default: #E2E8F0;
+  --border-subtle: #F1F5F9;
+  --border-strong: #CBD5E1;
+
+  /* Accents & Brand */
+  --primary: #003051;
+  --primary-hover: #001D31;
+  --primary-soft: #F0F6F9;
+  --accent: #00A581;
+  --accent-hover: #008B6E;
+  --accent-soft: #ECFDF8;
+  --accent-border: rgba(0, 165, 129, 0.3);
+
+  /* Status */
+  --success: #16A34A;
+  --success-soft: #F0FDF4;
+  --warning: #D97706;
+  --warning-soft: #FFFBEB;
+  --danger: #DC2626;
+  --danger-soft: #FEF2F2;
+  --info: #0284C7;
+  --info-soft: #F0F9FF;
+
+  /* Shadows */
+  --shadow-card: 0 4px 16px -2px rgba(0, 48, 81, 0.06), 0 1px 3px 0 rgba(0, 48, 81, 0.04);
+  --shadow-popover: 0 10px 25px -5px rgba(0, 48, 81, 0.12), 0 8px 10px -6px rgba(0, 48, 81, 0.08);
+
+  /* Native scrollbars */
+  --scrollbar-track: #F1F5F9;
+  --scrollbar-thumb: #CBD5E1;
+  --scrollbar-thumb-hover: #94A3B8;
+}
+
+[data-theme='dark'] {
+  /* Backgrounds */
+  --bg-app: #001424;
+  --bg-surface: #001D31;
+  --bg-surface-raised: #003051;
+  --bg-surface-muted: #00253F;
+  --bg-surface-subtle: #001424;
+  --bg-nav: rgba(0, 20, 36, 0.88);
+  --bg-card: #003051;
+  --bg-card-hover: #003B64;
+  --bg-card-inner: #001D31;
+
+  /* Typography */
+  --text-primary: #FFFFFF;
+  --text-secondary: #DCEAF0;
+  --text-muted: #8FB7C7;
+  --text-disabled: #5F94A9;
+  --text-inverse: #003051;
+
+  /* Borders */
+  --border-default: rgba(15, 84, 112, 0.45);
+  --border-subtle: rgba(15, 84, 112, 0.25);
+  --border-strong: #0F5470;
+
+  /* Accents & Brand */
+  --primary: #00A581;
+  --primary-hover: #00B994;
+  --primary-soft: rgba(0, 165, 129, 0.15);
+  --accent: #00A581;
+  --accent-hover: #00B994;
+  --accent-soft: rgba(0, 165, 129, 0.15);
+  --accent-border: rgba(0, 165, 129, 0.45);
+
+  /* Status */
+  --success: #22C55E;
+  --success-soft: rgba(34, 197, 94, 0.12);
   --warning: #F59E0B;
-  --warning-subtle: rgba(245, 158, 11, 0.1);
+  --warning-soft: rgba(245, 158, 11, 0.12);
   --danger: #EF4444;
-  --danger-subtle: rgba(239, 68, 68, 0.1);
-  --text-primary: #F9FAFB;
-  --text-secondary: #9CA3AF;
-  --text-muted: #6B7280;
+  --danger-soft: rgba(239, 68, 68, 0.15);
+  --info: #38BDF8;
+  --info-soft: rgba(56, 189, 248, 0.12);
+
+  /* Shadows */
+  --shadow-card: 0 4px 20px -4px rgba(0, 0, 0, 0.5);
+  --shadow-popover: 0 12px 32px -4px rgba(0, 0, 0, 0.8);
+
+  /* Native scrollbars */
+  --scrollbar-track: #001424;
+  --scrollbar-thumb: #0F5470;
+  --scrollbar-thumb-hover: #176587;
 }
 
 * {
@@ -27,12 +119,19 @@
   padding: 0;
 }
 
+html {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
 body {
-  background-color: var(--bg-main);
+  background-color: var(--bg-app);
   color: var(--text-primary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
 }
 
 a {
@@ -51,18 +150,18 @@ input, select, textarea {
   font-family: inherit;
 }
 
-/* Scrollbar styles */
+/* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--bg-main);
+  background: var(--scrollbar-track);
 }
 ::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #4B5563;
+  background: var(--scrollbar-thumb-hover);
 }

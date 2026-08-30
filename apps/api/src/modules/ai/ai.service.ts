@@ -42,7 +42,7 @@ import {
 } from '@netify/validation';
 import { AIContextBuilder } from './ai-context-builder';
 import { CollectionAttentionService } from './collection-attention.service';
-import { BusinessQAService } from './business-qa.service';
+import { BusinessQAService, GroundedQAResult } from './business-qa.service';
 import { ConversationService } from './conversation.service';
 import { ActionExecutionService } from './action-execution.service';
 import { AI_SYSTEM_INSTRUCTIONS, PROMPT_VERSIONS } from './ai-prompts';
@@ -236,17 +236,49 @@ Respond strictly in JSON format matching this schema:
         cleanJson = cleanJson.replace(/^```\s*/, '').replace(/\s*```$/, '');
       }
 
-      parsedResult = JSON.parse(cleanJson);
+      try {
+        parsedResult = JSON.parse(cleanJson);
+        // Normalize alternative field names
+        if (!parsedResult.content && (parsedResult.message || parsedResult.reply || parsedResult.response || parsedResult.summary || parsedResult.text || parsedResult.answer)) {
+          parsedResult.content = parsedResult.message || parsedResult.reply || parsedResult.response || parsedResult.summary || parsedResult.text || parsedResult.answer;
+        }
+        // Handle object content
+        if (typeof parsedResult.content === 'object' && parsedResult.content !== null) {
+          parsedResult.content = parsedResult.content.message || parsedResult.content.text || parsedResult.content.summary || JSON.stringify(parsedResult.content);
+        }
+        // Handle nested JSON string inside content
+        if (typeof parsedResult.content === 'string' && (parsedResult.content.trim().startsWith('{') || parsedResult.content.includes('```json'))) {
+          try {
+            let innerJson = parsedResult.content.trim();
+            if (innerJson.includes('```json')) {
+              innerJson = innerJson.replace(/```json\s*/g, '').replace(/```/g, '').trim();
+            }
+            const nested = JSON.parse(innerJson);
+            if (nested.content || nested.message || nested.reply || nested.summary) {
+              parsedResult.content = nested.content || nested.message || nested.reply || nested.summary;
+              if (nested.facts && (!parsedResult.facts || !parsedResult.facts.length)) parsedResult.facts = nested.facts;
+              if (nested.inferences && (!parsedResult.inferences || !parsedResult.inferences.length)) parsedResult.inferences = nested.inferences;
+              if (nested.suggestedActions && (!parsedResult.suggestedActions || !parsedResult.suggestedActions.length)) parsedResult.suggestedActions = nested.suggestedActions;
+              if (nested.suggestedFollowUps && (!parsedResult.suggestedFollowUps || !parsedResult.suggestedFollowUps.length)) parsedResult.suggestedFollowUps = nested.suggestedFollowUps;
+            }
+          } catch {}
+        }
+      } catch {
+        // If the LLM returned conversational plain text instead of strict JSON, use the real LLM output
+        parsedResult = {
+          content: rawResponse.trim(),
+          facts: qaResult.contextSummary ? [{ title: 'Business Records', detail: qaResult.contextSummary }] : [],
+          inferences: [],
+          suggestedActions: [],
+          suggestedFollowUps: ['Who should I follow up with today?', 'Show total outstanding receivables'],
+        };
+      }
     } catch (err: any) {
-      this.logger.warn(`AI Provider failed for language ${targetLanguage}, using deterministic fallback narration: ${err.message}`);
-      parsedResult = {
-        content: qaResult.contextSummary || 'Here is what your verified business records show.',
-        facts: [{ title: 'Business Records', detail: qaResult.contextSummary }],
-        inferences: [],
-        suggestedActions: [],
-        suggestedFollowUps: ['Who should I follow up with today?', 'Show total outstanding receivables'],
-      };
+      this.logger.warn(`Cloud AI Provider unavailable for language ${targetLanguage} (${err?.message}). Activating deterministic Business Memory intelligence synthesis.`);
+      parsedResult = this.synthesizeDeterministicResponse(input.content, targetLanguage, qaResult);
     }
+
+
 
     const latencyMs = Date.now() - startTime;
 
@@ -500,15 +532,74 @@ ${context.formattedPromptContext}
 Provide a structured JSON response matching CollectionMessageDraftOutputSchema.`;
 
     const decision = this.providerFactory.resolveProvider({ language: 'en' });
-    const result = await decision.selectedProvider.structuredOutputWithMetrics<CollectionMessageDraftOutput>(
-      prompt,
-      CollectionMessageDraftOutputSchema,
-      {
-        systemInstruction: `${AI_SYSTEM_INSTRUCTIONS.COPILOT_CORE}\n\n${AI_SYSTEM_INSTRUCTIONS.COLLECTION_MESSAGE_DRAFT}`,
-      }
-    );
+    try {
+      const result = await decision.selectedProvider.structuredOutputWithMetrics<CollectionMessageDraftOutput>(
+        prompt,
+        CollectionMessageDraftOutputSchema,
+        {
+          systemInstruction: `${AI_SYSTEM_INSTRUCTIONS.COPILOT_CORE}\n\n${AI_SYSTEM_INSTRUCTIONS.COLLECTION_MESSAGE_DRAFT}`,
+        }
+      );
 
-    return result.data;
+      const draftData = result.data as any;
+      if (draftData && (draftData.messageBody || draftData.messageText)) {
+        if (!draftData.messageBody) draftData.messageBody = draftData.messageText;
+        if (!draftData.messageText) draftData.messageText = draftData.messageBody;
+        return draftData;
+      }
+    } catch (err: any) {
+      this.logger.warn(`AI Provider failed for draftMessage: ${err.message}. Synthesizing strictly from verified ledger records.`);
+    }
+
+    // Deterministic factual synthesis strictly derived from live customer database records:
+    const fin = context.financial;
+    const custName = fin.customerName || 'Customer';
+    const amountStr = `${fin.currency} ${fin.totalOutstanding.toLocaleString()}`;
+    const recentPromise = fin.recentCommitments[0];
+    const rec = fin.openReceivables[0];
+
+    let toneIntro = 'We kindly follow up regarding';
+    if (input.tone === 'URGENT_ESCALATION') {
+      toneIntro = 'This is an urgent notice regarding your overdue account balance of';
+    } else if (input.tone === 'RESPECTFUL_REMINDER') {
+      toneIntro = 'We hope your business is thriving. This is a gentle reminder regarding';
+    } else if (input.tone === 'PARTIAL_PAYMENT_PROPOSAL') {
+      toneIntro = 'To support your working capital, we propose a flexible installment plan for your balance of';
+    }
+
+    let messageBody = `Good day ${custName}. ${toneIntro} ${amountStr}`;
+    if (rec) {
+      messageBody += ` on invoice ${rec.description || rec.id.slice(0, 8)}`;
+      if (rec.daysOverdue > 0) {
+        messageBody += ` which is ${rec.daysOverdue} days past due`;
+      }
+    }
+    if (recentPromise) {
+      messageBody += `. We reference the previous agreement of ${fin.currency} ${recentPromise.promisedAmount.toLocaleString()} scheduled for ${recentPromise.promisedFor}`;
+    }
+    messageBody += `. Please confirm receipt and kindly advise your payment timeline.`;
+
+    if (input.customNote) {
+      messageBody += ` Note: ${input.customNote}`;
+    }
+
+    return {
+      channel: input.channel as any,
+      tone: input.tone as any,
+      recipientName: custName,
+      recipientContact: fin.phone || '',
+      subject: `Payment Follow-up Notice — ${custName}`,
+      messageBody,
+      callScriptPoints: [
+        `Confirm contact with ${custName}`,
+        `Reference verified outstanding balance of ${amountStr}`,
+        rec ? `Clarify invoice terms (due: ${rec.dueDate})` : 'Clarify payment schedule',
+        recentPromise ? `Reference commitment of ${fin.currency} ${recentPromise.promisedAmount.toLocaleString()}` : 'Agree on definite payment date',
+      ],
+      culturalNotes: `Respectful, professional business outreach tailored for ${custName} based on live account balance of ${amountStr}.`,
+      verifiedOutstandingAmount: fin.totalOutstanding,
+      currency: fin.currency,
+    };
   }
 
   /**
@@ -648,5 +739,133 @@ Return valid JSON matching BusinessQAOutputSchema.`;
     } catch (err: any) {
       this.logger.warn(`[logAIRequest] Non-blocking telemetry error: ${err.message}`);
     }
+  }
+
+  private synthesizeDeterministicResponse(
+    query: string,
+    language: AppLanguage,
+    qaResult: GroundedQAResult
+  ): any {
+    const data = qaResult.data;
+    const intent = qaResult.intent;
+
+    let content = '';
+    const facts: Array<{ title: string; detail: string; metric?: string | number }> = [];
+    const inferences: Array<{ title: string; reason: string; urgency?: string }> = [];
+    const suggestedActions: Array<any> = [];
+    const suggestedFollowUps: string[] = [];
+
+    if (intent === 'TOP_OUTSTANDING' && Array.isArray(data)) {
+      if (data.length === 0) {
+        content = language === 'pcm'
+          ? 'No customer dey owe any outstanding money for your workspace right now. Everything dey balanced!'
+          : 'There are currently no customers with outstanding balances recorded in your workspace.';
+      } else {
+        const top = data[0];
+        if (language === 'pcm') {
+          content = `According to your live ledger records, you get ${data.length} customer(s) with open receivables. Customer wey dey owe pass na ${top.customerName} with ${top.totalOutstanding} (${top.daysOverdue} days overdue).`;
+        } else if (language === 'ha') {
+          content = `Bisa bayanan littafin asusunku na yanzu, akwai abokan ciniki ${data.length} da ke bin bashi. Wanda ya fi kowa bashi shi ne ${top.customerName} da ${top.totalOutstanding} (kwanaki ${top.daysOverdue} da wucewa).`;
+        } else if (language === 'yo') {
+          content = `Gẹgẹ bi akọsilẹ iwe-owo rẹ, awọn onibara ${data.length} lo jẹ ọ lowo. Eni to jẹ ọ julọ ni ${top.customerName} pelu ${top.totalOutstanding} (ọjọ ${top.daysOverdue} ti kọja).`;
+        } else if (language === 'ig') {
+          content = `Dịka ndekọ ego gị siri gosi, ndị ahịa ${data.length} na-eji gị ụgwọ. Onye kacha ji gị ego bụ ${top.customerName} nwere ${top.totalOutstanding} (ụbọchị ${top.daysOverdue} agafeela).`;
+        } else {
+          content = `Based on your live verified ledger records, you have ${data.length} customer(s) with active outstanding balances. Top priority is ${top.customerName} owing ${top.totalOutstanding} (${top.daysOverdue} days overdue).`;
+        }
+
+        data.slice(0, 4).forEach((d: any) => {
+          facts.push({
+            title: d.customerName,
+            detail: `${d.primaryReason || 'Overdue exposure'} • ${d.daysOverdue} days aging`,
+            metric: d.totalOutstanding,
+          });
+        });
+
+        if (top.daysOverdue > 14) {
+          inferences.push({
+            title: 'Aging Overdue Alert',
+            reason: `${top.customerName} has receivables exceeding ${top.daysOverdue} days without recorded settlement.`,
+            urgency: 'HIGH',
+          });
+        }
+
+        if (top.customerId) {
+          suggestedActions.push({
+            actionType: 'DRAFT_MESSAGE',
+            title: `Draft WhatsApp Reminder for ${top.customerName}`,
+            description: `Prepare respectful collection notice referencing ${top.totalOutstanding}`,
+            payload: { customerId: top.customerId },
+            isConsequential: false,
+          });
+        }
+
+        suggestedFollowUps.push(
+          `What is ${top.customerName}'s payment commitment history?`,
+          'Who broke a payment promise this week?',
+          'Show total overdue receivables breakdown'
+        );
+      }
+    } else if (intent === 'OVERDUE_RECEIVABLES' && Array.isArray(data)) {
+      if (data.length === 0) {
+        content = 'Good news! There are currently no overdue receivables in your ledger past their due date.';
+      } else {
+        const top = data[0];
+        content = `Identified ${data.length} overdue receivable invoice(s). The most urgent item is for ${top.customer} amounting to ${top.overdueAmount}, which is ${top.daysOverdue} days past due.`;
+
+        data.slice(0, 4).forEach((d: any) => {
+          facts.push({
+            title: `${d.customer} Invoice`,
+            detail: `Due on ${d.dueDate} (${d.daysOverdue} days overdue)`,
+            metric: d.overdueAmount,
+          });
+        });
+
+        inferences.push({
+          title: 'Cash Flow Exposure',
+          reason: `${data.length} credit invoices have crossed their credit grace period and require immediate human outreach.`,
+          urgency: 'HIGH',
+        });
+
+        if (top.customerId) {
+          suggestedActions.push({
+            actionType: 'DRAFT_MESSAGE',
+            title: `Draft Overdue Notice for ${top.customer}`,
+            description: `Generate grounded collection message for ${top.overdueAmount}`,
+            payload: { customerId: top.customerId },
+            isConsequential: false,
+          });
+        }
+
+        suggestedFollowUps.push(
+          'Who owes the most past 30 days?',
+          'What payment commitments are scheduled for today?'
+        );
+      }
+    } else {
+      content = qaResult.contextSummary
+        ? `Here is your verified Business Memory record: ${qaResult.contextSummary}`
+        : `Your live business memory records are synchronized. Ask about any debtor or overdue receivables to inspect details.`;
+
+      facts.push({
+        title: 'Business Memory Ledger',
+        detail: 'Connected to verified tenant database records',
+        metric: '100% Grounded',
+      });
+
+      suggestedFollowUps.push(
+        'Who owes the most past 30 days?',
+        'Who broke a payment promise this week?',
+        'Give me today collection priority briefing'
+      );
+    }
+
+    return {
+      content,
+      facts,
+      inferences,
+      suggestedActions,
+      suggestedFollowUps,
+    };
   }
 }

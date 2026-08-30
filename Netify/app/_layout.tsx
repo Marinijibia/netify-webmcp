@@ -33,7 +33,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (!isLoading) {
-      SplashScreen.hideAsync().catch(() => {});
+      const timer = setTimeout(() => {
+        SplashScreen.hideAsync().catch(() => {});
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [isLoading]);
 

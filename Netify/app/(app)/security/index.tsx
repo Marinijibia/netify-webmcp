@@ -39,6 +39,7 @@ import { authApi } from '@/services/api/auth';
 import { SecureStorageService } from '@/services/storage/secure-storage';
 import { useAuthStore } from '@/store/auth-store';
 import { useTheme } from '@/design/theme';
+import { useLanguageStore } from '@/store/language-store';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GRADIENTS, GRADIENT_DIRECTION } from '@/design/tokens/gradients';
 
@@ -78,6 +79,7 @@ export default function SecuritySettingsScreen() {
     setAutoLockTimeout,
   } = useAuthStore();
   const { tokens, isDark } = useTheme();
+  const { t } = useLanguageStore();
 
   const [capabilities, setCapabilities] = useState<DeviceBiometricCapabilities>({
     hasHardware: false,
@@ -224,7 +226,7 @@ export default function SecuritySettingsScreen() {
           <ChevronLeftIcon size={18} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={{ fontSize: 18, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.3 }}>
-          Security & Privacy
+          {t('security.title')}
         </Text>
       </LinearGradient>
 
@@ -239,13 +241,13 @@ export default function SecuritySettingsScreen() {
                 style={{ color: tokens.textPrimary }}
                 className="text-base font-bold"
               >
-                Biometric Sign-In
+                {t('security.biometricUnlock')}
               </Text>
               <Text
                 style={{ color: tokens.textSecondary }}
                 className="text-xs mt-0.5"
               >
-                Fast & secure 1-tap workspace unlock (OFF by default)
+                {t('security.biometricDesc')}
               </Text>
             </View>
             <Badge label="Hardware Protected" variant="primary" size="sm" />

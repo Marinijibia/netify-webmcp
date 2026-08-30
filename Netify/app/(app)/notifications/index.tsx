@@ -18,10 +18,12 @@ import { useTheme } from '@/design/theme';
 import { useNotificationStore } from '@/store/notification-store';
 import { AppNotification } from '@/services/api/notifications';
 import { GRADIENTS, GRADIENT_DIRECTION } from '@/design/tokens/gradients';
+import { useLanguageStore } from '@/store/language-store';
 
 export default function NotificationsScreen() {
   const router = useRouter();
   const { tokens, isDark } = useTheme();
+  const { t } = useLanguageStore();
 
   const [activeTab, setActiveTab] = useState<'ALL' | 'UNREAD'>('ALL');
   const {
@@ -129,7 +131,7 @@ export default function NotificationsScreen() {
           >
             <Feather name="arrow-left" size={18} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Notifications</Text>
+          <Text style={styles.headerTitle}>{t('notifications.title')}</Text>
         </View>
 
         {unreadCount > 0 && (
@@ -138,7 +140,7 @@ export default function NotificationsScreen() {
             activeOpacity={0.8}
             style={styles.markAllBtn}
           >
-            <Text style={styles.markAllBtnText}>Mark all read</Text>
+            <Text style={styles.markAllBtnText}>{t('notifications.markAllRead')}</Text>
           </TouchableOpacity>
         )}
       </LinearGradient>
@@ -157,11 +159,11 @@ export default function NotificationsScreen() {
               end={GRADIENT_DIRECTION.toRight.end}
               style={styles.tabActive}
             >
-              <Text style={styles.tabActiveText}>All</Text>
+              <Text style={styles.tabActiveText}>{t('common.all')}</Text>
             </LinearGradient>
           ) : (
             <View style={[styles.tabInactive, { backgroundColor: tokens.surfaceMuted, borderColor: tokens.border }]}>
-              <Text style={[styles.tabInactiveText, { color: tokens.textSecondary }]}>All</Text>
+              <Text style={[styles.tabInactiveText, { color: tokens.textSecondary }]}>{t('common.all')}</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -178,7 +180,7 @@ export default function NotificationsScreen() {
               end={GRADIENT_DIRECTION.toRight.end}
               style={[styles.tabActive, styles.tabUnreadActive]}
             >
-              <Text style={styles.tabActiveText}>Unread</Text>
+              <Text style={styles.tabActiveText}>{t('common.pending')}</Text>
               {unreadCount > 0 && (
                 <View style={styles.tabBadge}>
                   <Text style={styles.tabBadgeText}>{unreadCount}</Text>
@@ -187,7 +189,7 @@ export default function NotificationsScreen() {
             </LinearGradient>
           ) : (
             <View style={[styles.tabInactive, styles.tabUnreadInactive, { backgroundColor: tokens.surfaceMuted, borderColor: tokens.border }]}>
-              <Text style={[styles.tabInactiveText, { color: tokens.textSecondary }]}>Unread</Text>
+              <Text style={[styles.tabInactiveText, { color: tokens.textSecondary }]}>{t('common.pending')}</Text>
               {unreadCount > 0 && (
                 <View style={[styles.tabBadgeInactive, { backgroundColor: '#EF4444' }]}>
                   <Text style={styles.tabBadgeInactiveText}>{unreadCount}</Text>

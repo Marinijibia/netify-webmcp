@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@/design/theme';
+import { useLanguageStore } from '@/store/language-store';
 import { Avatar } from '@/design/components';
 import { ChevronLeftIcon, UserIcon } from '@/design/icons';
 import { receivablesApi } from '@/services/api/receivables';
@@ -33,6 +34,7 @@ const TERM_OPTIONS = [7, 14, 30, 60];
 export default function CreateReceivableScreen() {
   const router = useRouter();
   const { tokens, isDark } = useTheme();
+  const { t } = useLanguageStore();
 
   const [customers, setCustomers] = useState<CustomerItem[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(true);
@@ -142,7 +144,7 @@ export default function CreateReceivableScreen() {
           <ChevronLeftIcon size={18} color="#FFFFFF" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Record Receivable</Text>
+          <Text style={styles.headerTitle}>{t('receivables.issueInvoiceTitle')}</Text>
           <Text style={styles.headerSub}>Authoritative debtor obligation</Text>
         </View>
       </LinearGradient>
@@ -168,7 +170,7 @@ export default function CreateReceivableScreen() {
               <View style={[styles.cardIcon, { backgroundColor: 'rgba(0,165,129,0.1)' }]}>
                 <MaterialCommunityIcons name="account-outline" size={16} color="#00A581" />
               </View>
-              <Text style={[styles.cardTitle, { color: tokens.textPrimary }]}>Customer / Debtor *</Text>
+              <Text style={[styles.cardTitle, { color: tokens.textPrimary }]}>{t('receivables.selectCustomer')} *</Text>
             </View>
 
             {loadingCustomers ? (
@@ -407,7 +409,7 @@ export default function CreateReceivableScreen() {
               ) : (
                 <>
                   <MaterialCommunityIcons name="receipt" size={18} color="#FFFFFF" />
-                  <Text style={styles.submitText}>Record Receivable</Text>
+                  <Text style={styles.submitText}>{t('receivables.issueButton')}</Text>
                 </>
               )}
             </LinearGradient>

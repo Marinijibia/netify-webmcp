@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '@/design/theme';
+import { useLanguageStore } from '@/store/language-store';
 import { Badge, TimelineEventCard, Avatar } from '@/design/components';
 import { GRADIENTS, GRADIENT_DIRECTION } from '@/design/tokens/gradients';
 import {
@@ -51,6 +52,7 @@ export default function ReceivableDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { tokens, isDark } = useTheme();
+  const { t } = useLanguageStore();
 
   const [receivable, setReceivable] = useState<ReceivableItem | null>(null);
   const [activities, setActivities] = useState<CollectionActivityItem[]>([]);
@@ -171,7 +173,7 @@ export default function ReceivableDetailScreen() {
             <ChevronLeftIcon size={18} color="#FFFFFF" />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerTitle}>Receivable Details</Text>
+            <Text style={styles.headerTitle}>{t('receivables.title')}</Text>
             {receivable.customer?.name ? (
               <Text style={styles.headerSub} numberOfLines={1}>{receivable.customer.name}</Text>
             ) : null}
@@ -214,7 +216,7 @@ export default function ReceivableDetailScreen() {
           ) : null}
 
           {/* Balance */}
-          <Text style={styles.heroLabel}>Outstanding Balance</Text>
+          <Text style={styles.heroLabel}>{t('commandCenter.totalOutstanding')}</Text>
           <Text style={[styles.heroBalance, { color: balanceColor }]}>
             {formatMoney(receivable.balance, receivable.currency)}
           </Text>
@@ -268,7 +270,7 @@ export default function ReceivableDetailScreen() {
                 style={styles.primaryActionGradient}
               >
                 <MaterialCommunityIcons name="credit-card-check-outline" size={18} color="#FFFFFF" />
-                <Text style={styles.primaryActionText}>Record Payment</Text>
+                <Text style={styles.primaryActionText}>{t('receivables.recordPaymentTitle')}</Text>
               </LinearGradient>
             </TouchableOpacity>
 

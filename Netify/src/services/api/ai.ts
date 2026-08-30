@@ -115,10 +115,10 @@ export const aiApi = {
    * Fetches deterministic today's attention figures and daily briefing.
    */
   async getTodayAttention(query?: { currency?: string }): Promise<TodayAttentionData> {
-    const response = await apiClient.get<ApiResponse<TodayAttentionData>>('/ai/today', {
+    const response = await apiClient.get<TodayAttentionData>('/ai/today', {
       params: query,
     });
-    return response.data.data;
+    return response.data;
   },
 
   /**
@@ -132,11 +132,11 @@ export const aiApi = {
     page?: number;
     limit?: number;
   }): Promise<PriorityCustomersResponse> {
-    const response = await apiClient.get<ApiResponse<PriorityCustomersResponse>>(
+    const response = await apiClient.get<PriorityCustomersResponse>(
       '/ai/priority-customers',
       { params: query }
     );
-    return response.data.data;
+    return response.data;
   },
 
   /**
@@ -147,11 +147,11 @@ export const aiApi = {
     customerId: string,
     input?: { receivableId?: string }
   ): Promise<CustomerExplanationData> {
-    const response = await apiClient.post<ApiResponse<CustomerExplanationData>>(
+    const response = await apiClient.post<CustomerExplanationData>(
       `/ai/customers/${customerId}/explain`,
       input || {}
     );
-    return response.data.data;
+    return response.data;
   },
 
   /**
@@ -162,11 +162,11 @@ export const aiApi = {
     customerId: string,
     input?: { receivableId?: string; preferredChannel?: string }
   ): Promise<CollectionRecommendationData> {
-    const response = await apiClient.post<ApiResponse<CollectionRecommendationData>>(
+    const response = await apiClient.post<CollectionRecommendationData>(
       `/ai/customers/${customerId}/recommend`,
       input || {}
     );
-    return response.data.data;
+    return response.data;
   },
 
   /**
@@ -182,11 +182,11 @@ export const aiApi = {
       customNote?: string;
     }
   ): Promise<CollectionMessageDraftData> {
-    const response = await apiClient.post<ApiResponse<CollectionMessageDraftData>>(
+    const response = await apiClient.post<CollectionMessageDraftData>(
       `/ai/customers/${customerId}/draft-message`,
       input
     );
-    return response.data.data;
+    return response.data;
   },
 
   /**
@@ -197,11 +197,11 @@ export const aiApi = {
     customerId: string,
     input?: { timeWindowDays?: number }
   ): Promise<CustomerSummaryData> {
-    const response = await apiClient.post<ApiResponse<CustomerSummaryData>>(
+    const response = await apiClient.post<CustomerSummaryData>(
       `/ai/customers/${customerId}/summary`,
       input || {}
     );
-    return response.data.data;
+    return response.data;
   },
 
   /**
@@ -214,8 +214,8 @@ export const aiApi = {
     receivableId?: string;
     timeWindowDays?: number;
   }): Promise<BusinessQAData> {
-    const response = await apiClient.post<ApiResponse<BusinessQAData>>('/ai/qa', input);
-    return response.data.data;
+    const response = await apiClient.post<BusinessQAData>('/ai/qa', input);
+    return response.data;
   },
 
   /**
@@ -226,10 +226,11 @@ export const aiApi = {
     recommendationId: string,
     status: AIRecommendationStatus
   ) {
-    const response = await apiClient.patch<ApiResponse<any>>(
+    const response = await apiClient.patch<any>(
       `/ai/recommendations/${recommendationId}/status`,
       { status }
     );
-    return response.data.data;
+    return response.data;
   },
 };
+

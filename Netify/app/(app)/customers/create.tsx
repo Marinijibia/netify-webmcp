@@ -18,10 +18,12 @@ import { Input, Alert } from '@/design/components';
 import { ChevronLeftIcon, UserIcon, PhoneIcon, MailIcon } from '@/design/icons';
 import { customersApi } from '@/services/api/customers';
 import { GRADIENTS, GRADIENT_DIRECTION } from '@/design/tokens/gradients';
+import { useLanguageStore } from '@/store/language-store';
 
 export default function CreateCustomerScreen() {
   const router = useRouter();
   const { tokens, isDark } = useTheme();
+  const { t } = useLanguageStore();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -85,7 +87,7 @@ export default function CreateCustomerScreen() {
           <ChevronLeftIcon size={18} color="#FFFFFF" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Add New Customer</Text>
+          <Text style={styles.headerTitle}>{t('customers.addCustomerTitle')}</Text>
           <Text style={styles.headerSub}>Debtor or business client profile</Text>
         </View>
       </LinearGradient>
@@ -115,16 +117,16 @@ export default function CreateCustomerScreen() {
             </View>
 
             <Input
-              label="Customer / Business Name *"
-              placeholder="e.g. Adebayo Agro Ventures or Kemi Stores Ltd"
+              label={t('customers.nameLabel')}
+              placeholder={t('customers.namePlaceholder')}
               value={name}
-              onChangeText={(t) => { setName(t); setErrorMessage(null); }}
+              onChangeText={(tVal) => { setName(tVal); setErrorMessage(null); }}
               leftIcon={<UserIcon size={17} color={tokens.textMuted} />}
             />
             <View style={styles.spacer} />
             <Input
-              label="Physical / Office Address"
-              placeholder="e.g. Suite 4B, Victoria Island, Lagos"
+              label={t('customers.addressLabel')}
+              placeholder={t('customers.addressPlaceholder')}
               value={address}
               onChangeText={setAddress}
             />
@@ -140,8 +142,8 @@ export default function CreateCustomerScreen() {
             </View>
 
             <Input
-              label="Phone Number"
-              placeholder="+234 802 345 6789"
+              label={t('customers.phoneLabel')}
+              placeholder={t('customers.phonePlaceholder')}
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"
@@ -149,8 +151,8 @@ export default function CreateCustomerScreen() {
             />
             <View style={styles.spacer} />
             <Input
-              label="Email Address"
-              placeholder="billing@client.ng"
+              label={t('customers.emailLabel')}
+              placeholder={t('customers.emailPlaceholder')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -204,7 +206,7 @@ export default function CreateCustomerScreen() {
               ) : (
                 <>
                   <Feather name="user-plus" size={18} color="#FFFFFF" />
-                  <Text style={styles.submitText}>Save Customer Record</Text>
+                  <Text style={styles.submitText}>{t('customers.createButton')}</Text>
                 </>
               )}
             </LinearGradient>

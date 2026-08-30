@@ -66,4 +66,9 @@ export const notificationApi = {
     const res = await apiClient.post<ApiResponse<{ updatedCount: number }>>('/notifications/read-all');
     return (res.data?.data || res.data) as { updatedCount: number };
   },
+
+  scanSignals: async (): Promise<{ detectedCount: number; signals: any[] }> => {
+    const res = await apiClient.post<ApiResponse<{ detectedCount: number; signals: any[] }>>('/notifications/scan-signals');
+    return (res.data?.data || res.data) as { detectedCount: number; signals: any[] };
+  },
 };

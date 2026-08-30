@@ -88,8 +88,8 @@ export const aiChatApi = {
    * Lists historical conversation sessions.
    */
   listConversations: async (): Promise<AIConversationItem[]> => {
-    const res = await apiClient.get<ApiResponse<AIConversationItem[]>>('/ai/conversations');
-    return res.data.data;
+    const res = await apiClient.get<AIConversationItem[]>('/ai/conversations');
+    return res.data;
   },
 
   /**
@@ -104,8 +104,14 @@ export const aiChatApi = {
     messages: AIMessageItem[];
     actionProposals: AIActionProposalItem[];
   }> => {
-    const res = await apiClient.get<ApiResponse<any>>(`/ai/conversations/${conversationId}`);
-    return res.data.data;
+    const res = await apiClient.get<{
+      id: string;
+      title: string;
+      language: SupportedLanguage;
+      messages: AIMessageItem[];
+      actionProposals: AIActionProposalItem[];
+    }>(`/ai/conversations/${conversationId}`);
+    return res.data;
   },
 
   /**
@@ -127,12 +133,14 @@ export const aiChatApi = {
     executed: boolean;
     message: string;
   }> => {
-    const res = await apiClient.post<ApiResponse<any>>(
-      `/ai/actions/${actionProposalId}/confirm`,
-      { confirm, notes }
-    );
-    return res.data.data;
+    const res = await apiClient.post<{
+      proposal: AIActionProposalItem;
+      executed: boolean;
+      message: string;
+    }>(`/ai/actions/${actionProposalId}/confirm`, { confirm, notes });
+    return res.data;
   },
+
 
   /**
    * Updates user's preferred language.

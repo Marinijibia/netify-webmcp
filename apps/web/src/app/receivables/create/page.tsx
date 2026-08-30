@@ -19,12 +19,16 @@ import {
   AlertCircle, 
   Loader2 
 } from 'lucide-react';
+import { useTheme } from '@/lib/theme/theme-context';
+import { useLanguage } from '@/lib/i18n';
 
 const TERM_OPTIONS = [7, 14, 30, 60];
 
 export default function CreateReceivablePage() {
   const router = useRouter();
   const { organization } = useAuth();
+  const { tokens, isLight } = useTheme();
+  const { t } = useLanguage();
 
   const [customers, setCustomers] = useState<CustomerItem[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(true);
@@ -116,6 +120,7 @@ export default function CreateReceivablePage() {
           color: '#00A581',
           fontSize: '13px',
           fontWeight: '600',
+          textDecoration: 'none',
         }}
       >
         <ArrowLeft size={16} />
@@ -124,24 +129,27 @@ export default function CreateReceivablePage() {
 
       {/* Form Card */}
       <div style={{
-        backgroundColor: '#003051',
+        backgroundColor: tokens.surface,
         borderRadius: '12px',
-        border: '1px solid #0F5470',
+        border: `1px solid ${tokens.surfaceBorder}`,
         padding: '32px',
+        boxShadow: isLight ? tokens.shadowCard : 'none',
       }}>
         <div style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <FileText size={22} color="#00A581" />
-            <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#FFFFFF' }}>Issue New Receivable / Invoice</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
+              {t('receivables.issueInvoiceTitle')}
+            </h2>
           </div>
-          <p style={{ color: '#8FB7C7', fontSize: '13px', marginTop: '4px' }}>
+          <p style={{ color: tokens.textSecondary, fontSize: '13px', marginTop: '4px' }}>
             Log a new credit sale or invoice with deterministic due dates.
           </p>
         </div>
 
         {error && (
           <div style={{
-            backgroundColor: 'rgba(239, 68, 68, 0.15)',
+            backgroundColor: isLight ? '#FEE2E2' : 'rgba(239, 68, 68, 0.15)',
             border: '1px solid #EF4444',
             borderRadius: '8px',
             padding: '12px 14px',
@@ -149,7 +157,7 @@ export default function CreateReceivablePage() {
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
-            color: '#FCA5A5',
+            color: isLight ? '#B91C1C' : '#FCA5A5',
             fontSize: '13px',
           }}>
             <AlertCircle size={16} color="#EF4444" />
@@ -160,18 +168,18 @@ export default function CreateReceivablePage() {
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
           {/* Customer Picker */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#8FB7C7', marginBottom: '6px', textTransform: 'uppercase' }}>
-              Assign Customer *
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
+              {t('receivables.selectCustomer')} *
             </label>
             {loadingCustomers ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#8FB7C7', fontSize: '13px' }}>
-                <Loader2 size={16} className="animate-spin" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tokens.textMuted, fontSize: '13px' }}>
+                <Loader2 size={16} className="animate-spin text-teal-500" />
                 <span>Loading customer accounts...</span>
               </div>
             ) : customers.length === 0 ? (
-              <div style={{ color: '#FCA5A5', fontSize: '13px' }}>
+              <div style={{ color: '#EF4444', fontSize: '13px' }}>
                 No active customers found.{' '}
-                <Link href="/customers/create" style={{ color: '#00A581', fontWeight: 'bold' }}>
+                <Link href="/customers/create" style={{ color: '#00A581', fontWeight: 'bold', textDecoration: 'none' }}>
                   Create Customer First
                 </Link>
               </div>
@@ -183,12 +191,13 @@ export default function CreateReceivablePage() {
                 style={{
                   width: '100%',
                   padding: '12px',
-                  backgroundColor: '#001D31',
-                  border: '1px solid #0F5470',
+                  backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                  border: `1px solid ${tokens.surfaceBorder}`,
                   borderRadius: '8px',
-                  color: '#FFFFFF',
+                  color: tokens.textPrimary,
                   fontSize: '13.5px',
                   outline: 'none',
+                  boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
                 }}
               >
                 {customers.map((c) => (
@@ -202,7 +211,7 @@ export default function CreateReceivablePage() {
 
           {/* Amount */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#8FB7C7', marginBottom: '6px', textTransform: 'uppercase' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
               Invoice Amount ({currency}) *
             </label>
             <input
@@ -215,20 +224,21 @@ export default function CreateReceivablePage() {
               style={{
                 width: '100%',
                 padding: '12px',
-                backgroundColor: '#001D31',
-                border: '1px solid #0F5470',
+                backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                border: `1px solid ${tokens.surfaceBorder}`,
                 borderRadius: '8px',
-                color: '#FFFFFF',
+                color: tokens.textPrimary,
                 fontSize: '16px',
                 fontWeight: 'bold',
                 outline: 'none',
+                boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
               }}
             />
           </div>
 
           {/* Payment Terms */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#8FB7C7', marginBottom: '8px', textTransform: 'uppercase' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '8px', textTransform: 'uppercase' }}>
               Payment Terms (Due in {termDays} days — {calculateDueDate()})
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
@@ -242,9 +252,11 @@ export default function CreateReceivablePage() {
                     borderRadius: '8px',
                     fontSize: '12.5px',
                     fontWeight: '600',
-                    backgroundColor: termDays === days ? '#00A581' : '#001D31',
-                    color: termDays === days ? '#FFFFFF' : '#8FB7C7',
-                    border: `1px solid ${termDays === days ? '#00A581' : '#0F5470'}`,
+                    backgroundColor: termDays === days ? '#00A581' : (isLight ? '#FFFFFF' : '#001D31'),
+                    color: termDays === days ? '#FFFFFF' : tokens.textSecondary,
+                    border: `1px solid ${termDays === days ? '#00A581' : tokens.surfaceBorder}`,
+                    cursor: 'pointer',
+                    boxShadow: isLight && termDays !== days ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
                   }}
                 >
                   {days} Days
@@ -256,7 +268,7 @@ export default function CreateReceivablePage() {
           {/* Reference & Source */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#8FB7C7', marginBottom: '6px', textTransform: 'uppercase' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
                 Invoice Reference
               </label>
               <input
@@ -267,18 +279,19 @@ export default function CreateReceivablePage() {
                 style={{
                   width: '100%',
                   padding: '10px 12px',
-                  backgroundColor: '#001D31',
-                  border: '1px solid #0F5470',
+                  backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                  border: `1px solid ${tokens.surfaceBorder}`,
                   borderRadius: '8px',
-                  color: '#FFFFFF',
+                  color: tokens.textPrimary,
                   fontSize: '13px',
                   outline: 'none',
+                  boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
                 }}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#8FB7C7', marginBottom: '6px', textTransform: 'uppercase' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
                 Receivable Source
               </label>
               <select
@@ -287,12 +300,13 @@ export default function CreateReceivablePage() {
                 style={{
                   width: '100%',
                   padding: '10px 12px',
-                  backgroundColor: '#001D31',
-                  border: '1px solid #0F5470',
+                  backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                  border: `1px solid ${tokens.surfaceBorder}`,
                   borderRadius: '8px',
-                  color: '#FFFFFF',
+                  color: tokens.textPrimary,
                   fontSize: '13px',
                   outline: 'none',
+                  boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
                 }}
               >
                 <option value="INVOICE">Formal Invoice</option>
@@ -305,7 +319,7 @@ export default function CreateReceivablePage() {
 
           {/* Description */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#8FB7C7', marginBottom: '6px', textTransform: 'uppercase' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
               Item / Goods Description
             </label>
             <input
@@ -316,19 +330,20 @@ export default function CreateReceivablePage() {
               style={{
                 width: '100%',
                 padding: '10px 12px',
-                backgroundColor: '#001D31',
-                border: '1px solid #0F5470',
+                backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                border: `1px solid ${tokens.surfaceBorder}`,
                 borderRadius: '8px',
-                color: '#FFFFFF',
+                color: tokens.textPrimary,
                 fontSize: '13px',
                 outline: 'none',
+                boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
               }}
             />
           </div>
 
           {/* Notes */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#8FB7C7', marginBottom: '6px', textTransform: 'uppercase' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
               Internal Notes
             </label>
             <textarea
@@ -339,13 +354,14 @@ export default function CreateReceivablePage() {
               style={{
                 width: '100%',
                 padding: '10px 12px',
-                backgroundColor: '#001D31',
-                border: '1px solid #0F5470',
+                backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                border: `1px solid ${tokens.surfaceBorder}`,
                 borderRadius: '8px',
-                color: '#FFFFFF',
+                color: tokens.textPrimary,
                 fontSize: '13px',
                 outline: 'none',
                 resize: 'none',
+                boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
               }}
             />
           </div>
@@ -365,6 +381,9 @@ export default function CreateReceivablePage() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
+              cursor: 'pointer',
+              border: 'none',
+              boxShadow: '0 4px 14px rgba(0, 165, 129, 0.35)',
               opacity: isSubmitting || customers.length === 0 ? 0.6 : 1,
             }}
           >
@@ -376,7 +395,7 @@ export default function CreateReceivablePage() {
             ) : (
               <>
                 <CheckCircle2 size={16} />
-                <span>Issue Receivable & Commit to Ledger</span>
+                <span>{t('receivables.issueButton')}</span>
               </>
             )}
           </button>

@@ -41,7 +41,9 @@ export const aiChatApi = {
     conversationId?: string;
     customerId?: string;
   }): Promise<AIChatResponse> => {
-    const res = await apiClient.post<ApiResponse<AIChatResponse>>('/ai/chat', data);
+    const res = await apiClient.post<ApiResponse<AIChatResponse>>('/ai/chat', data, {
+      timeoutMs: 60000,
+    });
     return (res.data?.data || res.data) as AIChatResponse;
   },
 

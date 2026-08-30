@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/lib/auth-context';
 import { webMCPTools } from '@/lib/webmcp/tools';
 import { WebMCPToolDefinition } from '@/lib/webmcp/types';
 import { 
@@ -17,10 +18,18 @@ import {
   Layers,
   Check,
   Copy,
-  Loader2
+  Loader2,
+  Lock,
+  Zap,
+  Globe,
+  HelpCircle,
+  ChevronRight
 } from 'lucide-react';
+import { useTheme } from '@/lib/theme/theme-context';
 
 export default function WebMCPPage() {
+  const { isAuthenticated } = useAuth();
+  const { tokens, isLight } = useTheme();
   const [selectedTool, setSelectedTool] = useState<WebMCPToolDefinition>(webMCPTools[0]);
   const [testInput, setTestInput] = useState<string>('{}');
   const [testResult, setTestResult] = useState<any>(null);
@@ -58,6 +67,7 @@ export default function WebMCPPage() {
 document.modelContext.registerTool({
   name: "${selectedTool.name}",
   description: "${selectedTool.description}",
+  category: "${selectedTool.category}",
   inputSchema: ${JSON.stringify(selectedTool.inputSchema, null, 2)},
   execute: async (input) => { ... }
 });`;
@@ -67,102 +77,219 @@ document.modelContext.registerTool({
   };
 
   return (
-    <div style={{ maxWidth: '1140px', margin: '0 auto', padding: '60px 24px 80px', display: 'flex', flexDirection: 'column', gap: '64px' }}>
+    <div style={{
+      maxWidth: '1240px',
+      margin: '0 auto',
+      padding: '80px 24px 100px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '80px',
+      position: 'relative',
+    }}>
+      {/* Ambient Glow */}
+      <div style={{
+        position: 'absolute',
+        top: '-120px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '850px',
+        height: '450px',
+        background: 'radial-gradient(circle at 50% 30%, rgba(0, 165, 129, 0.16), transparent 70%)',
+        pointerEvents: 'none',
+      }} />
+
       {/* Header */}
-      <div style={{ textAlign: 'center', maxWidth: '820px', margin: '0 auto' }}>
+      <div style={{ textAlign: 'center', maxWidth: '840px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
         <div style={{
           display: 'inline-flex',
           alignItems: 'center',
           gap: '8px',
-          backgroundColor: '#003051',
-          border: '1px solid #00A581',
-          padding: '6px 16px',
+          backgroundColor: isLight ? '#FFFFFF' : 'rgba(0, 48, 81, 0.8)',
+          border: `1px solid ${tokens.accentBorder}`,
+          padding: '6px 18px',
           borderRadius: '30px',
-          fontSize: '12px',
+          fontSize: '12.5px',
           fontWeight: 'bold',
-          color: '#3AD0A9',
-          marginBottom: '16px',
+          color: '#00A581',
+          marginBottom: '20px',
+          boxShadow: isLight ? tokens.shadowCard : '0 0 25px rgba(0, 165, 129, 0.25)',
         }}>
           <Sparkles size={14} color="#00A581" />
           <span>The WebMCP Challenge Submission • 8 Live Registered Tools</span>
         </div>
 
-        <h1 style={{ fontSize: '38px', fontWeight: '900', color: '#FFFFFF', letterSpacing: '-1px' }}>
-          Browser-Native WebMCP Agent Architecture
+        <h1 style={{
+          fontSize: 'clamp(36px, 5vw, 56px)',
+          fontWeight: '900',
+          color: tokens.textPrimary,
+          letterSpacing: '-1.5px',
+          lineHeight: '1.12',
+        }}>
+          Browser-Native WebMCP{' '}
+          <span style={{
+            background: 'linear-gradient(135deg, #00A581 0%, #3AD0A9 50%, #00A581 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}>
+            Agent Architecture
+          </span>
         </h1>
-        <p style={{ color: '#8FB7C7', fontSize: '16px', lineHeight: '1.6', marginTop: '12px' }}>
-          Netify connects autonomous AI assistants directly to live business credit ledgers through the W3C WebMCP standard (<code style={{ color: '#3AD0A9' }}>document.modelContext.registerTool</code>).
+        <p style={{ color: tokens.textSecondary, fontSize: '17px', lineHeight: '1.6', marginTop: '16px' }}>
+          Netify connects autonomous client-side AI agents directly to live African business credit ledgers through the emerging W3C WebMCP standard (<code style={{ color: '#00A581' }}>document.modelContext.registerTool</code>).
         </p>
       </div>
 
-      {/* Testing Guide for Hackathon Judges */}
+      {/* Visual Architecture Flow Diagram */}
       <div style={{
-        backgroundColor: '#003051',
-        borderRadius: '16px',
-        border: '1px solid #00A581',
-        padding: '32px',
-        boxShadow: '0 10px 30px rgba(0, 165, 129, 0.1)',
+        backgroundColor: tokens.surface,
+        borderRadius: '24px',
+        border: `1px solid ${tokens.surfaceBorder}`,
+        padding: '40px 32px',
+        boxShadow: isLight ? tokens.shadowCard : '0 10px 40px rgba(0, 0, 0, 0.3)',
+        position: 'relative',
+        zIndex: 1,
+        transition: 'all 0.2s ease',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-          <Cpu size={22} color="#00A581" />
-          <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#FFFFFF' }}>
-            Quick Verification Instructions for Hackathon Judges
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            System Architecture
+          </span>
+          <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>
+            How WebMCP Operates Without API Key Sharing
           </h2>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-          <div style={{ backgroundColor: '#001D31', padding: '18px', borderRadius: '10px', border: '1px solid #0F5470' }}>
-            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#00A581' }}>OPTION 1</span>
-            <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#FFFFFF', marginTop: '4px' }}>On-Screen Inspector</h4>
-            <p style={{ fontSize: '12.5px', color: '#8FB7C7', marginTop: '6px', lineHeight: '1.5' }}>
-              Click the floating <strong>"WebMCP Engine"</strong> button at the bottom-right of any workspace screen to inspect live registrations and execute tool tests.
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '16px',
+          alignItems: 'center',
+        }}>
+          {/* Step 1 */}
+          <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#00192B', padding: '24px', borderRadius: '16px', border: `1px solid ${tokens.surfaceBorder}`, textAlign: 'center' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: isLight ? '#EFF6FF' : 'rgba(59, 130, 246, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB', margin: '0 auto 12px' }}>
+              <Cpu size={20} />
+            </div>
+            <div style={{ fontWeight: 'bold', fontSize: '14px', color: tokens.textPrimary }}>AI Client Agent</div>
+            <div style={{ fontSize: '12px', color: tokens.textSecondary, marginTop: '4px' }}>
+              Chrome built-in Gemini Nano or ChatGPT In-App Browser
+            </div>
+          </div>
+
+          {/* Step 2 */}
+          <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#00192B', padding: '24px', borderRadius: '16px', border: '1px solid #00A581', textAlign: 'center', boxShadow: isLight ? tokens.shadowCard : '0 0 20px rgba(0, 165, 129, 0.15)' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: tokens.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00A581', margin: '0 auto 12px' }}>
+              <Terminal size={20} />
+            </div>
+            <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#00A581' }}>document.modelContext</div>
+            <div style={{ fontSize: '12px', color: tokens.textSecondary, marginTop: '4px' }}>
+              8 live registered tools with verified JSON schemas
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#00192B', padding: '24px', borderRadius: '16px', border: `1px solid ${tokens.surfaceBorder}`, textAlign: 'center' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: isLight ? '#FEF3C7' : 'rgba(245, 158, 11, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D97706', margin: '0 auto 12px' }}>
+              <ShieldCheck size={20} />
+            </div>
+            <div style={{ fontWeight: 'bold', fontSize: '14px', color: tokens.textPrimary }}>Human Authorization</div>
+            <div style={{ fontSize: '12px', color: tokens.textSecondary, marginTop: '4px' }}>
+              Proposals require explicit human approval before dispatch
+            </div>
+          </div>
+
+          {/* Step 4 */}
+          <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#00192B', padding: '24px', borderRadius: '16px', border: `1px solid ${tokens.surfaceBorder}`, textAlign: 'center' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: tokens.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00A581', margin: '0 auto 12px' }}>
+              <Layers size={20} />
+            </div>
+            <div style={{ fontWeight: 'bold', fontSize: '14px', color: tokens.textPrimary }}>PostgreSQL & Ledger API</div>
+            <div style={{ fontSize: '12px', color: tokens.textSecondary, marginTop: '4px' }}>
+              Tenant-isolated data access via active session JWT
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Verification Instructions for Hackathon Judges */}
+      <div style={{
+        backgroundColor: tokens.surface,
+        borderRadius: '24px',
+        border: '2px solid #00A581',
+        padding: '36px',
+        boxShadow: isLight ? tokens.shadowCard : '0 15px 40px rgba(0, 165, 129, 0.15)',
+        position: 'relative',
+        zIndex: 1,
+        transition: 'all 0.2s ease',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: tokens.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00A581' }}>
+            <Cpu size={20} />
+          </div>
+          <div>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: tokens.textPrimary }}>
+              Testing Instructions for Hackathon Judges
+            </h2>
+            <p style={{ color: tokens.textSecondary, fontSize: '13px', margin: 0 }}>
+              Verify WebMCP tool registration using any of the three supported evaluation pathways.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+          <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#00192B', padding: '20px', borderRadius: '14px', border: `1px solid ${tokens.surfaceBorder}` }}>
+            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase' }}>PATHWAY 1 (INSTANT)</span>
+            <h4 style={{ fontSize: '15px', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '4px' }}>On-Screen WebMCP Drawer</h4>
+            <p style={{ fontSize: '13px', color: tokens.textSecondary, marginTop: '6px', lineHeight: '1.5' }}>
+              Click the floating <strong>"WebMCP Engine"</strong> button at the bottom-right of any screen to inspect live registrations and execute tool calls directly in the UI.
             </p>
           </div>
 
-          <div style={{ backgroundColor: '#001D31', padding: '18px', borderRadius: '10px', border: '1px solid #0F5470' }}>
-            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#00A581' }}>OPTION 2</span>
-            <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#FFFFFF', marginTop: '4px' }}>Google Chrome Flag</h4>
-            <p style={{ fontSize: '12.5px', color: '#8FB7C7', marginTop: '6px', lineHeight: '1.5' }}>
-              Enable <code style={{ color: '#3AD0A9' }}>chrome://flags/#enable-webmcp-testing</code>. In DevTools console, run <code style={{ color: '#3AD0A9' }}>document.modelContext.getTools()</code>.
+          <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#00192B', padding: '20px', borderRadius: '14px', border: `1px solid ${tokens.surfaceBorder}` }}>
+            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase' }}>PATHWAY 2 (BROWSER FLAG)</span>
+            <h4 style={{ fontSize: '15px', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '4px' }}>Google Chrome DevTools</h4>
+            <p style={{ fontSize: '13px', color: tokens.textSecondary, marginTop: '6px', lineHeight: '1.5' }}>
+              Enable <code style={{ color: '#00A581' }}>chrome://flags/#enable-webmcp-testing</code>. In DevTools console, run <code style={{ color: '#00A581' }}>document.modelContext.getTools()</code>.
             </p>
           </div>
 
-          <div style={{ backgroundColor: '#001D31', padding: '18px', borderRadius: '10px', border: '1px solid #0F5470' }}>
-            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#00A581' }}>OPTION 3</span>
-            <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#FFFFFF', marginTop: '4px' }}>ChatGPT In-App Browser</h4>
-            <p style={{ fontSize: '12.5px', color: '#8FB7C7', marginTop: '6px', lineHeight: '1.5' }}>
-              Navigate to Netify in ChatGPT's browser. ChatGPT will autonomously discover and invoke the tools during conversation.
+          <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#00192B', padding: '20px', borderRadius: '14px', border: `1px solid ${tokens.surfaceBorder}` }}>
+            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase' }}>PATHWAY 3 (IN-APP)</span>
+            <h4 style={{ fontSize: '15px', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '4px' }}>ChatGPT In-App Browser</h4>
+            <p style={{ fontSize: '13px', color: tokens.textSecondary, marginTop: '6px', lineHeight: '1.5' }}>
+              Browse to Netify inside ChatGPT. ChatGPT will autonomously inspect the registered tools and invoke them during conversation.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Interactive Tool Explorer */}
-      <div id="tools" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* Interactive 8-Tool Schema Explorer & Live Runner */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', position: 'relative', zIndex: 1 }}>
         <div>
           <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase', letterSpacing: '1px' }}>
-            Interactive Directory
+            Interactive Sandbox
           </span>
-          <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#FFFFFF', marginTop: '4px' }}>
+          <h2 style={{ fontSize: '32px', fontWeight: '900', color: tokens.textPrimary, marginTop: '4px', letterSpacing: '-0.5px' }}>
             The 8 Registered WebMCP Tools
           </h2>
-          <p style={{ color: '#8FB7C7', fontSize: '14px', marginTop: '4px' }}>
-            Select any tool below to inspect its schema and run a live test execution against the backend.
+          <p style={{ color: tokens.textSecondary, fontSize: '15px', marginTop: '6px' }}>
+            Select any tool below to inspect its schema and execute a live call against the backend.
           </p>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '24px' }}>
           {/* Tool Selector List */}
           <div style={{
-            backgroundColor: '#003051',
-            borderRadius: '12px',
-            border: '1px solid #0F5470',
+            backgroundColor: tokens.surface,
+            borderRadius: '16px',
+            border: `1px solid ${tokens.surfaceBorder}`,
             padding: '12px',
             display: 'flex',
             flexDirection: 'column',
             gap: '6px',
             maxHeight: '620px',
             overflowY: 'auto',
+            boxShadow: isLight ? tokens.shadowCard : 'none',
           }}>
             {webMCPTools.map((tool) => {
               const isSelected = selectedTool.name === tool.name;
@@ -172,19 +299,19 @@ document.modelContext.registerTool({
                   onClick={() => handleSelectTool(tool)}
                   style={{
                     textAlign: 'left',
-                    padding: '12px 14px',
-                    borderRadius: '8px',
-                    backgroundColor: isSelected ? '#00A581' : 'transparent',
-                    color: isSelected ? '#FFFFFF' : '#DCEAF0',
-                    border: 'none',
+                    padding: '14px 16px',
+                    borderRadius: '10px',
+                    backgroundColor: isSelected ? '#00A581' : (isLight ? '#F8FAFC' : 'transparent'),
+                    color: isSelected ? '#FFFFFF' : tokens.textPrimary,
+                    border: isSelected ? 'none' : `1px solid ${tokens.surfaceBorder}`,
                     cursor: 'pointer',
-                    transition: 'background 0.15s ease',
+                    transition: 'all 0.15s ease',
                   }}
                 >
-                  <div style={{ fontWeight: 'bold', fontSize: '13.5px' }}>{tool.name}</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', opacity: 0.8, fontSize: '11px' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{tool.name}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', opacity: 0.85, fontSize: '11px', color: isSelected ? '#FFFFFF' : tokens.textMuted }}>
                     <span>{tool.category}</span>
-                    <span>{tool.category === 'READ_ONLY' ? 'Safe Query' : 'Action'}</span>
+                    <span>{tool.category === 'READ_ONLY' ? 'Safe Query' : 'Action Proposal'}</span>
                   </div>
                 </button>
               );
@@ -193,31 +320,33 @@ document.modelContext.registerTool({
 
           {/* Tool Inspector & Execution Sandbox */}
           <div style={{
-            backgroundColor: '#003051',
-            borderRadius: '12px',
-            border: '1px solid #0F5470',
-            padding: '28px',
+            backgroundColor: tokens.surface,
+            borderRadius: '16px',
+            border: `1px solid ${tokens.surfaceBorder}`,
+            boxShadow: isLight ? tokens.shadowCard : 'none',
+            padding: '32px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '20px',
+            gap: '24px',
+            transition: 'all 0.2s ease',
           }}>
             {/* Tool Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: '#FFFFFF' }}>{selectedTool.name}</h3>
+                  <h3 style={{ fontSize: '22px', fontWeight: 'bold', color: tokens.textPrimary }}>{selectedTool.name}</h3>
                   <span style={{
-                    backgroundColor: selectedTool.category === 'READ_ONLY' ? 'rgba(0, 165, 129, 0.2)' : selectedTool.category === 'PROPOSAL' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(59, 130, 246, 0.2)',
-                    color: selectedTool.category === 'READ_ONLY' ? '#3AD0A9' : selectedTool.category === 'PROPOSAL' ? '#FCD34D' : '#93C5FD',
+                    backgroundColor: selectedTool.category === 'READ_ONLY' ? tokens.accentSoft : selectedTool.category === 'PROPOSAL' ? (isLight ? '#FEF3C7' : 'rgba(245, 158, 11, 0.2)') : (isLight ? '#EFF6FF' : 'rgba(59, 130, 246, 0.2)'),
+                    color: selectedTool.category === 'READ_ONLY' ? '#00A581' : selectedTool.category === 'PROPOSAL' ? '#D97706' : '#2563EB',
                     fontSize: '11px',
                     fontWeight: 'bold',
-                    padding: '2px 8px',
+                    padding: '3px 10px',
                     borderRadius: '4px',
                   }}>
                     {selectedTool.category}
                   </span>
                 </div>
-                <p style={{ color: '#8FB7C7', fontSize: '13.5px', marginTop: '6px', lineHeight: '1.5' }}>
+                <p style={{ color: tokens.textSecondary, fontSize: '14px', marginTop: '8px', lineHeight: '1.6' }}>
                   {selectedTool.description}
                 </p>
               </div>
@@ -227,34 +356,36 @@ document.modelContext.registerTool({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '5px',
-                  backgroundColor: '#001D31',
-                  border: '1px solid #0F5470',
-                  color: '#8FB7C7',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  fontSize: '12px',
+                  gap: '6px',
+                  backgroundColor: isLight ? '#F1F5F9' : '#00192B',
+                  border: `1px solid ${tokens.surfaceBorder}`,
+                  color: tokens.textSecondary,
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  fontSize: '12.5px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
                 }}
               >
                 {copiedCode ? <Check size={14} color="#00A581" /> : <Copy size={14} />}
-                <span>{copiedCode ? 'Copied' : 'Copy Spec'}</span>
+                <span>{copiedCode ? 'Copied Registration' : 'Copy Spec'}</span>
               </button>
             </div>
 
             {/* Input Schema */}
             <div>
-              <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#8FB7C7', textTransform: 'uppercase', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase', marginBottom: '8px' }}>
                 JSON Input Schema:
               </label>
               <pre style={{
-                backgroundColor: '#001D31',
-                padding: '12px 16px',
-                borderRadius: '8px',
+                backgroundColor: '#00192B',
+                padding: '14px 18px',
+                borderRadius: '10px',
                 border: '1px solid #0F5470',
-                fontSize: '11.5px',
+                fontSize: '12px',
                 color: '#3AD0A9',
                 fontFamily: 'monospace',
-                maxHeight: '120px',
+                maxHeight: '140px',
                 overflowY: 'auto',
               }}>
                 {JSON.stringify(selectedTool.inputSchema, null, 2)}
@@ -263,8 +394,8 @@ document.modelContext.registerTool({
 
             {/* Input Payload Sandbox */}
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#8FB7C7', textTransform: 'uppercase' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ fontSize: '11.5px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase' }}>
                   Input Payload (Editable JSON):
                 </label>
                 <button
@@ -276,14 +407,16 @@ document.modelContext.registerTool({
                     gap: '6px',
                     backgroundColor: '#00A581',
                     color: '#FFFFFF',
-                    padding: '6px 16px',
-                    borderRadius: '6px',
-                    fontSize: '12.5px',
+                    padding: '8px 18px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
                     fontWeight: 'bold',
+                    border: 'none',
+                    cursor: 'pointer',
                     opacity: isExecuting ? 0.7 : 1,
                   }}
                 >
-                  {isExecuting ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
+                  {isExecuting ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
                   <span>Execute Live Tool Call</span>
                 </button>
               </div>
@@ -293,12 +426,12 @@ document.modelContext.registerTool({
                 onChange={(e) => setTestInput(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '10px 12px',
-                  backgroundColor: '#001D31',
+                  padding: '12px 14px',
+                  backgroundColor: '#00192B',
                   border: '1px solid #0F5470',
-                  borderRadius: '8px',
+                  borderRadius: '10px',
                   color: '#FFFFFF',
-                  fontSize: '12px',
+                  fontSize: '12.5px',
                   fontFamily: 'monospace',
                   outline: 'none',
                 }}
@@ -308,18 +441,18 @@ document.modelContext.registerTool({
             {/* Live Output */}
             {testResult && (
               <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#8FB7C7', textTransform: 'uppercase', marginBottom: '6px' }}>
-                  Live Execution Result:
+                <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase', marginBottom: '8px' }}>
+                  Live API Execution Result:
                 </label>
                 <pre style={{
-                  backgroundColor: '#001D31',
-                  padding: '14px',
-                  borderRadius: '8px',
+                  backgroundColor: '#00192B',
+                  padding: '16px',
+                  borderRadius: '10px',
                   border: `1px solid ${testResult.success ? '#00A581' : '#EF4444'}`,
                   color: testResult.success ? '#FFFFFF' : '#FCA5A5',
                   fontSize: '12px',
                   fontFamily: 'monospace',
-                  maxHeight: '180px',
+                  maxHeight: '200px',
                   overflowY: 'auto',
                 }}>
                   {JSON.stringify(testResult, null, 2)}
@@ -332,45 +465,50 @@ document.modelContext.registerTool({
 
       {/* Safety Protocol Callout */}
       <div style={{
-        backgroundColor: '#001D31',
-        borderRadius: '16px',
-        border: '1px solid #0F5470',
-        padding: '32px',
+        backgroundColor: isLight ? '#F1F5F9' : '#00253E',
+        borderRadius: '24px',
+        border: `1px solid ${tokens.surfaceBorder}`,
+        boxShadow: isLight ? tokens.shadowCard : 'none',
+        padding: '36px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '24px',
         flexWrap: 'wrap',
+        position: 'relative',
+        zIndex: 1,
+        transition: 'all 0.2s ease',
       }}>
-        <div style={{ maxWidth: '640px' }}>
+        <div style={{ maxWidth: '680px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <ShieldCheck size={20} color="#00A581" />
-            <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#FFFFFF' }}>
+            <ShieldCheck size={22} color="#00A581" />
+            <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: tokens.textPrimary }}>
               Human-in-the-Loop AI Safeguards
             </h3>
           </div>
-          <p style={{ color: '#8FB7C7', fontSize: '13.5px', lineHeight: '1.6' }}>
-            Tools that propose external communication (such as <code style={{ color: '#3AD0A9' }}>draft_follow_up_message</code>) return structured proposals requiring human approval. Autonomous agents never dispatch unapproved debt collections.
+          <p style={{ color: tokens.textSecondary, fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
+            Tools that propose external communication (such as <code style={{ color: '#00A581' }}>draft_follow_up_message</code>) return structured proposals requiring human approval. Autonomous agents never dispatch unapproved debt collections.
           </p>
         </div>
 
         <Link
-          href="/"
+          href={isAuthenticated ? '/workspace' : '/register'}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
             backgroundColor: '#00A581',
             color: '#FFFFFF',
-            padding: '12px 20px',
-            borderRadius: '8px',
-            fontSize: '13px',
+            padding: '14px 28px',
+            borderRadius: '10px',
+            fontSize: '14px',
             fontWeight: 'bold',
             textDecoration: 'none',
+            boxShadow: '0 8px 20px rgba(0, 165, 129, 0.3)',
           }}
         >
-          <span>Launch Workspace</span>
-          <ArrowRight size={14} />
+          <span>{isAuthenticated ? 'Open Workspace' : 'Register Free Account'}</span>
+          <ArrowRight size={16} />
         </Link>
       </div>
     </div>

@@ -31,20 +31,14 @@ import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Avatar, Shimmer } from '@/design/components';
 import { GRADIENTS, GRADIENT_DIRECTION } from '@/design/tokens/gradients';
+import { useLanguageStore } from '@/store/language-store';
 
 type TimeframeFilter = 'ALL' | 'TODAY' | 'UPCOMING' | 'MISSED' | 'FULFILLED';
-
-const TIMEFRAME_TABS: { label: string; value: TimeframeFilter }[] = [
-  { label: "Today's", value: 'TODAY' },
-  { label: 'Upcoming', value: 'UPCOMING' },
-  { label: 'Missed', value: 'MISSED' },
-  { label: 'Fulfilled', value: 'FULFILLED' },
-  { label: 'All', value: 'ALL' },
-];
 
 export default function CommitmentsScreen() {
   const router = useRouter();
   const { tokens, isDark } = useTheme();
+  const { t } = useLanguageStore();
 
   const [activeTab, setActiveTab] = useState<TimeframeFilter>('TODAY');
   const [commitments, setCommitments] = useState<PaymentCommitmentItem[]>([]);
@@ -260,7 +254,7 @@ export default function CommitmentsScreen() {
             <ChevronLeftIcon size={18} color="#FFFFFF" />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerTitle}>Payment Promises</Text>
+            <Text style={styles.headerTitle}>{t('commitments.title')}</Text>
             <Text style={styles.headerSubtitle}>Commitments & scheduled dues</Text>
           </View>
         </View>
@@ -271,7 +265,7 @@ export default function CommitmentsScreen() {
         <View style={[styles.searchBar, { backgroundColor: tokens.surfaceMuted, borderColor: tokens.border }]}>
           <SearchIcon size={16} color={tokens.textMuted} />
           <TextInput
-            placeholder="Search by customer, reference, notes..."
+            placeholder={t('commitments.searchPlaceholder')}
             placeholderTextColor={tokens.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -286,7 +280,13 @@ export default function CommitmentsScreen() {
 
         {/* Timeframe Filter Tabs */}
         <View style={styles.tabsRow}>
-          {TIMEFRAME_TABS.map((tab) => {
+          {[
+            { label: t('common.today'), value: 'TODAY' as const },
+            { label: t('common.pending'), value: 'UPCOMING' as const },
+            { label: t('common.broken'), value: 'MISSED' as const },
+            { label: t('common.paid'), value: 'FULFILLED' as const },
+            { label: t('common.all'), value: 'ALL' as const },
+          ].map((tab) => {
             const isSelected = activeTab === tab.value;
             return (
               <TouchableOpacity

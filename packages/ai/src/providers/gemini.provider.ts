@@ -11,7 +11,7 @@ export class GeminiProvider implements AIProvider {
   private genAI: GoogleGenerativeAI | null = null;
   private modelName: string;
 
-  constructor(apiKey?: string, modelName: string = 'gemini-1.5-flash') {
+  constructor(apiKey?: string, modelName: string = 'gemini-3.5-flash') {
     this.modelName = modelName;
     const isPlaceholder = !apiKey || apiKey === 'mock_dev_gemini_key' || apiKey.startsWith('your_');
     if (!isPlaceholder) {
@@ -19,33 +19,51 @@ export class GeminiProvider implements AIProvider {
     }
   }
 
-  private getModel(options?: AIGenerateOptions): GenerativeModel | null {
+  private getModelForName(name: string, options?: AIGenerateOptions, isJson: boolean = false): GenerativeModel | null {
     if (!this.genAI) return null;
     return this.genAI.getGenerativeModel({
-      model: this.modelName,
+      model: name,
       generationConfig: {
         temperature: options?.temperature ?? 0.2,
         maxOutputTokens: options?.maxTokens ?? 2048,
+        ...(isJson ? { responseMimeType: 'application/json' } : {}),
       },
       systemInstruction: options?.systemInstruction,
     });
   }
 
+  private getCandidateModels(): string[] {
+    return Array.from(new Set([
+      this.modelName,
+      'gemini-3.5-flash',
+      'gemini-3.1-flash-lite',
+      'gemini-flash-latest',
+      'gemini-3.7-flash',
+    ])).filter(Boolean);
+  }
+
   async generate(prompt: string, options?: AIGenerateOptions): Promise<string> {
     if (!this.genAI) {
-      return `[Gemini Dev Fallback] Response for: ${prompt.slice(0, 100)}...`;
+      throw new Error('Gemini provider is not initialized. Please ensure a valid GEMINI_API_KEY is configured.');
     }
 
-    try {
-      const model = this.getModel(options);
-      if (!model) throw new Error('Gemini model initialization failed');
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      return response.text();
-    } catch (error: any) {
-      console.warn(`[GeminiProvider.generate error]: ${error.message}. Returning fallback.`);
-      return `[Gemini Error Recovery] Analysis completed based on deterministic facts.`;
+    const candidateModels = this.getCandidateModels();
+    let lastError: any = null;
+
+    for (const candidate of candidateModels) {
+      try {
+        const model = this.getModelForName(candidate, options, false);
+        if (!model) continue;
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        return response.text();
+      } catch (error: any) {
+        lastError = error;
+        console.warn(`[GeminiProvider] Model ${candidate} failed: ${error.message}. Trying next candidate...`);
+      }
     }
+
+    throw new Error(`Gemini generation failed: ${lastError?.message || 'Unknown error'}`);
   }
 
   async structuredOutput<T>(
@@ -53,35 +71,42 @@ export class GeminiProvider implements AIProvider {
     schema: z.ZodType<T, any, any>,
     options?: AIGenerateOptions
   ): Promise<T> {
-    const jsonPrompt = `${prompt}\n\nIMPORTANT: Output ONLY valid JSON matching this schema. Do not enclose in markdown ticks if possible, or use standard \`\`\`json block.\nEnsure all keys match the requested format.`;
+    const jsonPrompt = `${prompt}\n\nIMPORTANT: Output ONLY valid JSON matching the requested schema. Ensure all keys match the requested format.`;
 
     if (!this.genAI) {
-      // Return safe mock conforming to schema
-      return this.generateMockStructured(prompt, schema);
+      throw new Error('Gemini API is not initialized. Please ensure GEMINI_API_KEY is configured.');
     }
 
-    try {
-      const model = this.getModel(options);
-      if (!model) throw new Error('Gemini model initialization failed');
+    const candidateModels = this.getCandidateModels();
+    let lastError: any = null;
 
-      const result = await model.generateContent(jsonPrompt);
-      const response = await result.response;
-      let text = response.text().trim();
+    for (const candidate of candidateModels) {
+      try {
+        const model = this.getModelForName(candidate, options, true);
+        if (!model) continue;
 
-      // Clean markdown code fence if present
-      if (text.startsWith('```json')) {
-        text = text.replace(/^```json/, '').replace(/```$/, '').trim();
-      } else if (text.startsWith('```')) {
-        text = text.replace(/^```/, '').replace(/```$/, '').trim();
+        const result = await model.generateContent(jsonPrompt);
+        const response = await result.response;
+        let text = response.text().trim();
+
+        // Clean markdown code fence if present
+        if (text.startsWith('```json')) {
+          text = text.replace(/^```json/, '').replace(/```$/, '').trim();
+        } else if (text.startsWith('```')) {
+          text = text.replace(/^```/, '').replace(/```$/, '').trim();
+        }
+
+        const parsed = JSON.parse(text);
+        return schema.parse(parsed);
+      } catch (error: any) {
+        lastError = error;
+        console.warn(`[GeminiProvider.structuredOutput] Model ${candidate} failed: ${error.message}. Trying next candidate...`);
       }
-
-      const parsed = JSON.parse(text);
-      return schema.parse(parsed);
-    } catch (error: any) {
-      console.warn(`[GeminiProvider.structuredOutput parsing error]: ${error.message}. Attempting recovery.`);
-      return this.generateMockStructured(prompt, schema);
     }
+
+    throw new Error(`Gemini structured output failed: ${lastError?.message || 'Unknown error'}`);
   }
+
 
   async structuredOutputWithMetrics<T>(
     prompt: string,
@@ -106,7 +131,7 @@ export class GeminiProvider implements AIProvider {
     }
 
     try {
-      const embeddingModel = this.genAI.getGenerativeModel({ model: 'text-embedding-004' });
+      const embeddingModel = this.genAI.getGenerativeModel({ model: 'gemini-embedding-001' });
       const result = await embeddingModel.embedContent(text);
       const values = result.embedding.values;
       // Pad or trim to 1536 for pgvector schema consistency
@@ -123,34 +148,5 @@ export class GeminiProvider implements AIProvider {
   async summarize(content: string, options?: { maxWords?: number }): Promise<string> {
     const prompt = `Summarize the following business context in ${options?.maxWords ?? 60} words or less:\n\n${content}`;
     return this.generate(prompt, { temperature: 0.1 });
-  }
-
-  private generateMockStructured<T>(prompt: string, schema: z.ZodType<T, any, any>): T {
-    // Attempt basic pattern matches for commitments and messages
-    const lowerPrompt = prompt.toLowerCase();
-    const hasPromise = lowerPrompt.includes('promise') || lowerPrompt.includes('send') || lowerPrompt.includes('pay') || lowerPrompt.includes('friday');
-
-    const defaultMock: any = {
-      hasCommitment: hasPromise,
-      amount: 300000,
-      currency: 'NGN',
-      promisedDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
-      description: 'Customer promised to transfer payment on Friday morning.',
-      confidence: 'HIGH',
-      quoteEvidence: "I will send ₦300,000 on Friday morning without fail.",
-      reasoning: 'Explicit verbal agreement with specific amount and Friday due date.',
-      messageText: 'Good day. We kindly follow up regarding the outstanding payment of ₦300,000 promised for Friday. Please let us know once the transfer is made.',
-      tone: 'polite_reminder',
-      channel: 'whatsapp',
-      suggestedAction: 'Send WhatsApp reminder',
-      evidenceUsed: ['Invoice INV-102', 'Commitment ₦300,000 on Friday'],
-    };
-
-    try {
-      return schema.parse(defaultMock);
-    } catch {
-      // Fallback object conforming to whatever properties schema requires
-      return defaultMock as T;
-    }
   }
 }

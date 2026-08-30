@@ -20,7 +20,14 @@ const translations: Record<SupportedLanguage, typeof en> = {
 export type TranslationKey =
   | `common.${keyof typeof en.common}`
   | `commandCenter.${keyof typeof en.commandCenter}`
+  | `customers.${keyof typeof en.customers}`
+  | `receivables.${keyof typeof en.receivables}`
+  | `commitments.${keyof typeof en.commitments}`
   | `copilot.${keyof typeof en.copilot}`
+  | `settings.${keyof typeof en.settings}`
+  | `security.${keyof typeof en.security}`
+  | `notifications.${keyof typeof en.notifications}`
+  | `auth.${keyof typeof en.auth}`
   | `nav.${keyof typeof en.nav}`;
 
 /**

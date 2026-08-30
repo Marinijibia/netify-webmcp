@@ -9,11 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash.png",
+      "image": "./assets/images/logo-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#001D31",
       "dark": {
-        "image": "./assets/images/splash.png",
+        "image": "./assets/images/logo-icon.png",
         "resizeMode": "contain",
         "backgroundColor": "#001D31"
       }
@@ -26,7 +26,7 @@
         "NSMicrophoneUsageDescription": "Netify uses the microphone so you can ask business questions and manage receivables using voice."
       },
       "splash": {
-        "image": "./assets/images/splash.png",
+        "image": "./assets/images/logo-icon.png",
         "resizeMode": "contain",
         "backgroundColor": "#001D31"
       }
@@ -39,11 +39,11 @@
         "backgroundColor": "#001D31"
       },
       "splash": {
-        "image": "./assets/images/splash.png",
+        "image": "./assets/images/logo-icon.png",
         "resizeMode": "contain",
         "backgroundColor": "#001D31",
         "dark": {
-          "image": "./assets/images/splash.png",
+          "image": "./assets/images/logo-icon.png",
           "resizeMode": "contain",
           "backgroundColor": "#001D31"
         }
@@ -71,13 +71,13 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash.png",
-          "imageWidth": 220,
+          "image": "./assets/images/logo-icon.png",
+          "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#001D31",
           "dark": {
-            "image": "./assets/images/splash.png",
-            "imageWidth": 220,
+            "image": "./assets/images/logo-icon.png",
+            "imageWidth": 200,
             "resizeMode": "contain",
             "backgroundColor": "#001D31"
           }

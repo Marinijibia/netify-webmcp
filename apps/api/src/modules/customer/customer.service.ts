@@ -6,6 +6,8 @@ import {
   BusinessEventType,
   ActorType,
   EventSource,
+  ReceivableStatus,
+  CommitmentStatus,
 } from '@netify/database';
 import {
   CreateCustomerInput,
@@ -19,6 +21,66 @@ import { BusinessEventService } from '../business-event/business-event.service';
 @Injectable()
 export class CustomerService {
   constructor(private readonly businessEventService: BusinessEventService) {}
+
+  /**
+   * Helper to enrich customer entity with authoritative financial exposure and risk classification.
+   */
+  private enrichCustomerFinancials(customer: any) {
+    const now = new Date();
+    let totalOutstanding = 0;
+    let totalOverdue = 0;
+    let oldestOverdueDays = 0;
+    const openReceivables = customer.receivables || [];
+    const openReceivablesCount = openReceivables.length;
+
+    for (const rec of openReceivables) {
+      const paid = rec.payments?.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
+      const remaining = Math.max(0, Number(rec.originalAmount) - paid);
+      totalOutstanding += remaining;
+
+      if (rec.dueDate && new Date(rec.dueDate) < now && remaining > 0) {
+        totalOverdue += remaining;
+        const daysOverdue = Math.floor((now.getTime() - new Date(rec.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+        if (daysOverdue > oldestOverdueDays) {
+          oldestOverdueDays = daysOverdue;
+        }
+      }
+    }
+
+    const missedPromisesCount = customer.paymentCommitments?.length || 0;
+
+    // Calculate deterministic risk score (0-100)
+    let riskScore = 10;
+    if (oldestOverdueDays > 60) riskScore += 50;
+    else if (oldestOverdueDays > 30) riskScore += 35;
+    else if (oldestOverdueDays > 14) riskScore += 20;
+    else if (oldestOverdueDays > 0) riskScore += 10;
+
+    if (missedPromisesCount > 0) riskScore += Math.min(30, missedPromisesCount * 15);
+    if (totalOutstanding > 1000000) riskScore += 15;
+    else if (totalOutstanding > 300000) riskScore += 10;
+
+    riskScore = Math.min(100, Math.max(0, riskScore));
+
+    let riskLevel: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'NORMAL' = 'NORMAL';
+    if (riskScore >= 80) riskLevel = 'CRITICAL';
+    else if (riskScore >= 60) riskLevel = 'HIGH';
+    else if (riskScore >= 40) riskLevel = 'MEDIUM';
+    else if (totalOutstanding > 0) riskLevel = 'LOW';
+
+    const { receivables: _, paymentCommitments: __, ...cleanCustomer } = customer;
+
+    return {
+      ...cleanCustomer,
+      totalOutstanding,
+      totalOverdue,
+      oldestOverdueDays,
+      openReceivablesCount,
+      missedPromisesCount,
+      riskScore,
+      riskLevel,
+    };
+  }
 
   /**
    * Retrieves a paginated list of customers for the organization with search and filtering.
@@ -65,12 +127,35 @@ export class CustomerService {
           contacts: {
             orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
           },
+          receivables: {
+            where: {
+              status: { in: [ReceivableStatus.OPEN, ReceivableStatus.PARTIALLY_PAID] },
+            },
+            select: {
+              id: true,
+              originalAmount: true,
+              dueDate: true,
+              status: true,
+              payments: {
+                where: { status: 'CONFIRMED' },
+                select: { amount: true },
+              },
+            },
+          },
+          paymentCommitments: {
+            where: {
+              status: CommitmentStatus.MISSED,
+            },
+            select: { id: true },
+          },
         },
       }),
     ]);
 
+    const enrichedItems = customers.map((c) => this.enrichCustomerFinancials(c));
+
     return {
-      items: customers,
+      items: enrichedItems,
       pagination: {
         page,
         pageSize,
@@ -95,6 +180,27 @@ export class CustomerService {
         contacts: {
           orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
         },
+        receivables: {
+          where: {
+            status: { in: [ReceivableStatus.OPEN, ReceivableStatus.PARTIALLY_PAID] },
+          },
+          select: {
+            id: true,
+            originalAmount: true,
+            dueDate: true,
+            status: true,
+            payments: {
+              where: { status: 'CONFIRMED' },
+              select: { amount: true },
+            },
+          },
+        },
+        paymentCommitments: {
+          where: {
+            status: CommitmentStatus.MISSED,
+          },
+          select: { id: true },
+        },
       },
     });
 
@@ -102,7 +208,7 @@ export class CustomerService {
       throw new NotFoundException('Customer not found in this organization');
     }
 
-    return customer;
+    return this.enrichCustomerFinancials(customer);
   }
 
   /**

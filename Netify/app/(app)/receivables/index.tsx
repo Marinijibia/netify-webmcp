@@ -28,12 +28,14 @@ import {
   ReceivableItem,
 } from '@/services/api/receivables';
 import { GRADIENTS, GRADIENT_DIRECTION } from '@/design/tokens/gradients';
+import { useLanguageStore } from '@/store/language-store';
 
 type StatusFilter = 'ALL' | 'OPEN' | 'PARTIALLY_PAID' | 'OVERDUE' | 'PAID';
 
 export default function ReceivablesScreen() {
   const router = useRouter();
   const { tokens, isDark } = useTheme();
+  const { t } = useLanguageStore();
 
   const [receivables, setReceivables] = useState<ReceivableItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -275,7 +277,7 @@ export default function ReceivablesScreen() {
             <ChevronLeftIcon size={18} color="#FFFFFF" />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerTitle}>Receivables</Text>
+            <Text style={styles.headerTitle}>{t('receivables.title')}</Text>
             <Text style={styles.headerSubtitle}>Authoritative debts & balances</Text>
           </View>
         </View>
@@ -292,7 +294,7 @@ export default function ReceivablesScreen() {
             style={styles.addBtn}
           >
             <Feather name="plus" size={16} color="#FFFFFF" />
-            <Text style={styles.addBtnText}>Record</Text>
+            <Text style={styles.addBtnText}>{t('commandCenter.addInvoice')}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </LinearGradient>
@@ -302,7 +304,7 @@ export default function ReceivablesScreen() {
         <View style={[styles.searchBar, { backgroundColor: tokens.surfaceMuted, borderColor: tokens.border }]}>
           <SearchIcon size={16} color={tokens.textMuted} />
           <TextInput
-            placeholder="Search by customer, reference..."
+            placeholder={t('receivables.searchPlaceholder')}
             placeholderTextColor={tokens.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -319,6 +321,16 @@ export default function ReceivablesScreen() {
         <View style={styles.tabsRow}>
           {(['ALL', 'OPEN', 'PARTIALLY_PAID', 'OVERDUE', 'PAID'] as StatusFilter[]).map((tab) => {
             const active = statusFilter === tab;
+            const tabLabel =
+              tab === 'ALL'
+                ? t('common.all')
+                : tab === 'OPEN'
+                ? t('common.pending')
+                : tab === 'PARTIALLY_PAID'
+                ? (t('common.pending') || 'Partial')
+                : tab === 'OVERDUE'
+                ? t('common.overdue')
+                : t('common.paid');
             return (
               <TouchableOpacity
                 key={tab}
@@ -333,12 +345,12 @@ export default function ReceivablesScreen() {
                     end={GRADIENT_DIRECTION.toRight.end}
                     style={styles.tabActive}
                   >
-                    <Text style={styles.tabActiveText}>{tab.replace('_', ' ')}</Text>
+                    <Text style={styles.tabActiveText}>{tabLabel}</Text>
                   </LinearGradient>
                 ) : (
                   <View style={[styles.tabInactive, { backgroundColor: tokens.surfaceMuted, borderColor: tokens.border }]}>
                     <Text style={[styles.tabInactiveText, { color: tokens.textSecondary }]}>
-                      {tab.replace('_', ' ')}
+                      {tabLabel}
                     </Text>
                   </View>
                 )}

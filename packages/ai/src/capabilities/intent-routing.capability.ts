@@ -12,6 +12,12 @@ export class IntentRoutingCapability {
     query: string,
     preferredLanguage?: AppLanguage
   ): Promise<StructuredBusinessIntent> {
+    // 1. Fast deterministic heuristic classification (0ms)
+    const fastResult = this.fastIntentClassification(query, preferredLanguage);
+    if (fastResult) {
+      return fastResult;
+    }
+
     const prompt = `You are the intent classification and language detection engine for Netify (an AI Collections & Business Intelligence platform for African SMEs).
 
 Analyze the user's business query carefully. The user might speak in:
@@ -66,6 +72,100 @@ Return JSON matching the schema.`;
       // Deterministic rule-based fallback if LLM structured output fails
       return this.fallbackIntentClassification(query, preferredLanguage);
     }
+  }
+
+  private fastIntentClassification(
+    query: string,
+    preferredLanguage?: AppLanguage
+  ): StructuredBusinessIntent | null {
+    const lower = query.toLowerCase();
+
+    let detectedLanguage: AppLanguage = preferredLanguage || 'en';
+    let isCodeSwitched = false;
+    if (lower.includes('dey') || lower.includes('abeg') || lower.includes('wetin') || lower.includes('jare')) {
+      detectedLanguage = 'pcm';
+      isCodeSwitched = true;
+    } else if (lower.includes('suka') || lower.includes('bashi') || lower.includes('mene')) {
+      detectedLanguage = 'ha';
+    } else if (lower.includes('gbese') || lower.includes('alabara') || lower.includes('kini')) {
+      detectedLanguage = 'yo';
+    } else if (lower.includes('ụgwọ') || lower.includes('ahịa') || lower.includes('kedu')) {
+      detectedLanguage = 'ig';
+    }
+
+    if (
+      lower.includes('who dey owe') ||
+      lower.includes('who owes') ||
+      lower.includes('owe') ||
+      lower.includes('debtor') ||
+      lower.includes('priority') ||
+      lower.includes('highest') ||
+      lower.includes('overdue') ||
+      lower.includes('suka fi bin mu bashi') ||
+      lower.includes('jẹ mi ni gbese') ||
+      lower.includes('ji m ụgwọ')
+    ) {
+      return {
+        intentType: 'COLLECTION_PRIORITY',
+        confidence: 0.95,
+        detectedLanguage,
+        isCodeSwitched,
+        extractedParameters: {},
+      };
+    }
+
+    if (
+      lower.includes('broken') ||
+      lower.includes('promise') ||
+      lower.includes('commitment') ||
+      lower.includes('missed')
+    ) {
+      return {
+        intentType: 'COLLECTION_PRIORITY',
+        confidence: 0.92,
+        detectedLanguage,
+        isCodeSwitched,
+        extractedParameters: {},
+      };
+    }
+
+    if (
+      lower.includes('draft') ||
+      lower.includes('message') ||
+      lower.includes('reminder') ||
+      lower.includes('follow-up') ||
+      lower.includes('rubuta sako') ||
+      lower.includes('kọ ifiranṣẹ') ||
+      lower.includes('dee ozi')
+    ) {
+      return {
+        intentType: 'DRAFT_COLLECTION_MESSAGE',
+        confidence: 0.95,
+        detectedLanguage,
+        isCodeSwitched,
+        extractedParameters: {},
+      };
+    }
+
+    if (
+      lower.includes('how much') ||
+      lower.includes('total') ||
+      lower.includes('summary') ||
+      lower.includes('overview') ||
+      lower.includes('nawa') ||
+      lower.includes('elo') ||
+      lower.includes('ole')
+    ) {
+      return {
+        intentType: 'RECEIVABLE_SUMMARY',
+        confidence: 0.95,
+        detectedLanguage,
+        isCodeSwitched,
+        extractedParameters: {},
+      };
+    }
+
+    return null;
   }
 
   private fallbackIntentClassification(

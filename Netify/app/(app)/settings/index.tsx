@@ -27,7 +27,7 @@ export default function SettingsScreen() {
 
   const { user, organization, logout } = useAuthStore();
   const { plan, isPro, isBusiness } = useBillingStore();
-  const { currentLanguage } = useLanguageStore();
+  const { currentLanguage, t } = useLanguageStore();
 
   const [isLangModalVisible, setIsLangModalVisible] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -66,7 +66,7 @@ export default function SettingsScreen() {
         >
           <Feather name="arrow-left" size={18} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings & Profile</Text>
+        <Text style={styles.headerTitle}>{t('settings.title')}</Text>
       </LinearGradient>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -125,7 +125,7 @@ export default function SettingsScreen() {
 
         {/* ── SECTION: ACTIVE BUSINESS ── */}
         <Text style={[styles.sectionHeading, { color: tokens.textMuted }]}>
-          Active Business
+          {t('settings.activeBusiness')}
         </Text>
         <View style={[styles.sectionCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
           <View style={[styles.orgCardHeader, { borderBottomColor: tokens.border }]}>
@@ -135,7 +135,7 @@ export default function SettingsScreen() {
                 {organization?.name || 'My Business'}
               </Text>
               <Text style={[styles.orgCurrency, { color: tokens.textSecondary }]}>
-                Operating Currency: {organization?.currency || 'NGN'}
+                {t('settings.operatingCurrency', { currency: organization?.currency || 'NGN' })}
               </Text>
             </View>
             <View style={[styles.orgIconWrap, { backgroundColor: tokens.accentSoft }]}>
@@ -153,7 +153,7 @@ export default function SettingsScreen() {
                 <Ionicons name="card-outline" size={17} color="#00A581" />
               </View>
               <Text style={[styles.rowLabel, { color: tokens.textPrimary }]}>
-                Subscription & Billing Plan
+                {t('settings.subscriptionBilling')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={17} color={tokens.textMuted} />
@@ -162,7 +162,7 @@ export default function SettingsScreen() {
 
         {/* ── SECTION: PREFERENCES ── */}
         <Text style={[styles.sectionHeading, { color: tokens.textMuted }]}>
-          Preferences
+          {t('settings.preferences')}
         </Text>
         <View style={[styles.sectionCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
           <TouchableOpacity
@@ -175,7 +175,7 @@ export default function SettingsScreen() {
                 <Ionicons name="globe-outline" size={17} color="#10B981" />
               </View>
               <Text style={[styles.rowLabel, { color: tokens.textPrimary }]}>
-                App & AI Language
+                {t('settings.appLanguage')}
               </Text>
             </View>
             <View style={styles.rowRight}>
@@ -196,7 +196,7 @@ export default function SettingsScreen() {
                 <Ionicons name="notifications-outline" size={17} color="#F59E0B" />
               </View>
               <Text style={[styles.rowLabel, { color: tokens.textPrimary }]}>
-                Notifications & Signals
+                {t('settings.notificationsSignals')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={17} color={tokens.textMuted} />
@@ -205,7 +205,7 @@ export default function SettingsScreen() {
 
         {/* ── SECTION: SECURITY ── */}
         <Text style={[styles.sectionHeading, { color: tokens.textMuted }]}>
-          Security & Access
+          {t('settings.securityAccess')}
         </Text>
         <View style={[styles.sectionCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
           <TouchableOpacity
@@ -218,7 +218,7 @@ export default function SettingsScreen() {
                 <Ionicons name="finger-print-outline" size={17} color="#6366F1" />
               </View>
               <Text style={[styles.rowLabel, { color: tokens.textPrimary }]}>
-                Biometrics & App Lock
+                {t('security.biometricUnlock')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={17} color={tokens.textMuted} />
@@ -234,7 +234,7 @@ export default function SettingsScreen() {
                 <Ionicons name="shield-checkmark-outline" size={17} color="#EC4899" />
               </View>
               <Text style={[styles.rowLabel, { color: tokens.textPrimary }]}>
-                Active Devices & Sessions
+                {t('security.activeSessions')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={17} color={tokens.textMuted} />
@@ -248,7 +248,7 @@ export default function SettingsScreen() {
           style={[styles.signOutBtn, { backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.3)' }]}
         >
           <Ionicons name="log-out-outline" size={18} color="#EF4444" />
-          <Text style={styles.signOutText}>Sign Out of Netify</Text>
+          <Text style={styles.signOutText}>{t('settings.signOut')}</Text>
         </TouchableOpacity>
       </ScrollView>
 

@@ -2,9 +2,16 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ShieldCheck, Lock, Database, UserCheck, Key, ArrowRight } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
+import { useTheme } from '@/lib/theme/theme-context';
+import { useLanguage } from '@/lib/i18n';
+import { ShieldCheck, Lock, Database, UserCheck, Key, ArrowRight, Sparkles, Check } from 'lucide-react';
 
 export default function SecurityPage() {
+  const { isAuthenticated } = useAuth();
+  const { tokens, isLight } = useTheme();
+  const { t } = useLanguage();
+
   const securityPillars = [
     {
       icon: Database,
@@ -13,7 +20,7 @@ export default function SecurityPage() {
     },
     {
       icon: Lock,
-      title: 'Token Security & Cryptographic Sessions',
+      title: 'Cryptographic Sessions & JWTs',
       description: 'Client authentication uses short-lived JWT access tokens paired with secure silent refresh tokens. Passwords and sensitive secrets are hashed using bcrypt with salt.',
     },
     {
@@ -29,42 +36,109 @@ export default function SecurityPage() {
   ];
 
   return (
-    <div style={{ maxWidth: '960px', margin: '0 auto', padding: '60px 24px 80px', display: 'flex', flexDirection: 'column', gap: '56px' }}>
+    <div style={{
+      maxWidth: '1100px',
+      margin: '0 auto',
+      padding: '80px 24px 100px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '72px',
+      position: 'relative',
+    }}>
+      {/* Ambient Glow */}
+      <div style={{
+        position: 'absolute',
+        top: '-120px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '850px',
+        height: '450px',
+        background: 'radial-gradient(circle at 50% 30%, rgba(0, 165, 129, 0.16), transparent 70%)',
+        pointerEvents: 'none',
+      }} />
+
       {/* Header */}
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: 'rgba(0, 165, 129, 0.15)', border: '1px solid #00A581', padding: '4px 14px', borderRadius: '20px', color: '#3AD0A9', fontSize: '12px', fontWeight: 'bold', marginBottom: '14px' }}>
-          <ShieldCheck size={14} />
-          <span>Security & Trust Center</span>
+      <div style={{ textAlign: 'center', maxWidth: '820px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          backgroundColor: isLight ? '#FFFFFF' : 'rgba(0, 48, 81, 0.8)',
+          border: `1px solid ${tokens.accentBorder}`,
+          padding: '6px 18px',
+          borderRadius: '30px',
+          fontSize: '12.5px',
+          fontWeight: 'bold',
+          color: '#00A581',
+          marginBottom: '20px',
+          boxShadow: isLight ? tokens.shadowCard : '0 0 25px rgba(0, 165, 129, 0.25)',
+        }}>
+          <ShieldCheck size={14} color="#00A581" />
+          <span>{t('security.title')}</span>
         </div>
-        <h1 style={{ fontSize: '38px', fontWeight: '900', color: '#FFFFFF', letterSpacing: '-1px' }}>
-          Enterprise-Grade Security for African Small Businesses
+
+        <h1 style={{
+          fontSize: 'clamp(36px, 5vw, 54px)',
+          fontWeight: '900',
+          color: tokens.textPrimary,
+          letterSpacing: '-1.5px',
+          lineHeight: '1.15',
+        }}>
+          Protecting Your Private Ledger &{' '}
+          <span style={{
+            background: 'linear-gradient(135deg, #00A581 0%, #3AD0A9 50%, #00A581 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}>
+            Debtor Relationships
+          </span>
         </h1>
-        <p style={{ color: '#8FB7C7', fontSize: '16px', lineHeight: '1.6', marginTop: '12px', maxWidth: '680px', margin: '12px auto 0' }}>
-          How we protect your financial ledgers, customer records, and AI agent interactions.
+        <p style={{ color: tokens.textSecondary, fontSize: '17px', lineHeight: '1.6', marginTop: '16px' }}>
+          How Netify safeguards your financial ledgers, customer records, and AI agent interactions with bank-grade controls.
         </p>
       </div>
 
-      {/* Security Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+      {/* Security Pillars (4 Cards) */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+        gap: '24px',
+        position: 'relative',
+        zIndex: 1,
+      }}>
         {securityPillars.map((p) => {
           const Icon = p.icon;
           return (
             <div
               key={p.title}
               style={{
-                backgroundColor: '#003051',
-                borderRadius: '14px',
-                border: '1px solid #0F5470',
-                padding: '28px',
+                backgroundColor: tokens.surface,
+                borderRadius: '20px',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                boxShadow: isLight ? tokens.shadowCard : 'none',
+                padding: '36px 32px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px',
+                transition: 'all 0.2s ease',
               }}
             >
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'rgba(0, 165, 129, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00A581', marginBottom: '16px' }}>
+              <div style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                backgroundColor: tokens.accentSoft,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#00A581',
+              }}>
                 <Icon size={22} />
               </div>
-              <h3 style={{ fontSize: '17px', fontWeight: 'bold', color: '#FFFFFF', marginBottom: '8px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: tokens.textPrimary }}>
                 {p.title}
               </h3>
-              <p style={{ color: '#8FB7C7', fontSize: '13.5px', lineHeight: '1.6' }}>
+              <p style={{ color: tokens.textSecondary, fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
                 {p.description}
               </p>
             </div>
@@ -72,28 +146,74 @@ export default function SecurityPage() {
         })}
       </div>
 
-      {/* Compliance & WebMCP Safe Execution */}
+      {/* WebMCP Browser Boundary Security Model */}
       <div style={{
-        backgroundColor: '#001D31',
-        borderRadius: '16px',
-        border: '1px solid #0F5470',
-        padding: '36px',
+        backgroundColor: tokens.surface,
+        borderRadius: '24px',
+        border: `1px solid ${tokens.surfaceBorder}`,
+        boxShadow: isLight ? tokens.shadowCard : 'none',
+        padding: '48px 40px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '16px',
+        gap: '18px',
         lineHeight: '1.7',
-        color: '#DCEAF0',
-        fontSize: '14px',
+        color: tokens.textSecondary,
+        fontSize: '14.5px',
+        position: 'relative',
+        zIndex: 1,
+        transition: 'all 0.2s ease',
       }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#FFFFFF' }}>
-          Safe WebMCP Agent Execution
+        <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: tokens.textPrimary }}>
+          Safe WebMCP Browser-Native Execution Boundary
         </h2>
         <p>
-          In browser environments using WebMCP, security is enforced at the browser boundary. AI tools running under <code style={{ color: '#3AD0A9' }}>document.modelContext</code> cannot access server infrastructure or bypass user sessions. They operate strictly through our authenticated client API using the user's active session.
+          In traditional AI setups, developers are forced to share sensitive API keys with third-party LLM cloud servers. This creates severe compliance risks for SME financial data.
         </p>
         <p>
-          If you have questions regarding our security protocols or vulnerability disclosures, please contact our security team at <code style={{ color: '#00A581' }}>security@netify.africa</code>.
+          With WebMCP, security is enforced directly at the browser boundary. AI tools running under <code style={{ color: '#00A581' }}>document.modelContext</code> cannot access server credentials or bypass user authentication. They operate strictly through our authenticated client session, inheriting the permissions of the logged-in merchant.
         </p>
+        <div style={{ marginTop: '12px', paddingTop: '16px', borderTop: `1px solid ${tokens.surfaceBorder}`, fontSize: '13px', color: tokens.textMuted }}>
+          Have security questions or responsible disclosures? Email our security team at <code style={{ color: '#00A581' }}>security@netify.ng</code>.
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div style={{
+        backgroundColor: isLight ? '#F1F5F9' : '#00253E',
+        borderRadius: '24px',
+        border: '2px solid #00A581',
+        padding: '48px 36px',
+        textAlign: 'center',
+        boxShadow: isLight ? tokens.shadowCard : '0 10px 40px rgba(0, 165, 129, 0.2)',
+        position: 'relative',
+        zIndex: 1,
+        transition: 'all 0.2s ease',
+      }}>
+        <h3 style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary, marginBottom: '10px' }}>
+          Trade with Complete Confidence
+        </h3>
+        <p style={{ color: tokens.textSecondary, fontSize: '14px', marginBottom: '28px' }}>
+          Experience an enterprise-grade collections workspace built specifically for African commerce.
+        </p>
+        <Link
+          href={isAuthenticated ? "/workspace" : "/register"}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            backgroundColor: '#00A581',
+            color: '#FFFFFF',
+            padding: '14px 32px',
+            borderRadius: '10px',
+            fontSize: '15px',
+            fontWeight: 'bold',
+            textDecoration: 'none',
+            boxShadow: '0 8px 25px rgba(0, 165, 129, 0.4)',
+          }}
+        >
+          <span>{isAuthenticated ? 'Open Collections Workspace' : 'Register Free Account'}</span>
+          <ArrowRight size={16} />
+        </Link>
       </div>
     </div>
   );

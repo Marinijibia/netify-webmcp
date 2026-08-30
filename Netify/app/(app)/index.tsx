@@ -7,7 +7,7 @@ import {
   RefreshControl,
   StyleSheet,
   Animated,
-  Pressable,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,7 +18,7 @@ import { useLanguageStore } from '@/store/language-store';
 import { LANGUAGE_REGISTRY } from '@/i18n';
 import {
   DailyBriefingCard,
-  PriorityCustomerCard,
+  FollowUpCustomerCard,
   LanguageSelectorModal,
   ProPaywallModal,
   BusinessPaywallModal,
@@ -27,7 +27,6 @@ import {
   MetricGridSkeleton,
   BriefingCardSkeleton,
   CustomerRowSkeleton,
-  Avatar,
 } from '@/design/components';
 import { BuildingIcon, ChevronRightIcon } from '@/design/icons';
 import { useTheme } from '@/design/theme';
@@ -39,57 +38,7 @@ import { aiApi, PriorityCustomerItem } from '@/services/api/ai';
 import { useNotificationStore } from '@/store/notification-store';
 import { GRADIENTS, GRADIENT_DIRECTION } from '@/design/tokens/gradients';
 
-// ─── Metric Card Component ───────────────────────────────────────────────────
-
-interface MetricCardProps {
-  label: string;
-  value: number;
-  sub: string;
-  valueColor: string;
-  bgColor: string;
-  borderColor: string;
-  icon: React.ReactNode;
-  formatValue?: (n: number) => string;
-  onPress?: () => void;
-}
-
-function MetricCard({
-  label,
-  value,
-  sub,
-  valueColor,
-  bgColor,
-  borderColor,
-  icon,
-  formatValue,
-  onPress,
-}: MetricCardProps) {
-  return (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={onPress}
-      style={[styles.metricBox, { backgroundColor: bgColor, borderColor }]}
-    >
-      <View style={styles.metricTop}>
-        <Text style={[styles.metricBoxLabel, { color: valueColor }]}>{label}</Text>
-        <View style={[styles.metricIconWrap, { backgroundColor: valueColor + '22' }]}>
-          {icon}
-        </View>
-      </View>
-      <AnimatedNumber
-        value={value}
-        duration={800}
-        style={StyleSheet.flatten([styles.metricBoxValue, { color: valueColor }])}
-        format={formatValue}
-      />
-      <Text style={[styles.metricSub, { color: valueColor + 'CC' }]} numberOfLines={1}>
-        {sub}
-      </Text>
-    </TouchableOpacity>
-  );
-}
-
-// ─── Main Screen Component ───────────────────────────────────────────────────
+type FollowUpFilter = 'ALL' | 'BROKEN_PROMISES' | 'OVERDUE' | 'HIGH_URGENCY';
 
 export default function AppHomeScreen() {
   const router = useRouter();
@@ -97,13 +46,8 @@ export default function AppHomeScreen() {
   const { tokens, isDark } = useTheme();
 
   const {
-    isPro,
-    isBusiness,
-    plan,
     initializeBilling,
     openBusinessSwitcher,
-    openProPaywall,
-    canAccessFeature,
   } = useBillingStore();
 
   const { currentLanguage, openLanguageModal, initializeLanguage, t } = useLanguageStore();
@@ -113,6 +57,7 @@ export default function AppHomeScreen() {
   const [priorityCustomers, setPriorityCustomers] = useState<PriorityCustomerItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [followUpFilter, setFollowUpFilter] = useState<FollowUpFilter>('ALL');
 
   // Notification badge pulse
   const badgePulse = useRef(new Animated.Value(1)).current;
@@ -145,7 +90,7 @@ export default function AppHomeScreen() {
       fetchUnreadCount();
       const [attResult, priorityResult] = await Promise.all([
         commandCenterApi.getAttention({ language: currentLanguage }),
-        aiApi.getPriorityCustomers({ limit: 5 }),
+        aiApi.getPriorityCustomers({ limit: 15 }),
       ]);
       setAttentionData(attResult);
       setPriorityCustomers(priorityResult?.items || []);
@@ -172,21 +117,42 @@ export default function AppHomeScreen() {
 
   const currency = attentionData?.currency || organization?.currency || '₦';
 
+  // Derived Follow-Up Metrics & Filter Calculations
+  const brokenPromisesCount = priorityCustomers.filter(
+    (p) => (p.missedCommitmentsCount || 0) > 0
+  ).length;
+  const overdueCount = priorityCustomers.filter(
+    (p) => (p.totalOverdue || 0) > 0
+  ).length;
+  const highUrgencyCount = priorityCustomers.filter(
+    (p) => p.urgency === 'HIGH' || p.priorityScore >= 70
+  ).length;
+
+  const filteredFollowUps = priorityCustomers.filter((item) => {
+    if (followUpFilter === 'BROKEN_PROMISES') return (item.missedCommitmentsCount || 0) > 0;
+    if (followUpFilter === 'OVERDUE') return (item.totalOverdue || 0) > 0;
+    if (followUpFilter === 'HIGH_URGENCY') return item.urgency === 'HIGH' || item.priorityScore >= 70;
+    return true;
+  });
+
+  const totalOut = attentionData?.facts?.totalOutstanding || 0;
+  const totalOver = attentionData?.facts?.totalOverdue || 0;
+  const overdueRatio = totalOut > 0 ? Math.min(100, Math.round((totalOver / totalOut) * 100)) : 0;
+
   const headerGradient = isDark ? GRADIENTS.darkHero : GRADIENTS.navyHero;
   const orgPillBg = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.18)';
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: tokens.background }]}>
-      {/* ── PREMIUM HEADER ── */}
+      {/* ── SLEEK EXECUTIVE HEADER ── */}
       <LinearGradient
         colors={headerGradient as [string, string]}
         start={GRADIENT_DIRECTION.toBottomRight.start}
         end={GRADIENT_DIRECTION.toBottomRight.end}
         style={styles.header}
       >
-        {/* Top Nav Row: Org Switcher + Icons */}
+        {/* Top Nav Row: Org Switcher + Quick Icons */}
         <View style={styles.headerTopRow}>
-          {/* Business Name Switcher Pill */}
           <TouchableOpacity
             onPress={openBusinessSwitcher}
             style={[styles.orgPill, { backgroundColor: orgPillBg }]}
@@ -238,7 +204,7 @@ export default function AppHomeScreen() {
           </View>
         </View>
 
-        {/* Hero Greeting — inside gradient for both light + dark */}
+        {/* Hero Greeting Row */}
         <View style={styles.headerGreeting}>
           <View style={styles.greetingRow}>
             <View style={styles.greetingAccentLine} />
@@ -252,7 +218,7 @@ export default function AppHomeScreen() {
         </View>
       </LinearGradient>
 
-      {/* ── SCROLLABLE CONTENT ── */}
+      {/* ── MAIN SCROLLABLE CONTENT ── */}
       <ScrollView
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
@@ -260,186 +226,149 @@ export default function AppHomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={tokens.accent} />
         }
       >
-        {/* ── QUICK ACTIONS BAR ── */}
-        <View style={styles.quickActionsContainer}>
-          <TouchableOpacity
-            onPress={() => router.push('/(app)/customers/create' as any)}
-            style={[styles.quickActionCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
-            activeOpacity={0.75}
-          >
-            <View style={[styles.quickActionIconWrap, { backgroundColor: 'rgba(0,165,129,0.12)' }]}>
-              <Feather name="user-plus" size={16} color="#00A581" />
-            </View>
-            <Text style={[styles.quickActionLabel, { color: tokens.textPrimary }]}>
-              + Customer
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => router.push('/(app)/receivables/create' as any)}
-            style={[styles.quickActionCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
-            activeOpacity={0.75}
-          >
-            <View style={[styles.quickActionIconWrap, { backgroundColor: 'rgba(239,68,68,0.12)' }]}>
-              <Feather name="file-plus" size={16} color="#EF4444" />
-            </View>
-            <Text style={[styles.quickActionLabel, { color: tokens.textPrimary }]}>
-              + Receivable
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => router.push('/(app)/commitments' as any)}
-            style={[styles.quickActionCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
-            activeOpacity={0.75}
-          >
-            <View style={[styles.quickActionIconWrap, { backgroundColor: 'rgba(245,158,11,0.12)' }]}>
-              <MaterialCommunityIcons name="handshake-outline" size={16} color="#F59E0B" />
-            </View>
-            <Text style={[styles.quickActionLabel, { color: tokens.textPrimary }]}>
-              Promises
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={handleOpenCopilot}
-            style={[styles.quickActionCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
-            activeOpacity={0.75}
-          >
-            <View style={[styles.quickActionIconWrap, { backgroundColor: 'rgba(99,102,241,0.12)' }]}>
-              <MaterialCommunityIcons name="robot-outline" size={16} color="#6366F1" />
-            </View>
-            <Text style={[styles.quickActionLabel, { color: tokens.textPrimary }]}>
-              AI Copilot
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {loading ? (
-          <>
+          <View style={styles.loadingPadding}>
             <MetricGridSkeleton />
             <BriefingCardSkeleton />
             {[0, 1, 2].map((i) => (
               <CustomerRowSkeleton key={i} />
             ))}
-          </>
+          </View>
         ) : (
-          <View>
-            {/* ── FINANCIAL ATTENTION METRICS (2×2 GRID) ── */}
-            <View style={styles.metricsGrid}>
-              <MetricCard
-                label={t('commandCenter.totalOutstanding')}
-                value={attentionData?.facts?.totalOutstanding || 0}
-                sub={`${attentionData?.facts?.activeCustomersCount || 0} active accounts`}
-                valueColor={tokens.danger}
-                bgColor={tokens.dangerSoft}
-                borderColor={tokens.danger + '33'}
-                icon={<MaterialCommunityIcons name="cash-remove" size={16} color={tokens.danger} />}
-                formatValue={(n) => `${currency}${n.toLocaleString()}`}
-                onPress={() => router.push('/(app)/receivables' as any)}
-              />
-              <MetricCard
-                label={t('commandCenter.overdueCustomers')}
-                value={attentionData?.facts?.overdueCustomersCount || 0}
-                sub={`${currency}${(attentionData?.facts?.totalOverdue || 0).toLocaleString()} past due`}
-                valueColor={tokens.warning}
-                bgColor={tokens.warningSoft}
-                borderColor={tokens.warning + '33'}
-                icon={<MaterialCommunityIcons name="clock-alert-outline" size={16} color={tokens.warning} />}
-                onPress={() => router.push('/(app)/receivables' as any)}
-              />
-              <MetricCard
-                label={t('commandCenter.promisesDueToday')}
-                value={attentionData?.facts?.promisesDueTodayCount || 0}
-                sub={`${currency}${(attentionData?.facts?.promisesDueTodayAmount || 0).toLocaleString()} expected`}
-                valueColor={tokens.accent}
-                bgColor={tokens.accentSoft}
-                borderColor={tokens.accent + '33'}
-                icon={<MaterialCommunityIcons name="handshake-outline" size={16} color={tokens.accent} />}
-                onPress={() => router.push('/(app)/commitments' as any)}
-              />
-              <MetricCard
-                label={t('commandCenter.highRiskCases')}
-                value={attentionData?.facts?.highRiskCasesCount || 0}
-                sub={`${attentionData?.facts?.missedPromisesCount || 0} missed commitments`}
-                valueColor="#7C3AED"
-                bgColor={isDark ? '#1E0D40' : '#F5F3FF'}
-                borderColor="#7C3AED33"
-                icon={<MaterialCommunityIcons name="alert-circle-outline" size={16} color="#7C3AED" />}
-                onPress={() => router.push('/(app)/receivables' as any)}
-              />
-            </View>
+          <>
+            {/* ── 1. EXECUTIVE FINANCIAL BENTO HERO (Replaces Chunky 2x2 Grid) ── */}
+            <LinearGradient
+              colors={isDark ? ['#002C48', '#001A2C'] : ['#00385C', '#001E33']}
+              start={GRADIENT_DIRECTION.toBottomRight.start}
+              end={GRADIENT_DIRECTION.toBottomRight.end}
+              style={styles.heroCard}
+            >
+              <View style={styles.heroCardTop}>
+                <View style={styles.heroLabelRow}>
+                  <Text style={styles.heroCardLabel}>{t('commandCenter.totalOutstanding')}</Text>
+                </View>
+                <View style={styles.syncPill}>
+                  <View style={styles.syncDot} />
+                  <Text style={styles.syncText}>{t('common.liveLedger')}</Text>
+                </View>
+              </View>
 
-            {/* ── CORE BUSINESS MODULES NAVIGATION ── */}
-            <View style={styles.sectionContainer}>
-              <Text style={[styles.sectionTitle, { color: tokens.textPrimary, marginBottom: 12 }]}>
-                Business Modules
-              </Text>
-              <View style={styles.modulesGrid}>
-                {/* Customers Module */}
-                <TouchableOpacity
-                  onPress={() => router.push('/(app)/customers' as any)}
-                  style={[styles.moduleCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
-                  activeOpacity={0.75}
-                >
-                  <View style={[styles.moduleIconCircle, { backgroundColor: 'rgba(0,165,129,0.12)' }]}>
-                    <Feather name="users" size={20} color="#00A581" />
-                  </View>
-                  <Text style={[styles.moduleTitle, { color: tokens.textPrimary }]}>Customers</Text>
-                  <Text style={[styles.moduleDesc, { color: tokens.textSecondary }]}>
-                    Directory & debtor records
+              <AnimatedNumber
+                value={totalOut}
+                duration={800}
+                style={styles.heroAmount}
+                format={(n) => `${currency}${n.toLocaleString()}`}
+              />
+
+              {/* Overdue Exposure Bar */}
+              <View style={styles.exposureBarContainer}>
+                <View style={styles.exposureBarTrack}>
+                  <View style={[styles.exposureBarFill, { width: `${overdueRatio}%` }]} />
+                </View>
+                <View style={styles.exposureMetaRow}>
+                  <Text style={styles.exposureMetaText}>
+                    {t('commandCenter.overdueExposure')}: <Text style={{ color: overdueRatio > 30 ? '#FCA5A5' : '#3AD0A9', fontWeight: '800' }}>{overdueRatio}%</Text>
                   </Text>
-                </TouchableOpacity>
+                  <Text style={styles.exposureMetaText}>
+                    {t('commandCenter.activeAccountsCount', { count: attentionData?.facts?.activeCustomersCount || 0 })}
+                  </Text>
+                </View>
+              </View>
 
-                {/* Receivables Module */}
+              {/* Micro-Metrics Bento Row */}
+              <View style={styles.heroBentoRow}>
+                {/* Past Due */}
                 <TouchableOpacity
+                  style={styles.heroBentoTile}
                   onPress={() => router.push('/(app)/receivables' as any)}
-                  style={[styles.moduleCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
                   activeOpacity={0.75}
                 >
-                  <View style={[styles.moduleIconCircle, { backgroundColor: 'rgba(239,68,68,0.12)' }]}>
-                    <MaterialCommunityIcons name="file-document-outline" size={20} color="#EF4444" />
-                  </View>
-                  <Text style={[styles.moduleTitle, { color: tokens.textPrimary }]}>Receivables</Text>
-                  <Text style={[styles.moduleDesc, { color: tokens.textSecondary }]}>
-                    Debt ledger & invoices
+                  <Text style={styles.bentoTileLabel}>{t('commandCenter.pastDue')}</Text>
+                  <Text style={[styles.bentoTileValue, { color: '#F87171' }]} numberOfLines={1}>
+                    {currency}{totalOver > 1000000 ? (totalOver / 1000000).toFixed(1) + 'M' : totalOver.toLocaleString()}
+                  </Text>
+                  <Text style={styles.bentoTileSub}>
+                    {attentionData?.facts?.overdueCustomersCount || 0} {t('common.accounts')}
                   </Text>
                 </TouchableOpacity>
 
-                {/* Payment Promises Module */}
+                <View style={styles.bentoDivider} />
+
+                {/* Due Today */}
                 <TouchableOpacity
+                  style={styles.heroBentoTile}
                   onPress={() => router.push('/(app)/commitments' as any)}
-                  style={[styles.moduleCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
                   activeOpacity={0.75}
                 >
-                  <View style={[styles.moduleIconCircle, { backgroundColor: 'rgba(245,158,11,0.12)' }]}>
-                    <MaterialCommunityIcons name="handshake" size={20} color="#F59E0B" />
-                  </View>
-                  <Text style={[styles.moduleTitle, { color: tokens.textPrimary }]}>Commitments</Text>
-                  <Text style={[styles.moduleDesc, { color: tokens.textSecondary }]}>
-                    Payment promises & dues
+                  <Text style={styles.bentoTileLabel}>{t('commandCenter.dueToday')}</Text>
+                  <Text style={[styles.bentoTileValue, { color: '#FBBF24' }]} numberOfLines={1}>
+                    {currency}{(attentionData?.facts?.promisesDueTodayAmount || 0) > 1000000 ? ((attentionData?.facts?.promisesDueTodayAmount || 0) / 1000000).toFixed(1) + 'M' : (attentionData?.facts?.promisesDueTodayAmount || 0).toLocaleString()}
+                  </Text>
+                  <Text style={styles.bentoTileSub}>
+                    {attentionData?.facts?.promisesDueTodayCount || 0} {t('common.promises')}
                   </Text>
                 </TouchableOpacity>
 
-                {/* AI Copilot Module */}
+                <View style={styles.bentoDivider} />
+
+                {/* Broken Promises */}
                 <TouchableOpacity
-                  onPress={handleOpenCopilot}
-                  style={[styles.moduleCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
+                  style={styles.heroBentoTile}
+                  onPress={() => router.push('/(app)/commitments' as any)}
                   activeOpacity={0.75}
                 >
-                  <View style={[styles.moduleIconCircle, { backgroundColor: 'rgba(99,102,241,0.12)' }]}>
-                    <MaterialCommunityIcons name="robot" size={20} color="#6366F1" />
-                  </View>
-                  <Text style={[styles.moduleTitle, { color: tokens.textPrimary }]}>AI Intelligence</Text>
-                  <Text style={[styles.moduleDesc, { color: tokens.textSecondary }]}>
-                    Collections reasoning
+                  <Text style={styles.bentoTileLabel}>{t('commandCenter.broken')}</Text>
+                  <Text style={[styles.bentoTileValue, { color: '#C084FC' }]} numberOfLines={1}>
+                    {attentionData?.facts?.missedPromisesCount || 0}
+                  </Text>
+                  <Text style={styles.bentoTileSub}>
+                    {t('common.missedDues')}
                   </Text>
                 </TouchableOpacity>
               </View>
+            </LinearGradient>
+
+            {/* ── 2. COMPACT ACTION STRIP (Single Row, Uncluttered) ── */}
+            <View style={styles.actionStripContainer}>
+              <TouchableOpacity
+                onPress={() => router.push('/(app)/customers/create' as any)}
+                style={[styles.actionStripPill, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
+                activeOpacity={0.75}
+              >
+                <Feather name="user-plus" size={13} color="#00A581" />
+                <Text style={[styles.actionStripText, { color: tokens.textPrimary }]}>{t('commandCenter.addCustomer')}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => router.push('/(app)/receivables/create' as any)}
+                style={[styles.actionStripPill, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
+                activeOpacity={0.75}
+              >
+                <Feather name="file-plus" size={13} color="#EF4444" />
+                <Text style={[styles.actionStripText, { color: tokens.textPrimary }]}>{t('commandCenter.addInvoice')}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => router.push('/(app)/commitments' as any)}
+                style={[styles.actionStripPill, { backgroundColor: tokens.surface, borderColor: tokens.border }]}
+                activeOpacity={0.75}
+              >
+                <MaterialCommunityIcons name="handshake-outline" size={14} color="#F59E0B" />
+                <Text style={[styles.actionStripText, { color: tokens.textPrimary }]}>{t('commandCenter.promisesAction')}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleOpenCopilot}
+                style={[styles.actionStripPill, { backgroundColor: isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.08)', borderColor: 'rgba(99,102,241,0.3)' }]}
+                activeOpacity={0.75}
+              >
+                <MaterialCommunityIcons name="robot-outline" size={14} color="#6366F1" />
+                <Text style={[styles.actionStripText, { color: '#6366F1', fontWeight: '800' }]}>{t('commandCenter.askAI')}</Text>
+              </TouchableOpacity>
             </View>
 
-            {/* ── AI DAILY BRIEFING CARD ── */}
-            <View style={styles.sectionContainer}>
+            {/* ── 3. AI DAILY BRIEFING CARD ── */}
+            <View style={styles.sectionWrap}>
               <DailyBriefingCard
                 briefing={
                   attentionData?.executiveBriefing ||
@@ -451,97 +380,190 @@ export default function AppHomeScreen() {
               />
             </View>
 
-            {/* ── PRIORITY CUSTOMERS / ACTION QUEUE ── */}
-            <View style={styles.sectionContainer}>
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionTitleRow}>
-                  <Text style={[styles.sectionTitle, { color: tokens.textPrimary }]}>
-                    {t('commandCenter.topPriority')}
+            {/* ── 4. DEDICATED COLLECTIONS FOLLOW-UP QUEUE (Matching Web App) ── */}
+            <View style={styles.sectionWrap}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.titleWithBadge}>
+                  <Text style={[styles.sectionHeading, { color: tokens.textPrimary }]}>
+                    {t('commandCenter.todaysQueue')}
                   </Text>
                   {priorityCustomers.length > 0 && (
-                    <View style={[styles.countBadge, { backgroundColor: tokens.dangerSoft }]}>
-                      <Text style={[styles.countBadgeText, { color: tokens.danger }]}>
+                    <View style={[styles.headingCountBadge, { backgroundColor: tokens.dangerSoft }]}>
+                      <Text style={[styles.headingCountText, { color: tokens.danger }]}>
                         {priorityCustomers.length}
                       </Text>
                     </View>
                   )}
                 </View>
                 <TouchableOpacity onPress={() => router.push('/(app)/customers' as any)}>
-                  <Text style={[styles.viewAllText, { color: tokens.accent }]}>
+                  <Text style={[styles.viewAllLink, { color: tokens.accent }]}>
                     {t('common.viewAll')}
                   </Text>
                 </TouchableOpacity>
               </View>
 
-              {priorityCustomers.length > 0 ? (
-                priorityCustomers.map((cust) => (
-                  <PriorityCustomerCard
+              <Text style={[styles.sectionSubheading, { color: tokens.textSecondary }]}>
+                {t('commandCenter.queueSubtitle')}
+              </Text>
+
+              {/* Filter Tabs (All, Broken Promises, Past Due, High Urgency) */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterTabsContainer}
+              >
+                <TouchableOpacity
+                  onPress={() => setFollowUpFilter('ALL')}
+                  style={[
+                    styles.filterTabPill,
+                    followUpFilter === 'ALL'
+                      ? { backgroundColor: '#00A581', borderColor: '#00A581' }
+                      : { backgroundColor: tokens.surface, borderColor: tokens.border },
+                  ]}
+                  activeOpacity={0.75}
+                >
+                  <Text
+                    style={[
+                      styles.filterTabText,
+                      { color: followUpFilter === 'ALL' ? '#FFFFFF' : tokens.textSecondary },
+                    ]}
+                  >
+                    {t('commandCenter.tabAll', { count: priorityCustomers.length })}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setFollowUpFilter('BROKEN_PROMISES')}
+                  style={[
+                    styles.filterTabPill,
+                    followUpFilter === 'BROKEN_PROMISES'
+                      ? { backgroundColor: '#EF4444', borderColor: '#EF4444' }
+                      : { backgroundColor: tokens.surface, borderColor: tokens.border },
+                  ]}
+                  activeOpacity={0.75}
+                >
+                  <Text
+                    style={[
+                      styles.filterTabText,
+                      { color: followUpFilter === 'BROKEN_PROMISES' ? '#FFFFFF' : tokens.textSecondary },
+                    ]}
+                  >
+                    ⚠️ {t('commandCenter.tabBrokenPromises')} ({brokenPromisesCount})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setFollowUpFilter('OVERDUE')}
+                  style={[
+                    styles.filterTabPill,
+                    followUpFilter === 'OVERDUE'
+                      ? { backgroundColor: '#F59E0B', borderColor: '#F59E0B' }
+                      : { backgroundColor: tokens.surface, borderColor: tokens.border },
+                  ]}
+                  activeOpacity={0.75}
+                >
+                  <Text
+                    style={[
+                      styles.filterTabText,
+                      { color: followUpFilter === 'OVERDUE' ? '#FFFFFF' : tokens.textSecondary },
+                    ]}
+                  >
+                    ⏰ {t('commandCenter.tabPastDue')} ({overdueCount})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setFollowUpFilter('HIGH_URGENCY')}
+                  style={[
+                    styles.filterTabPill,
+                    followUpFilter === 'HIGH_URGENCY'
+                      ? { backgroundColor: '#7C3AED', borderColor: '#7C3AED' }
+                      : { backgroundColor: tokens.surface, borderColor: tokens.border },
+                  ]}
+                  activeOpacity={0.75}
+                >
+                  <Text
+                    style={[
+                      styles.filterTabText,
+                      { color: followUpFilter === 'HIGH_URGENCY' ? '#FFFFFF' : tokens.textSecondary },
+                    ]}
+                  >
+                    🔥 {t('commandCenter.tabHighUrgency')} ({highUrgencyCount})
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+
+              {/* Follow-Up Cards Stream */}
+              {filteredFollowUps.length > 0 ? (
+                filteredFollowUps.map((cust) => (
+                  <FollowUpCustomerCard
                     key={cust.customerId}
                     customer={cust}
                     onPress={() => router.push(`/(app)/customers/${cust.customerId}` as any)}
-                    onQuickMessage={() => {
-                      router.push('/(app)/copilot' as any);
+                    onCall={() => {
+                      if (cust.phone) {
+                        const clean = cust.phone.replace(/[^0-9+]/g, '');
+                        Linking.openURL(`tel:${clean}`).catch(() => {});
+                      }
+                    }}
+                    onWhatsApp={() => {
+                      if (cust.phone) {
+                        const clean = cust.phone.replace(/[^0-9]/g, '');
+                        const msg = encodeURIComponent(
+                          `Hello ${cust.customerName}, this is a courtesy follow-up from our accounts team regarding your invoice balance of ${cust.currency} ${cust.totalOutstanding.toLocaleString()}. Kindly confirm if payment has been scheduled.`
+                        );
+                        Linking.openURL(`https://wa.me/${clean}?text=${msg}`).catch(() => {});
+                      }
+                    }}
+                    onAiDraft={() => {
+                      router.push({
+                        pathname: '/(app)/copilot' as any,
+                        params: {
+                          initialPrompt: `Draft a polite payment follow-up for ${cust.customerName} regarding their outstanding balance of ${cust.currency} ${cust.totalOutstanding.toLocaleString()}`,
+                        },
+                      });
+                    }}
+                    onRecordPromise={() => {
+                      router.push('/(app)/commitments' as any);
                     }}
                   />
                 ))
               ) : (
-                <View style={[styles.emptyCustomerCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
-                  <Feather name="check-circle" size={24} color="#00A581" style={{ marginBottom: 6 }} />
-                  <Text style={[styles.emptyCustomerTitle, { color: tokens.textPrimary }]}>
-                    No Urgent Collection Flags
+                <View style={[styles.emptyFollowUpBox, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
+                  <Feather name="check-circle" size={28} color="#00A581" style={{ marginBottom: 8 }} />
+                  <Text style={[styles.emptyFollowUpTitle, { color: tokens.textPrimary }]}>
+                    No Pending Follow-Ups
                   </Text>
-                  <Text style={[styles.emptyCustomerDesc, { color: tokens.textSecondary }]}>
-                    Your high-priority debtor queues will populate here as receivables mature.
+                  <Text style={[styles.emptyFollowUpDesc, { color: tokens.textSecondary }]}>
+                    {followUpFilter === 'BROKEN_PROMISES'
+                      ? 'No customers with broken payment promises in this filter.'
+                      : followUpFilter === 'OVERDUE'
+                      ? 'No past due accounts in this filter.'
+                      : 'All debtor accounts in this queue are currently clear with no urgent collection flags.'}
                   </Text>
-                  <TouchableOpacity
-                    onPress={() => router.push('/(app)/customers' as any)}
-                    style={[styles.viewCustomersBtn, { backgroundColor: tokens.accentSoft, borderColor: tokens.accent }]}
-                  >
-                    <Text style={[styles.viewCustomersBtnText, { color: tokens.accent }]}>
-                      Browse All Customers
-                    </Text>
-                  </TouchableOpacity>
                 </View>
               )}
             </View>
-          </View>
+          </>
         )}
       </ScrollView>
 
-      {/* ── FLOATING COPILOT BAR ── */}
-      <View style={[styles.floatingBarContainer, { backgroundColor: tokens.surface, borderTopColor: tokens.border }]}>
-        <Pressable onPress={handleOpenCopilot}>
-          {({ pressed }) => (
-            <LinearGradient
-              colors={
-                pressed
-                  ? ['#003F5F', '#007A64']
-                  : isDark
-                  ? ['rgba(0,165,129,0.18)', 'rgba(0,185,148,0.12)']
-                  : ['rgba(0,165,129,0.06)', 'rgba(0,185,148,0.04)']
-              }
-              start={GRADIENT_DIRECTION.toRight.start}
-              end={GRADIENT_DIRECTION.toRight.end}
-              style={[styles.copilotBar, { borderColor: tokens.accent }]}
-            >
-              <View style={styles.copilotBarLeft}>
-                <LinearGradient
-                  colors={GRADIENTS.tealSheen as [string, string]}
-                  style={styles.copilotIconCircle}
-                >
-                  <MaterialCommunityIcons name="robot-outline" size={17} color="#FFFFFF" />
-                </LinearGradient>
-                <Text style={[styles.copilotBarText, { color: tokens.textSecondary }]}>
-                  {t('copilot.placeholder')}
-                </Text>
-              </View>
-              <View style={[styles.copilotArrow, { backgroundColor: tokens.accent }]}>
-                <Feather name="arrow-up-right" size={16} color="#FFFFFF" />
-              </View>
-            </LinearGradient>
-          )}
-        </Pressable>
-      </View>
+      {/* ── DISCREET FLOATING COPILOT ACTION BUTTON ── */}
+      <TouchableOpacity
+        style={styles.floatingCopilotFab}
+        onPress={handleOpenCopilot}
+        activeOpacity={0.85}
+      >
+        <LinearGradient
+          colors={GRADIENTS.tealSheen as [string, string]}
+          start={GRADIENT_DIRECTION.toBottomRight.start}
+          end={GRADIENT_DIRECTION.toBottomRight.end}
+          style={styles.fabGradient}
+        >
+          <MaterialCommunityIcons name="robot-outline" size={22} color="#FFFFFF" />
+          <View style={styles.fabPulseDot} />
+        </LinearGradient>
+      </TouchableOpacity>
 
       {/* ── MODALS ── */}
       <LanguageSelectorModal
@@ -555,8 +577,6 @@ export default function AppHomeScreen() {
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
 
@@ -565,13 +585,13 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 20,
+    paddingBottom: 18,
   },
   headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 18,
+    marginBottom: 16,
   },
   headerGreeting: {
     paddingHorizontal: 2,
@@ -580,17 +600,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
     borderRadius: 20,
-    maxWidth: '55%',
+    maxWidth: '52%',
   },
   orgName: {
     fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
     flexShrink: 1,
-    letterSpacing: 0.1,
   },
   headerRight: {
     flexDirection: 'row',
@@ -603,20 +622,21 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
   badgeDot: {
     position: 'absolute',
-    top: -3,
-    right: -3,
+    top: 4,
+    right: 4,
     backgroundColor: '#EF4444',
-    minWidth: 17,
-    height: 17,
-    borderRadius: 9,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 3,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 3,
     borderWidth: 1.5,
-    borderColor: '#003051',
+    borderColor: '#00253E',
   },
   badgeText: {
     fontSize: 9,
@@ -627,253 +647,303 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
     borderRadius: 16,
-    borderWidth: 1.5,
+    borderWidth: 1,
   },
-  langFlag: { fontSize: 14 },
-  langCode: { fontSize: 11, fontWeight: '800', color: '#00B994' },
-
-  // ── Content ──────────────────────────────────────────────────────────────
-  contentContainer: { padding: 16, paddingBottom: 110 },
-  greetingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  langFlag: {
+    fontSize: 13,
+  },
+  langCode: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#00B994',
+  },
+  greetingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
   greetingAccentLine: {
-    width: 3,
-    height: 14,
-    borderRadius: 2,
+    width: 14,
+    height: 2.5,
     backgroundColor: '#00B994',
+    borderRadius: 2,
   },
   greetingSubtext: {
     fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 2,
-    color: 'rgba(255,255,255,0.55)',
-  },
-  greetingText: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 2,
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(255, 255, 255, 0.75)',
+    letterSpacing: 1,
   },
   heroHeadline: {
-    fontSize: 24,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-    lineHeight: 32,
+    fontSize: 20,
+    fontWeight: '900',
     color: '#FFFFFF',
+    letterSpacing: -0.3,
   },
 
-  // ── Quick Actions ────────────────────────────────────────────────────────
-  quickActionsContainer: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 20,
+  // ── Scroll Content ──────────────────────────────────────────────────────
+  contentContainer: {
+    paddingBottom: 90,
   },
-  quickActionCard: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    borderRadius: 14,
+  loadingPadding: {
+    padding: 16,
+  },
+
+  // ── Executive Financial Bento Hero Card ─────────────────────────────────
+  heroCard: {
+    marginHorizontal: 16,
+    marginTop: 14,
+    marginBottom: 12,
+    borderRadius: 20,
+    padding: 18,
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
+    borderColor: 'rgba(0, 165, 129, 0.35)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  quickActionIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  quickActionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-
-  // ── Metric Grid ──────────────────────────────────────────────────────────
-  metricsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 22,
-  },
-  metricBox: {
-    width: '48%',
-    padding: 14,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  metricTop: {
+  heroCardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  metricIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  metricBoxLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    flex: 1,
-    marginRight: 4,
-  },
-  metricBoxValue: {
-    fontSize: 22,
-    fontWeight: '800',
     marginBottom: 4,
-    letterSpacing: -0.5,
   },
-  metricSub: {
+  heroLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  heroCardLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#8FB7C7',
+    letterSpacing: 0.8,
+  },
+  syncPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(0, 165, 129, 0.18)',
+    borderColor: 'rgba(0, 165, 129, 0.4)',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  syncDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#00A581',
+  },
+  syncText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#3AD0A9',
+  },
+  heroAmount: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+    marginVertical: 4,
+  },
+  exposureBarContainer: {
+    marginTop: 4,
+    marginBottom: 14,
+  },
+  exposureBarTrack: {
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  exposureBarFill: {
+    height: '100%',
+    backgroundColor: '#EF4444',
+    borderRadius: 3,
+  },
+  exposureMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  exposureMetaText: {
     fontSize: 11,
     fontWeight: '600',
+    color: '#8FB7C7',
   },
-
-  // ── Business Modules Grid ────────────────────────────────────────────────
-  modulesGrid: {
+  heroBentoRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  moduleCard: {
-    width: '48%',
-    padding: 14,
-    borderRadius: 18,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  moduleIconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
+    backgroundColor: 'rgba(0, 18, 32, 0.65)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(15, 84, 112, 0.4)',
+    paddingVertical: 10,
+    paddingHorizontal: 6,
   },
-  moduleTitle: {
-    fontSize: 14.5,
+  heroBentoTile: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  bentoDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: 'rgba(15, 84, 112, 0.5)',
+  },
+  bentoTileLabel: {
+    fontSize: 9.5,
     fontWeight: '800',
+    color: '#8FB7C7',
+    letterSpacing: 0.5,
     marginBottom: 2,
   },
-  moduleDesc: {
-    fontSize: 11.5,
-    lineHeight: 16,
+  bentoTileValue: {
+    fontSize: 14,
+    fontWeight: '900',
+    marginBottom: 1,
+  },
+  bentoTileSub: {
+    fontSize: 10,
     fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.55)',
   },
 
-  // ── Section headers ──────────────────────────────────────────────────────
-  sectionContainer: { marginBottom: 22 },
-  sectionHeader: {
+  // ── Action Strip ────────────────────────────────────────────────────────
+  actionStripContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    marginBottom: 14,
+  },
+  actionStripPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  actionStripText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  // ── Section Wrappers ────────────────────────────────────────────────────
+  sectionWrap: {
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 4,
   },
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', letterSpacing: -0.2 },
-  countBadge: {
+  titleWithBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionHeading: {
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  headingCountBadge: {
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 10,
   },
-  countBadgeText: { fontSize: 11, fontWeight: '800' },
-  viewAllText: { fontSize: 13, fontWeight: '700' },
-
-  // ── Empty Priority Customer Card ─────────────────────────────────────────
-  emptyCustomerCard: {
-    padding: 20,
-    borderRadius: 18,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  emptyCustomerTitle: {
-    fontSize: 14.5,
+  headingCountText: {
+    fontSize: 11,
     fontWeight: '800',
-    marginBottom: 4,
-    textAlign: 'center',
   },
-  emptyCustomerDesc: {
-    fontSize: 12.5,
-    textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 14,
-  },
-  viewCustomersBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  viewCustomersBtnText: {
+  viewAllLink: {
     fontSize: 12.5,
     fontWeight: '700',
   },
-
-  // ── Copilot Floating Bar ─────────────────────────────────────────────────
-  floatingBarContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingBottom: 20,
-    borderTopWidth: 1,
-  },
-  copilotBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 28,
-    borderWidth: 1.5,
-  },
-  copilotBarLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
-  },
-  copilotIconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  copilotBarText: {
-    fontSize: 13,
+  sectionSubheading: {
+    fontSize: 12.5,
     fontWeight: '500',
-    flex: 1,
+    marginBottom: 12,
   },
-  copilotArrow: {
-    width: 32,
-    height: 32,
+
+  // ── Follow-Up Queue Filter Tabs ─────────────────────────────────────────
+  filterTabsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingBottom: 12,
+  },
+  filterTabPill: {
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  filterTabText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  // ── Empty Follow-Up Box ─────────────────────────────────────────────────
+  emptyFollowUpBox: {
     borderRadius: 16,
+    borderWidth: 1,
+    padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  emptyFollowUpTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  emptyFollowUpDesc: {
+    fontSize: 12.5,
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 16,
+  },
+
+  // ── Floating Copilot FAB ────────────────────────────────────────────────
+  floatingCopilotFab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    borderRadius: 28,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  fabGradient: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  fabPulseDot: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
   },
 });

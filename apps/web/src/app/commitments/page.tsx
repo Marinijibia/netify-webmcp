@@ -23,11 +23,15 @@ import {
   TrendingUp,
   User
 } from 'lucide-react';
+import { useTheme } from '@/lib/theme/theme-context';
+import { useLanguage } from '@/lib/i18n';
 
 type CommitmentTab = 'ALL' | 'TODAY' | 'MISSED' | 'UPCOMING' | 'FULFILLED';
 
 export default function CommitmentsPage() {
   const { organization } = useAuth();
+  const { tokens, isLight } = useTheme();
+  const { t } = useLanguage();
   const [commitments, setCommitments] = useState<PaymentCommitmentItem[]>([]);
   const [activeTab, setActiveTab] = useState<CommitmentTab>('ALL');
   const [isLoading, setIsLoading] = useState(true);
@@ -75,9 +79,9 @@ export default function CommitmentsPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Clock size={24} color="#00A581" />
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#FFFFFF' }}>Payment Commitments</h2>
+            <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>{t('commitments.title')}</h2>
           </div>
-          <p style={{ color: '#8FB7C7', fontSize: '13px', marginTop: '4px' }}>
+          <p style={{ color: tokens.textSecondary, fontSize: '13px', marginTop: '4px' }}>
             Track promised payment dates negotiated via WhatsApp, phone calls, and customer agreements.
           </p>
         </div>
@@ -89,45 +93,51 @@ export default function CommitmentsPage() {
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            backgroundColor: '#003051',
-            border: '1px solid #0F5470',
-            color: '#8FB7C7',
+            backgroundColor: isLight ? '#FFFFFF' : '#003051',
+            border: `1px solid ${tokens.surfaceBorder}`,
+            color: tokens.textSecondary,
             padding: '10px 14px',
             borderRadius: '8px',
             fontSize: '13px',
             fontWeight: '500',
+            cursor: 'pointer',
+            boxShadow: isLight ? tokens.shadowCard : 'none',
           }}
         >
           <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
-          <span>Refresh</span>
+          <span>{t('common.refresh')}</span>
         </button>
       </div>
 
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
         <div style={{
-          backgroundColor: '#003051',
+          backgroundColor: tokens.surface,
           padding: '18px 20px',
-          borderRadius: '10px',
-          border: '1px solid #0F5470',
+          borderRadius: '12px',
+          border: `1px solid ${tokens.surfaceBorder}`,
+          boxShadow: isLight ? tokens.shadowCard : 'none',
         }}>
-          <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#8FB7C7', textTransform: 'uppercase' }}>
-            Total Promised Amount
+          <span style={{ fontSize: '11px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase' }}>
+            {t('commitments.promisedAmount')}
           </span>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#FFFFFF', marginTop: '6px' }}>
+          <div style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>
             {formatCurrency(totalAmount, currency)}
           </div>
         </div>
 
         <div style={{
-          backgroundColor: '#003051',
+          backgroundColor: tokens.surface,
           padding: '18px 20px',
-          borderRadius: '10px',
-          border: '1px solid rgba(239, 68, 68, 0.4)',
-          background: 'linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, rgba(0, 48, 81, 1) 100%)',
+          borderRadius: '12px',
+          border: `1px solid ${isLight ? '#FCA5A5' : 'rgba(239, 68, 68, 0.4)'}`,
+          background: isLight 
+            ? '#FEF2F2' 
+            : 'linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, rgba(0, 48, 81, 1) 100%)',
+          boxShadow: isLight ? tokens.shadowCard : 'none',
         }}>
-          <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#FCA5A5', textTransform: 'uppercase' }}>
-            Missed Deadlines
+          <span style={{ fontSize: '11px', fontWeight: 'bold', color: isLight ? '#DC2626' : '#FCA5A5', textTransform: 'uppercase' }}>
+            {t('commitments.brokenTitle')}
           </span>
           <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#EF4444', marginTop: '6px' }}>
             {missedCount} Broken Promises
@@ -135,49 +145,65 @@ export default function CommitmentsPage() {
         </div>
 
         <div style={{
-          backgroundColor: '#003051',
+          backgroundColor: tokens.surface,
           padding: '18px 20px',
-          borderRadius: '10px',
-          border: '1px solid #0F5470',
+          borderRadius: '12px',
+          border: `1px solid ${tokens.surfaceBorder}`,
+          boxShadow: isLight ? tokens.shadowCard : 'none',
         }}>
-          <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#8FB7C7', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: '11px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase' }}>
             Active Commitments In View
           </span>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#FFFFFF', marginTop: '6px' }}>
+          <div style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>
             {commitments.length} Records
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px' }}>
-        {(['ALL', 'TODAY', 'MISSED', 'UPCOMING', 'FULFILLED'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '6px',
-              fontSize: '12.5px',
-              fontWeight: '600',
-              backgroundColor: activeTab === tab ? '#00A581' : '#003051',
-              color: activeTab === tab ? '#FFFFFF' : '#8FB7C7',
-              border: '1px solid #0F5470',
-            }}
-          >
-            {tab}
-          </button>
-        ))}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        {(['ALL', 'TODAY', 'MISSED', 'UPCOMING', 'FULFILLED'] as const).map((tab) => {
+          const tabLabel =
+            tab === 'ALL'
+              ? t('common.all')
+              : tab === 'TODAY'
+              ? t('common.today')
+              : tab === 'MISSED'
+              ? t('commitments.brokenTitle')
+              : tab === 'FULFILLED'
+              ? t('commitments.fulfilledTitle')
+              : tab;
+
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '6px',
+                fontSize: '12.5px',
+                fontWeight: '600',
+                backgroundColor: activeTab === tab ? '#00A581' : (isLight ? '#FFFFFF' : '#003051'),
+                color: activeTab === tab ? '#FFFFFF' : tokens.textSecondary,
+                border: `1px solid ${activeTab === tab ? '#00A581' : tokens.surfaceBorder}`,
+                cursor: 'pointer',
+                boxShadow: isLight && activeTab !== tab ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
+              }}
+            >
+              {tabLabel}
+            </button>
+          );
+        })}
       </div>
 
       {/* Error Banner */}
       {error && (
         <div style={{
-          backgroundColor: 'rgba(239, 68, 68, 0.15)',
+          backgroundColor: isLight ? '#FEE2E2' : 'rgba(239, 68, 68, 0.15)',
           border: '1px solid #EF4444',
           borderRadius: '8px',
           padding: '12px 16px',
-          color: '#FCA5A5',
+          color: isLight ? '#B91C1C' : '#FCA5A5',
           fontSize: '13px',
         }}>
           {error}
@@ -186,27 +212,28 @@ export default function CommitmentsPage() {
 
       {/* Commitments List */}
       <div style={{
-        backgroundColor: '#003051',
+        backgroundColor: tokens.surface,
         borderRadius: '12px',
-        border: '1px solid #0F5470',
+        border: `1px solid ${tokens.surfaceBorder}`,
         overflow: 'hidden',
+        boxShadow: isLight ? tokens.shadowCard : 'none',
       }}>
         {isLoading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
-            <Loader2 size={32} className="animate-spin text-teal-400" />
+            <Loader2 size={32} className="animate-spin text-teal-500" />
           </div>
         ) : commitments.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#8FB7C7' }}>
-            <Clock size={36} color="#5F94A9" style={{ margin: '0 auto 12px' }} />
-            <p style={{ fontSize: '15px', fontWeight: '600', color: '#FFFFFF' }}>No payment commitments found</p>
-            <p style={{ fontSize: '13px', color: '#8FB7C7', marginTop: '4px' }}>
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: tokens.textSecondary }}>
+            <Clock size={36} color={tokens.textMuted} style={{ margin: '0 auto 12px' }} />
+            <p style={{ fontSize: '15px', fontWeight: '600', color: tokens.textPrimary }}>No payment commitments found</p>
+            <p style={{ fontSize: '13px', color: tokens.textSecondary, marginTop: '4px' }}>
               When customers promise to pay by a specific date, commitments appear here.
             </p>
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
             <thead>
-              <tr style={{ backgroundColor: '#001D31', borderBottom: '1px solid #0F5470', color: '#8FB7C7', fontSize: '12px' }}>
+              <tr style={{ backgroundColor: isLight ? '#F8FAFC' : '#001D31', borderBottom: `1px solid ${tokens.surfaceBorder}`, color: tokens.textMuted, fontSize: '12px' }}>
                 <th style={{ padding: '14px 20px' }}>CUSTOMER</th>
                 <th style={{ padding: '14px 20px' }}>PROMISED DATE</th>
                 <th style={{ padding: '14px 20px' }}>STATUS</th>
@@ -220,23 +247,23 @@ export default function CommitmentsPage() {
                 const isMissed = com.status === 'MISSED';
 
                 return (
-                  <tr key={com.id} style={{ borderBottom: '1px solid #0F5470' }}>
+                  <tr key={com.id} style={{ borderBottom: `1px solid ${tokens.surfaceBorder}` }}>
                     <td style={{ padding: '16px 20px' }}>
                       {com.customer ? (
-                        <Link href={`/customers/${com.customer.id}`} style={{ fontWeight: '600', color: '#FFFFFF' }}>
+                        <Link href={`/customers/${com.customer.id}`} style={{ fontWeight: '600', color: tokens.textPrimary, textDecoration: 'none' }}>
                           {com.customer.name}
                         </Link>
                       ) : (
-                        <span style={{ color: '#FFFFFF', fontWeight: '600' }}>Customer #{com.customerId.slice(0, 8)}</span>
+                        <span style={{ color: tokens.textPrimary, fontWeight: '600' }}>Customer #{com.customerId.slice(0, 8)}</span>
                       )}
                       {com.receivable?.reference && (
-                        <p style={{ fontSize: '11px', color: '#8FB7C7', marginTop: '2px' }}>
+                        <p style={{ fontSize: '11px', color: tokens.textMuted, marginTop: '2px' }}>
                           Ref: {com.receivable.reference}
                         </p>
                       )}
                     </td>
 
-                    <td style={{ padding: '16px 20px', color: '#DCEAF0' }}>
+                    <td style={{ padding: '16px 20px', color: tokens.textSecondary }}>
                       <div>{formatDate(com.promisedFor)}</div>
                       {isMissed && (
                         <span style={{ color: '#EF4444', fontSize: '11px', fontWeight: 'bold' }}>
@@ -247,18 +274,18 @@ export default function CommitmentsPage() {
 
                     <td style={{ padding: '16px 20px' }}>
                       <span style={{
-                        backgroundColor: isMissed ? 'rgba(239, 68, 68, 0.15)' : com.status === 'FULFILLED' ? 'rgba(0, 165, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                        color: isMissed ? '#FCA5A5' : com.status === 'FULFILLED' ? '#3AD0A9' : '#FCD34D',
-                        padding: '2px 8px',
+                        backgroundColor: isMissed ? (isLight ? '#FEE2E2' : 'rgba(239, 68, 68, 0.15)') : com.status === 'FULFILLED' ? tokens.accentSoft : (isLight ? '#FEF3C7' : 'rgba(245, 158, 11, 0.15)'),
+                        color: isMissed ? (isLight ? '#B91C1C' : '#FCA5A5') : com.status === 'FULFILLED' ? '#00A581' : (isLight ? '#B45309' : '#FCD34D'),
+                        padding: '3px 8px',
                         borderRadius: '4px',
                         fontSize: '11px',
-                        fontWeight: '600',
+                        fontWeight: '700',
                       }}>
                         {com.status}
                       </span>
                     </td>
 
-                    <td style={{ padding: '16px 20px', color: '#8FB7C7', fontSize: '12px', maxWidth: '240px' }}>
+                    <td style={{ padding: '16px 20px', color: tokens.textSecondary, fontSize: '12px', maxWidth: '240px' }}>
                       {com.notes || '—'}
                     </td>
 
@@ -273,13 +300,14 @@ export default function CommitmentsPage() {
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '4px',
-                          backgroundColor: '#001D31',
-                          border: '1px solid #0F5470',
+                          backgroundColor: tokens.accentSoft,
+                          border: `1px solid ${tokens.accentBorder}`,
                           color: '#00A581',
                           padding: '6px 12px',
                           borderRadius: '6px',
                           fontSize: '12px',
-                          fontWeight: '600',
+                          fontWeight: '700',
+                          textDecoration: 'none',
                         }}
                       >
                         <MessageSquareQuote size={13} />

@@ -19,8 +19,12 @@ import {
   Sparkles,
   Inbox
 } from 'lucide-react';
+import { useTheme } from '@/lib/theme/theme-context';
+import { useLanguage } from '@/lib/i18n';
 
 export default function NotificationsPage() {
+  const { tokens, isLight } = useTheme();
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -70,34 +74,74 @@ export default function NotificationsPage() {
     }
   };
 
+  const [isScanning, setIsScanning] = useState(false);
+
+  const handleScanSignals = async () => {
+    setIsScanning(true);
+    try {
+      await notificationApi.scanSignals();
+      await loadNotifications();
+    } catch (err: any) {
+      console.warn('Failed to scan signals:', err);
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '840px', margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Bell size={24} color="#00A581" />
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#FFFFFF' }}>Notifications & Alerts</h2>
+            <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>{t('notifications.title')}</h2>
           </div>
-          <p style={{ color: '#8FB7C7', fontSize: '13px', marginTop: '4px' }}>
+          <p style={{ color: tokens.textSecondary, fontSize: '13px', margin: '4px 0 0' }}>
             Real-time collection signals, broken promise alerts, and debtor risk escalations.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <button
+            type="button"
+            onClick={handleScanSignals}
+            disabled={isScanning || isLoading}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: tokens.accentSoft,
+              border: `1px solid ${tokens.accentBorder}`,
+              color: '#00A581',
+              padding: '8px 14px',
+              borderRadius: '6px',
+              fontSize: '12.5px',
+              fontWeight: '700',
+              cursor: isScanning || isLoading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Sparkles size={14} className={isScanning ? 'animate-spin' : ''} />
+            <span>{isScanning ? 'Scanning Signals...' : 'Scan Business Signals'}</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => loadNotifications()}
             disabled={isLoading}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              backgroundColor: '#003051',
-              border: '1px solid #0F5470',
-              color: '#8FB7C7',
+              backgroundColor: isLight ? '#FFFFFF' : '#003051',
+              border: `1px solid ${tokens.surfaceBorder}`,
+              color: tokens.textSecondary,
               padding: '8px 12px',
               borderRadius: '6px',
               fontSize: '12.5px',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              boxShadow: isLight ? tokens.shadowCard : 'none',
             }}
           >
             <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
@@ -106,6 +150,7 @@ export default function NotificationsPage() {
 
           {unreadCount > 0 && (
             <button
+              type="button"
               onClick={handleMarkAllAsRead}
               style={{
                 display: 'flex',
@@ -117,10 +162,13 @@ export default function NotificationsPage() {
                 borderRadius: '6px',
                 fontSize: '12.5px',
                 fontWeight: '600',
+                cursor: 'pointer',
+                border: 'none',
+                boxShadow: '0 2px 8px rgba(0, 165, 129, 0.3)',
               }}
             >
               <Check size={14} />
-              <span>Mark All Read ({unreadCount})</span>
+              <span>{t('notifications.markAllRead')} ({unreadCount})</span>
             </button>
           )}
         </div>
@@ -135,12 +183,14 @@ export default function NotificationsPage() {
             borderRadius: '6px',
             fontSize: '12.5px',
             fontWeight: '600',
-            backgroundColor: !unreadOnly ? '#00A581' : '#003051',
-            color: !unreadOnly ? '#FFFFFF' : '#8FB7C7',
-            border: '1px solid #0F5470',
+            backgroundColor: !unreadOnly ? '#00A581' : (isLight ? '#FFFFFF' : '#003051'),
+            color: !unreadOnly ? '#FFFFFF' : tokens.textSecondary,
+            border: `1px solid ${!unreadOnly ? '#00A581' : tokens.surfaceBorder}`,
+            cursor: 'pointer',
+            boxShadow: isLight && unreadOnly ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
           }}
         >
-          All Notifications
+          {t('common.all')}
         </button>
 
         <button
@@ -150,15 +200,17 @@ export default function NotificationsPage() {
             borderRadius: '6px',
             fontSize: '12.5px',
             fontWeight: '600',
-            backgroundColor: unreadOnly ? '#00A581' : '#003051',
-            color: unreadOnly ? '#FFFFFF' : '#8FB7C7',
-            border: '1px solid #0F5470',
+            backgroundColor: unreadOnly ? '#00A581' : (isLight ? '#FFFFFF' : '#003051'),
+            color: unreadOnly ? '#FFFFFF' : tokens.textSecondary,
+            border: `1px solid ${unreadOnly ? '#00A581' : tokens.surfaceBorder}`,
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
+            cursor: 'pointer',
+            boxShadow: isLight && !unreadOnly ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
           }}
         >
-          <span>Unread Only</span>
+          <span>{t('common.pending')}</span>
           {unreadCount > 0 && (
             <span style={{
               backgroundColor: '#EF4444',
@@ -166,6 +218,7 @@ export default function NotificationsPage() {
               borderRadius: '10px',
               padding: '1px 6px',
               fontSize: '11px',
+              fontWeight: 'bold',
             }}>
               {unreadCount}
             </span>
@@ -176,11 +229,11 @@ export default function NotificationsPage() {
       {/* Error Alert */}
       {error && (
         <div style={{
-          backgroundColor: 'rgba(239, 68, 68, 0.15)',
+          backgroundColor: isLight ? '#FEE2E2' : 'rgba(239, 68, 68, 0.15)',
           border: '1px solid #EF4444',
           borderRadius: '8px',
           padding: '12px 16px',
-          color: '#FCA5A5',
+          color: isLight ? '#B91C1C' : '#FCA5A5',
           fontSize: '13px',
         }}>
           {error}
@@ -191,20 +244,21 @@ export default function NotificationsPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {isLoading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
-            <Loader2 size={32} className="animate-spin text-teal-400" />
+            <Loader2 size={32} className="animate-spin text-teal-500" />
           </div>
         ) : notifications.length === 0 ? (
           <div style={{
-            backgroundColor: '#003051',
+            backgroundColor: tokens.surface,
             borderRadius: '12px',
-            border: '1px solid #0F5470',
+            border: `1px solid ${tokens.surfaceBorder}`,
             padding: '60px 20px',
             textAlign: 'center',
-            color: '#8FB7C7',
+            color: tokens.textSecondary,
+            boxShadow: isLight ? tokens.shadowCard : 'none',
           }}>
-            <Inbox size={36} color="#5F94A9" style={{ margin: '0 auto 12px' }} />
-            <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: '#FFFFFF' }}>No Notifications</h3>
-            <p style={{ fontSize: '13px', color: '#8FB7C7', marginTop: '4px' }}>
+            <Inbox size={36} color={tokens.textMuted} style={{ margin: '0 auto 12px' }} />
+            <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: tokens.textPrimary }}>No Notifications</h3>
+            <p style={{ fontSize: '13px', color: tokens.textSecondary, marginTop: '4px' }}>
               {unreadOnly ? 'You have caught up with all alerts.' : 'No alerts have been generated yet.'}
             </p>
           </div>
@@ -217,14 +271,15 @@ export default function NotificationsPage() {
               <div
                 key={n.id}
                 style={{
-                  backgroundColor: isUnread ? '#003051' : '#001D31',
+                  backgroundColor: isUnread ? tokens.surface : (isLight ? '#F8FAFC' : '#001D31'),
                   borderRadius: '10px',
-                  border: `1px solid ${isUnread ? '#00A581' : '#0F5470'}`,
+                  border: `1px solid ${isUnread ? '#00A581' : tokens.surfaceBorder}`,
                   padding: '18px 20px',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'flex-start',
                   gap: '16px',
+                  boxShadow: isLight ? (isUnread ? '0 2px 8px rgba(0, 165, 129, 0.12)' : tokens.shadowCard) : 'none',
                 }}
               >
                 <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
@@ -232,7 +287,7 @@ export default function NotificationsPage() {
                     width: '36px',
                     height: '36px',
                     borderRadius: '8px',
-                    backgroundColor: isHigh ? 'rgba(239, 68, 68, 0.2)' : 'rgba(0, 165, 129, 0.2)',
+                    backgroundColor: isHigh ? (isLight ? '#FEE2E2' : 'rgba(239, 68, 68, 0.2)') : tokens.accentSoft,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -244,7 +299,7 @@ export default function NotificationsPage() {
 
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#FFFFFF' }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
                         {n.title}
                       </h4>
                       {isUnread && (
@@ -261,11 +316,11 @@ export default function NotificationsPage() {
                       )}
                     </div>
 
-                    <p style={{ color: '#DCEAF0', fontSize: '13px', marginTop: '4px', lineHeight: '1.5' }}>
+                    <p style={{ color: tokens.textSecondary, fontSize: '13px', marginTop: '4px', lineHeight: '1.5', margin: '4px 0 0' }}>
                       {n.body}
                     </p>
 
-                    <div style={{ display: 'flex', gap: '12px', marginTop: '8px', fontSize: '11px', color: '#8FB7C7' }}>
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '8px', fontSize: '11px', color: tokens.textMuted }}>
                       <span>{formatTimeAgo(n.createdAt)}</span>
                       {n.signalType && <span>• Signal: {n.signalType}</span>}
                     </div>
@@ -277,9 +332,12 @@ export default function NotificationsPage() {
                     <button
                       onClick={() => handleMarkAsRead(n.id)}
                       style={{
-                        color: '#3AD0A9',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        color: '#00A581',
                         fontSize: '12px',
-                        fontWeight: '600',
+                        fontWeight: '700',
+                        cursor: 'pointer',
                       }}
                     >
                       Mark Read
@@ -293,6 +351,7 @@ export default function NotificationsPage() {
                         fontSize: '12px',
                         color: '#00A581',
                         fontWeight: '600',
+                        textDecoration: 'none',
                       }}
                     >
                       View Customer →

@@ -3,8 +3,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, HelpCircle } from 'lucide-react';
+import { useTheme } from '@/lib/theme/theme-context';
 
 export default function NotFound() {
+  const { tokens, isLight } = useTheme();
+
   return (
     <div style={{
       display: 'flex',
@@ -16,16 +19,16 @@ export default function NotFound() {
       gap: '16px',
     }}>
       <div style={{
-        backgroundColor: '#003051',
+        backgroundColor: tokens.accentSoft,
         padding: '16px',
         borderRadius: '50%',
         color: '#00A581',
-        border: '1px solid #0F5470',
+        border: `1px solid ${tokens.accentBorder}`,
       }}>
         <HelpCircle size={36} />
       </div>
-      <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#FFFFFF' }}>Page Not Found</h2>
-      <p style={{ color: '#8FB7C7', fontSize: '14px', maxWidth: '400px' }}>
+      <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary }}>Page Not Found</h2>
+      <p style={{ color: tokens.textSecondary, fontSize: '14px', maxWidth: '400px' }}>
         The page or workspace view you are looking for does not exist or has been moved.
       </p>
       <Link
@@ -41,10 +44,12 @@ export default function NotFound() {
           fontSize: '13px',
           fontWeight: '600',
           marginTop: '8px',
+          textDecoration: 'none',
+          boxShadow: '0 4px 14px rgba(0, 165, 129, 0.35)',
         }}
       >
         <ArrowLeft size={16} />
-        <span>Return to Command Center</span>
+        <span>Return to Home</span>
       </Link>
     </div>
   );

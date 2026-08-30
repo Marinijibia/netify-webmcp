@@ -67,12 +67,20 @@ export const aiApi = {
   },
 
   async explainCustomer(customerId: string): Promise<CustomerExplanationData> {
-    const res = await apiClient.post<ApiResponse<CustomerExplanationData>>(`/ai/customers/${customerId}/explain`, {});
+    const res = await apiClient.post<ApiResponse<CustomerExplanationData>>(
+      `/ai/customers/${customerId}/explain`,
+      {},
+      { timeoutMs: 60000 }
+    );
     return res.data?.data || (res.data as unknown as CustomerExplanationData);
   },
 
   async recommendAction(customerId: string): Promise<CollectionRecommendationData> {
-    const res = await apiClient.post<ApiResponse<CollectionRecommendationData>>(`/ai/customers/${customerId}/recommend`, {});
+    const res = await apiClient.post<ApiResponse<CollectionRecommendationData>>(
+      `/ai/customers/${customerId}/recommend`,
+      {},
+      { timeoutMs: 60000 }
+    );
     return res.data?.data || (res.data as unknown as CollectionRecommendationData);
   },
 
@@ -85,7 +93,11 @@ export const aiApi = {
       receivableId?: string;
     }
   ): Promise<CollectionMessageDraftData> {
-    const res = await apiClient.post<ApiResponse<CollectionMessageDraftData>>(`/ai/customers/${customerId}/draft-message`, input);
+    const res = await apiClient.post<ApiResponse<CollectionMessageDraftData>>(
+      `/ai/customers/${customerId}/draft-message`,
+      input,
+      { timeoutMs: 60000 }
+    );
     return res.data?.data || (res.data as unknown as CollectionMessageDraftData);
   },
 };

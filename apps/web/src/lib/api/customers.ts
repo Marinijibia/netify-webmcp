@@ -29,8 +29,11 @@ export interface CustomerItem {
   contacts?: CustomerContactItem[];
   totalOutstanding?: number;
   totalOverdue?: number;
+  oldestOverdueDays?: number;
+  openReceivablesCount?: number;
+  missedPromisesCount?: number;
   riskScore?: number;
-  riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | 'NORMAL';
   createdAt: string;
   updatedAt: string;
 }

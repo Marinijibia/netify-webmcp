@@ -11,14 +11,16 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Code, 
-  Clock,
-  Sparkles,
-  X,
-  Loader2
+  Clock, 
+  Sparkles, 
+  X, 
+  Loader2 
 } from 'lucide-react';
+import { useTheme } from '@/lib/theme/theme-context';
 
 export function WebMCPInspector() {
   const { isSupported, registeredTools, executionLogs, executeTool } = useWebMCP();
+  const { tokens, isLight } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'TOOLS' | 'LOGS'>('TOOLS');
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
@@ -71,14 +73,16 @@ export function WebMCPInspector() {
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            backgroundColor: '#003051',
-            color: '#FFFFFF',
+            backgroundColor: isLight ? '#FFFFFF' : '#003051',
+            color: tokens.textPrimary,
             border: '1px solid #00A581',
             padding: '8px 16px',
             borderRadius: '24px',
             fontSize: '12px',
             fontWeight: 'bold',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
+            boxShadow: isLight ? tokens.shadowCard : '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
           }}
         >
           <Sparkles size={14} color="#00A581" />
@@ -95,32 +99,33 @@ export function WebMCPInspector() {
           right: '24px',
           width: '760px',
           maxHeight: '560px',
-          backgroundColor: '#001D31',
-          border: '1px solid #0F5470',
+          backgroundColor: tokens.surface,
+          border: `1px solid ${tokens.surfaceBorder}`,
           borderRadius: '16px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+          boxShadow: isLight ? tokens.shadowCard : '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
           zIndex: 999,
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
+          transition: 'all 0.2s ease',
         }}>
           {/* Drawer Header */}
           <div style={{
             padding: '16px 20px',
-            backgroundColor: '#003051',
-            borderBottom: '1px solid #0F5470',
+            backgroundColor: isLight ? '#F8FAFC' : '#003051',
+            borderBottom: `1px solid ${tokens.surfaceBorder}`,
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Terminal size={18} color="#00A581" />
-              <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#FFFFFF' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: tokens.textPrimary }}>
                 WebMCP Judge Inspector & Tool Simulator
               </h3>
               <span style={{
-                backgroundColor: isSupported ? 'rgba(0, 165, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                color: isSupported ? '#3AD0A9' : '#FCD34D',
+                backgroundColor: isSupported ? tokens.accentSoft : (isLight ? '#FEF3C7' : 'rgba(245, 158, 11, 0.2)'),
+                color: isSupported ? '#00A581' : (isLight ? '#B45309' : '#FCD34D'),
                 fontSize: '11px',
                 padding: '2px 8px',
                 borderRadius: '4px',
@@ -131,7 +136,7 @@ export function WebMCPInspector() {
             </div>
 
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <div style={{ display: 'flex', backgroundColor: '#001D31', borderRadius: '6px', border: '1px solid #0F5470', padding: '2px' }}>
+              <div style={{ display: 'flex', backgroundColor: isLight ? '#FFFFFF' : '#001D31', borderRadius: '6px', border: `1px solid ${tokens.surfaceBorder}`, padding: '2px' }}>
                 <button
                   onClick={() => setActiveTab('TOOLS')}
                   style={{
@@ -140,7 +145,9 @@ export function WebMCPInspector() {
                     fontSize: '11px',
                     fontWeight: '600',
                     backgroundColor: activeTab === 'TOOLS' ? '#00A581' : 'transparent',
-                    color: activeTab === 'TOOLS' ? '#FFFFFF' : '#8FB7C7',
+                    color: activeTab === 'TOOLS' ? '#FFFFFF' : tokens.textSecondary,
+                    border: 'none',
+                    cursor: 'pointer',
                   }}
                 >
                   Tools ({registeredTools.length})
@@ -153,7 +160,9 @@ export function WebMCPInspector() {
                     fontSize: '11px',
                     fontWeight: '600',
                     backgroundColor: activeTab === 'LOGS' ? '#00A581' : 'transparent',
-                    color: activeTab === 'LOGS' ? '#FFFFFF' : '#8FB7C7',
+                    color: activeTab === 'LOGS' ? '#FFFFFF' : tokens.textSecondary,
+                    border: 'none',
+                    cursor: 'pointer',
                   }}
                 >
                   Live Logs ({executionLogs.length})
@@ -163,9 +172,12 @@ export function WebMCPInspector() {
               <button
                 onClick={() => setIsOpen(false)}
                 style={{
-                  color: '#8FB7C7',
+                  color: tokens.textSecondary,
                   padding: '4px',
                   borderRadius: '4px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
                 }}
               >
                 <X size={16} />
@@ -179,9 +191,9 @@ export function WebMCPInspector() {
               <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '16px', height: '400px' }}>
                 {/* Tools List */}
                 <div style={{
-                  backgroundColor: '#003051',
+                  backgroundColor: isLight ? '#F8FAFC' : '#003051',
                   borderRadius: '8px',
-                  border: '1px solid #0F5470',
+                  border: `1px solid ${tokens.surfaceBorder}`,
                   padding: '8px',
                   overflowY: 'auto',
                   display: 'flex',
@@ -198,21 +210,24 @@ export function WebMCPInspector() {
                         borderRadius: '6px',
                         fontSize: '12px',
                         backgroundColor: selectedTool === t.name ? '#00A581' : 'transparent',
-                        color: selectedTool === t.name ? '#FFFFFF' : '#DCEAF0',
+                        color: selectedTool === t.name ? '#FFFFFF' : tokens.textPrimary,
                         fontWeight: selectedTool === t.name ? 'bold' : 'normal',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
                       }}
                     >
                       <div>{t.name}</div>
-                      <span style={{ fontSize: '10px', opacity: 0.8 }}>{t.category}</span>
+                      <span style={{ fontSize: '10px', opacity: 0.8, color: selectedTool === t.name ? '#FFFFFF' : tokens.textMuted }}>{t.category}</span>
                     </button>
                   ))}
                 </div>
 
                 {/* Tool Details & Execution Runner */}
                 <div style={{
-                  backgroundColor: '#003051',
+                  backgroundColor: isLight ? '#F8FAFC' : '#003051',
                   borderRadius: '8px',
-                  border: '1px solid #0F5470',
+                  border: `1px solid ${tokens.surfaceBorder}`,
                   padding: '16px',
                   overflowY: 'auto',
                   display: 'flex',
@@ -223,8 +238,8 @@ export function WebMCPInspector() {
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                          <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#FFFFFF' }}>{selectedTool}</h4>
-                          <p style={{ color: '#8FB7C7', fontSize: '12px', marginTop: '2px' }}>
+                          <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: tokens.textPrimary }}>{selectedTool}</h4>
+                          <p style={{ color: tokens.textSecondary, fontSize: '12px', marginTop: '2px' }}>
                             {registeredTools.find((t: WebMCPToolDefinition) => t.name === selectedTool)?.description}
                           </p>
                         </div>
@@ -242,6 +257,8 @@ export function WebMCPInspector() {
                             borderRadius: '6px',
                             fontSize: '12px',
                             fontWeight: 'bold',
+                            border: 'none',
+                            cursor: isExecuting ? 'not-allowed' : 'pointer',
                             opacity: isExecuting ? 0.7 : 1,
                           }}
                         >
@@ -252,7 +269,7 @@ export function WebMCPInspector() {
 
                       {/* Test Input */}
                       <div style={{ marginTop: '12px' }}>
-                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#8FB7C7', marginBottom: '4px' }}>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: tokens.textMuted, marginBottom: '4px' }}>
                           INPUT JSON PAYLOAD:
                         </label>
                         <textarea
@@ -261,13 +278,14 @@ export function WebMCPInspector() {
                           onChange={(e) => setTestInput(e.target.value)}
                           style={{
                             width: '100%',
-                            backgroundColor: '#001D31',
-                            border: '1px solid #0F5470',
+                            backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                            border: `1px solid ${tokens.surfaceBorder}`,
                             borderRadius: '6px',
-                            color: '#3AD0A9',
+                            color: isLight ? tokens.textPrimary : '#3AD0A9',
                             fontFamily: 'monospace',
                             fontSize: '12px',
                             padding: '8px',
+                            outline: 'none',
                           }}
                         />
                       </div>
@@ -275,15 +293,15 @@ export function WebMCPInspector() {
                       {/* Result */}
                       {testResult && (
                         <div style={{ marginTop: '12px' }}>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#8FB7C7', marginBottom: '4px' }}>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: tokens.textMuted, marginBottom: '4px' }}>
                             LIVE EXECUTION OUTPUT:
                           </label>
                           <pre style={{
-                            backgroundColor: '#001D31',
-                            border: '1px solid #0F5470',
+                            backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                            border: `1px solid ${testResult.success ? '#00A581' : '#EF4444'}`,
                             borderRadius: '6px',
                             padding: '10px',
-                            color: testResult.success ? '#FFFFFF' : '#EF4444',
+                            color: testResult.success ? tokens.textPrimary : '#EF4444',
                             fontSize: '11.5px',
                             maxHeight: '140px',
                             overflowY: 'auto',
@@ -295,7 +313,7 @@ export function WebMCPInspector() {
                       )}
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#8FB7C7', fontSize: '13px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: tokens.textSecondary, fontSize: '13px' }}>
                       Select a WebMCP tool on the left to inspect and test live.
                     </div>
                   )}
@@ -306,7 +324,7 @@ export function WebMCPInspector() {
             {activeTab === 'LOGS' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', height: '400px', overflowY: 'auto' }}>
                 {executionLogs.length === 0 ? (
-                  <p style={{ color: '#8FB7C7', textAlign: 'center', padding: '40px', fontSize: '13px' }}>
+                  <p style={{ color: tokens.textSecondary, textAlign: 'center', padding: '40px', fontSize: '13px' }}>
                     No WebMCP tool calls recorded yet. Use the Tools tab or interact with Copilot to generate live logs.
                   </p>
                 ) : (
@@ -314,22 +332,22 @@ export function WebMCPInspector() {
                     <div
                       key={log.id}
                       style={{
-                        backgroundColor: '#003051',
-                        border: '1px solid #0F5470',
+                        backgroundColor: isLight ? '#F8FAFC' : '#003051',
+                        border: `1px solid ${tokens.surfaceBorder}`,
                         borderRadius: '8px',
                         padding: '10px 14px',
                         fontSize: '12px',
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                        <span style={{ fontWeight: 'bold', color: '#3AD0A9' }}>{log.toolName}</span>
-                        <div style={{ display: 'flex', gap: '8px', color: '#8FB7C7', fontSize: '11px' }}>
+                        <span style={{ fontWeight: 'bold', color: '#00A581' }}>{log.toolName}</span>
+                        <div style={{ display: 'flex', gap: '8px', color: tokens.textMuted, fontSize: '11px' }}>
                           <span>{log.durationMs}ms</span>
                           <span>•</span>
                           <span>{log.timestamp}</span>
                         </div>
                       </div>
-                      <pre style={{ color: '#DCEAF0', fontSize: '11px', maxHeight: '80px', overflowY: 'auto', backgroundColor: '#001D31', padding: '6px', borderRadius: '4px' }}>
+                      <pre style={{ color: tokens.textSecondary, fontSize: '11px', maxHeight: '80px', overflowY: 'auto', backgroundColor: isLight ? '#FFFFFF' : '#001D31', border: `1px solid ${tokens.surfaceBorder}`, padding: '6px', borderRadius: '4px' }}>
                         {JSON.stringify(log.output || log.error, null, 2)}
                       </pre>
                     </div>

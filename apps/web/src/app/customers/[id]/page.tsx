@@ -37,11 +37,15 @@ import {
   Loader2,
   AlertCircle
 } from 'lucide-react';
+import { useTheme } from '@/lib/theme/theme-context';
+import { useLanguage } from '@/lib/i18n';
 
 export default function CustomerDetailPage() {
   const params = useParams();
   const customerId = params?.id as string;
   const { organization } = useAuth();
+  const { tokens, isLight } = useTheme();
+  const { t } = useLanguage();
 
   const [customer, setCustomer] = useState<CustomerItem | null>(null);
   const [receivables, setReceivables] = useState<ReceivableItem[]>([]);
@@ -97,26 +101,23 @@ export default function CustomerDetailPage() {
   if (isLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-        <Loader2 size={36} className="animate-spin text-teal-400" />
+        <Loader2 size={36} className="animate-spin text-teal-500" />
       </div>
     );
   }
 
   if (error || !customer) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <Link href="/customers" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#00A581', fontSize: '13px', fontWeight: '600' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <Link href="/customers" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#00A581', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}>
           <ArrowLeft size={16} />
-          <span>Back to Customers</span>
+          <span>Back to Customer Directory</span>
         </Link>
-        <div style={{
-          backgroundColor: 'rgba(239, 68, 68, 0.15)',
-          border: '1px solid #EF4444',
-          borderRadius: '10px',
-          padding: '24px',
-          color: '#FCA5A5',
-        }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 'bold' }}>Customer Not Found</h3>
+        <div style={{ backgroundColor: isLight ? '#FEE2E2' : 'rgba(239, 68, 68, 0.15)', border: '1px solid #EF4444', borderRadius: '8px', padding: '20px', color: isLight ? '#B91C1C' : '#FCA5A5' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <AlertCircle size={20} color="#EF4444" />
+            <span style={{ fontWeight: 'bold' }}>Customer record could not be loaded</span>
+          </div>
           <p style={{ fontSize: '13px', marginTop: '6px' }}>{error || 'Unable to retrieve record from live API.'}</p>
         </div>
       </div>
@@ -130,31 +131,35 @@ export default function CustomerDetailPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Back Link */}
-      <Link href="/customers" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#00A581', fontSize: '13px', fontWeight: '600' }}>
+      <Link href="/customers" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#00A581', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}>
         <ArrowLeft size={16} />
         <span>Back to Customer Directory</span>
       </Link>
 
       {/* Customer Header Profile Card */}
       <div style={{
-        backgroundColor: '#003051',
+        backgroundColor: tokens.surface,
         borderRadius: '12px',
-        border: '1px solid #0F5470',
+        border: `1px solid ${tokens.surfaceBorder}`,
         padding: '24px 28px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
+        flexWrap: 'wrap',
+        gap: '20px',
+        boxShadow: isLight ? tokens.shadowCard : 'none',
       }}>
-        <div style={{ display: 'flex', gap: '20px' }}>
+        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
           <div style={{
             width: '56px',
             height: '56px',
             borderRadius: '14px',
-            backgroundColor: '#00A581',
+            backgroundColor: isLight ? '#ECFDF8' : 'rgba(0, 165, 129, 0.2)',
+            border: `1px solid ${tokens.accentBorder}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#FFFFFF',
+            color: '#00A581',
             fontWeight: 'bold',
             fontSize: '22px',
           }}>
@@ -163,20 +168,21 @@ export default function CustomerDetailPage() {
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#FFFFFF' }}>{customer.name}</h2>
+              <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>{customer.name}</h2>
               <span style={{
-                backgroundColor: customer.status === 'ACTIVE' ? 'rgba(0, 165, 129, 0.15)' : 'rgba(107, 114, 128, 0.15)',
-                color: customer.status === 'ACTIVE' ? '#3AD0A9' : '#9CA3AF',
+                backgroundColor: customer.status === 'ACTIVE' ? tokens.accentSoft : (isLight ? '#F1F5F9' : 'rgba(107, 114, 128, 0.15)'),
+                color: customer.status === 'ACTIVE' ? '#00A581' : tokens.textMuted,
+                border: `1px solid ${customer.status === 'ACTIVE' ? tokens.accentBorder : tokens.surfaceBorder}`,
                 padding: '2px 8px',
                 borderRadius: '4px',
                 fontSize: '11px',
-                fontWeight: '600',
+                fontWeight: '700',
               }}>
                 {customer.status}
               </span>
             </div>
 
-            <div style={{ display: 'flex', gap: '16px', marginTop: '8px', color: '#8FB7C7', fontSize: '12.5px' }}>
+            <div style={{ display: 'flex', gap: '16px', marginTop: '8px', color: tokens.textSecondary, fontSize: '12.5px', flexWrap: 'wrap' }}>
               {customer.phone && (
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Phone size={14} color="#00A581" />
@@ -199,16 +205,16 @@ export default function CustomerDetailPage() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ textAlign: 'right', marginRight: '12px' }}>
-            <span style={{ fontSize: '11px', fontWeight: '600', color: '#8FB7C7', textTransform: 'uppercase' }}>
-              Total Outstanding
+            <span style={{ fontSize: '11px', fontWeight: '700', color: tokens.textMuted, textTransform: 'uppercase' }}>
+              {t('commandCenter.totalOutstanding')}
             </span>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#FFFFFF', marginTop: '2px' }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: totalBalance > 0 ? tokens.textPrimary : '#00A581', marginTop: '2px' }}>
               {formatCurrency(totalBalance, currency)}
             </div>
             {overdueCount > 0 && (
-              <span style={{ fontSize: '11px', color: '#EF4444', fontWeight: '600' }}>
+              <span style={{ fontSize: '11px', color: '#EF4444', fontWeight: '700' }}>
                 {overdueCount} overdue receivables
               </span>
             )}
@@ -226,10 +232,12 @@ export default function CustomerDetailPage() {
               borderRadius: '8px',
               fontSize: '13px',
               fontWeight: '600',
+              textDecoration: 'none',
+              boxShadow: '0 4px 14px rgba(0, 165, 129, 0.35)',
             }}
           >
             <MessageSquareQuote size={16} />
-            <span>Draft Action</span>
+            <span>{t('common.followUp')}</span>
           </Link>
         </div>
       </div>
@@ -237,16 +245,17 @@ export default function CustomerDetailPage() {
       {/* AI Customer Evidence Explanation */}
       {aiExplanation && (
         <div style={{
-          backgroundColor: '#003051',
+          backgroundColor: tokens.surface,
           borderRadius: '12px',
-          border: '1px solid #0F5470',
+          border: `1px solid ${tokens.surfaceBorder}`,
           padding: '20px 24px',
           display: 'flex',
           gap: '16px',
+          boxShadow: isLight ? tokens.shadowCard : 'none',
         }}>
           <div style={{
-            backgroundColor: 'rgba(0, 165, 129, 0.15)',
-            border: '1px solid rgba(0, 165, 129, 0.3)',
+            backgroundColor: tokens.accentSoft,
+            border: `1px solid ${tokens.accentBorder}`,
             padding: '10px',
             borderRadius: '10px',
             color: '#00A581',
@@ -255,14 +264,14 @@ export default function CustomerDetailPage() {
             <Sparkles size={20} />
           </div>
           <div>
-            <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#FFFFFF', marginBottom: '4px' }}>
+            <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: tokens.textPrimary, margin: '0 0 4px' }}>
               AI Evidence Breakdown & Recommended Strategy
             </h4>
-            <p style={{ color: '#DCEAF0', fontSize: '13px', lineHeight: '1.5' }}>
+            <p style={{ color: tokens.textSecondary, fontSize: '13px', lineHeight: '1.5', margin: 0 }}>
               {aiExplanation.summary}
             </p>
             {aiExplanation.recommendation && (
-              <p style={{ color: '#3AD0A9', fontSize: '12.5px', marginTop: '6px', fontWeight: '500' }}>
+              <p style={{ color: '#00A581', fontSize: '12.5px', marginTop: '6px', fontWeight: '600', marginBottom: 0 }}>
                 Recommendation: {aiExplanation.recommendation}
               </p>
             )}
@@ -271,11 +280,11 @@ export default function CustomerDetailPage() {
       )}
 
       {/* Tabs Navigation */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #0F5470', paddingBottom: '8px' }}>
+      <div style={{ display: 'flex', gap: '8px', borderBottom: `1px solid ${tokens.surfaceBorder}`, paddingBottom: '8px', flexWrap: 'wrap' }}>
         {[
-          { key: 'RECEIVABLES', label: `Receivables (${receivables.length})` },
+          { key: 'RECEIVABLES', label: `${t('nav.receivables')} (${receivables.length})` },
           { key: 'PAYMENTS', label: `Payment History (${payments.length})` },
-          { key: 'COMMITMENTS', label: `Commitments (${commitments.length})` },
+          { key: 'COMMITMENTS', label: `${t('nav.commitments')} (${commitments.length})` },
           { key: 'TIMELINE', label: `Activity Feed (${activities.length})` },
         ].map((tab) => (
           <button
@@ -286,9 +295,11 @@ export default function CustomerDetailPage() {
               borderRadius: '6px',
               fontSize: '13px',
               fontWeight: '600',
-              backgroundColor: activeTab === tab.key ? '#00A581' : '#003051',
-              color: activeTab === tab.key ? '#FFFFFF' : '#8FB7C7',
-              border: '1px solid #0F5470',
+              backgroundColor: activeTab === tab.key ? '#00A581' : (isLight ? '#FFFFFF' : '#003051'),
+              color: activeTab === tab.key ? '#FFFFFF' : tokens.textSecondary,
+              border: `1px solid ${activeTab === tab.key ? '#00A581' : tokens.surfaceBorder}`,
+              cursor: 'pointer',
+              boxShadow: isLight && activeTab !== tab.key ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
             }}
           >
             {tab.label}
@@ -298,21 +309,22 @@ export default function CustomerDetailPage() {
 
       {/* Tab Contents */}
       <div style={{
-        backgroundColor: '#003051',
+        backgroundColor: tokens.surface,
         borderRadius: '12px',
-        border: '1px solid #0F5470',
+        border: `1px solid ${tokens.surfaceBorder}`,
         padding: '20px',
+        boxShadow: isLight ? tokens.shadowCard : 'none',
       }}>
         {activeTab === 'RECEIVABLES' && (
           <div>
             {receivables.length === 0 ? (
-              <p style={{ color: '#8FB7C7', fontSize: '13px', textAlign: 'center', padding: '30px' }}>
+              <p style={{ color: tokens.textMuted, fontSize: '13px', textAlign: 'center', padding: '30px' }}>
                 No open or past receivables logged for this customer.
               </p>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ color: '#8FB7C7', borderBottom: '1px solid #0F5470' }}>
+                  <tr style={{ color: tokens.textMuted, borderBottom: `1px solid ${tokens.surfaceBorder}`, backgroundColor: isLight ? '#F8FAFC' : 'transparent' }}>
                     <th style={{ padding: '10px 14px' }}>REFERENCE</th>
                     <th style={{ padding: '10px 14px' }}>DUE DATE</th>
                     <th style={{ padding: '10px 14px' }}>STATUS</th>
@@ -322,12 +334,14 @@ export default function CustomerDetailPage() {
                 </thead>
                 <tbody>
                   {receivables.map((r) => (
-                    <tr key={r.id} style={{ borderBottom: '1px solid #0F5470' }}>
-                      <td style={{ padding: '12px 14px', fontWeight: '600', color: '#FFFFFF' }}>
-                        {r.reference || r.id}
-                        {r.description && <p style={{ fontSize: '11px', color: '#8FB7C7', fontWeight: 'normal' }}>{r.description}</p>}
+                    <tr key={r.id} style={{ borderBottom: `1px solid ${tokens.surfaceBorder}` }}>
+                      <td style={{ padding: '12px 14px', fontWeight: '600', color: tokens.textPrimary }}>
+                        <Link href={`/receivables/${r.id}`} style={{ color: tokens.textPrimary, textDecoration: 'none' }}>
+                          {r.reference || r.id}
+                        </Link>
+                        {r.description && <p style={{ fontSize: '11px', color: tokens.textMuted, margin: '2px 0 0', fontWeight: 'normal' }}>{r.description}</p>}
                       </td>
-                      <td style={{ padding: '12px 14px', color: '#DCEAF0' }}>
+                      <td style={{ padding: '12px 14px', color: tokens.textSecondary }}>
                         {formatDate(r.dueDate)}
                         {r.daysOverdue > 0 && (
                           <span style={{ color: '#EF4444', fontSize: '11px', marginLeft: '6px', fontWeight: 'bold' }}>
@@ -337,20 +351,20 @@ export default function CustomerDetailPage() {
                       </td>
                       <td style={{ padding: '12px 14px' }}>
                         <span style={{
-                          backgroundColor: r.status === 'OVERDUE' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(0, 165, 129, 0.15)',
-                          color: r.status === 'OVERDUE' ? '#FCA5A5' : '#3AD0A9',
+                          backgroundColor: r.status === 'OVERDUE' ? (isLight ? '#FEE2E2' : 'rgba(239, 68, 68, 0.15)') : r.status === 'PAID' ? tokens.accentSoft : (isLight ? '#FEF3C7' : 'rgba(245, 158, 11, 0.15)'),
+                          color: r.status === 'OVERDUE' ? (isLight ? '#B91C1C' : '#FCA5A5') : r.status === 'PAID' ? '#00A581' : (isLight ? '#B45309' : '#FCD34D'),
                           padding: '2px 6px',
                           borderRadius: '4px',
                           fontSize: '11px',
-                          fontWeight: '600',
+                          fontWeight: '700',
                         }}>
                           {r.status}
                         </span>
                       </td>
-                      <td style={{ padding: '12px 14px', textAlign: 'right', color: '#8FB7C7' }}>
+                      <td style={{ padding: '12px 14px', textAlign: 'right', color: tokens.textMuted }}>
                         {formatCurrency(r.originalAmount, r.currency || currency)}
                       </td>
-                      <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 'bold', color: '#FFFFFF' }}>
+                      <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 'bold', color: r.status === 'OVERDUE' ? '#EF4444' : tokens.textPrimary }}>
                         {formatCurrency(r.balance, r.currency || currency)}
                       </td>
                     </tr>
@@ -364,13 +378,13 @@ export default function CustomerDetailPage() {
         {activeTab === 'PAYMENTS' && (
           <div>
             {payments.length === 0 ? (
-              <p style={{ color: '#8FB7C7', fontSize: '13px', textAlign: 'center', padding: '30px' }}>
+              <p style={{ color: tokens.textMuted, fontSize: '13px', textAlign: 'center', padding: '30px' }}>
                 No payments recorded for this customer yet.
               </p>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ color: '#8FB7C7', borderBottom: '1px solid #0F5470' }}>
+                  <tr style={{ color: tokens.textMuted, borderBottom: `1px solid ${tokens.surfaceBorder}`, backgroundColor: isLight ? '#F8FAFC' : 'transparent' }}>
                     <th style={{ padding: '10px 14px' }}>DATE</th>
                     <th style={{ padding: '10px 14px' }}>METHOD</th>
                     <th style={{ padding: '10px 14px' }}>REFERENCE</th>
@@ -379,10 +393,10 @@ export default function CustomerDetailPage() {
                 </thead>
                 <tbody>
                   {payments.map((p) => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid #0F5470' }}>
-                      <td style={{ padding: '12px 14px', color: '#DCEAF0' }}>{formatDate(p.paidAt)}</td>
-                      <td style={{ padding: '12px 14px', color: '#8FB7C7' }}>{p.method}</td>
-                      <td style={{ padding: '12px 14px', color: '#8FB7C7' }}>{p.reference || '—'}</td>
+                    <tr key={p.id} style={{ borderBottom: `1px solid ${tokens.surfaceBorder}` }}>
+                      <td style={{ padding: '12px 14px', color: tokens.textSecondary }}>{formatDate(p.paidAt)}</td>
+                      <td style={{ padding: '12px 14px', color: tokens.textSecondary }}>{p.method}</td>
+                      <td style={{ padding: '12px 14px', color: tokens.textMuted }}>{p.reference || '—'}</td>
                       <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 'bold', color: '#00A581' }}>
                         {formatCurrency(p.amount, p.currency || currency)}
                       </td>
@@ -397,7 +411,7 @@ export default function CustomerDetailPage() {
         {activeTab === 'COMMITMENTS' && (
           <div>
             {commitments.length === 0 ? (
-              <p style={{ color: '#8FB7C7', fontSize: '13px', textAlign: 'center', padding: '30px' }}>
+              <p style={{ color: tokens.textMuted, fontSize: '13px', textAlign: 'center', padding: '30px' }}>
                 No active or past commitments logged.
               </p>
             ) : (
@@ -410,24 +424,24 @@ export default function CustomerDetailPage() {
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       padding: '12px 16px',
-                      backgroundColor: '#001D31',
+                      backgroundColor: isLight ? '#F8FAFC' : '#001D31',
                       borderRadius: '8px',
-                      border: '1px solid #0F5470',
+                      border: `1px solid ${tokens.surfaceBorder}`,
                     }}
                   >
                     <div>
-                      <p style={{ fontSize: '13px', fontWeight: '600', color: '#FFFFFF' }}>
+                      <p style={{ fontSize: '13px', fontWeight: '600', color: tokens.textPrimary, margin: 0 }}>
                         Promised: {formatCurrency(com.amount, com.currency || currency)} for {formatDate(com.promisedFor)}
                       </p>
-                      {com.notes && <p style={{ fontSize: '11.5px', color: '#8FB7C7', marginTop: '2px' }}>{com.notes}</p>}
+                      {com.notes && <p style={{ fontSize: '11.5px', color: tokens.textMuted, margin: '2px 0 0' }}>{com.notes}</p>}
                     </div>
                     <span style={{
-                      backgroundColor: com.status === 'MISSED' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(0, 165, 129, 0.15)',
-                      color: com.status === 'MISSED' ? '#FCA5A5' : '#3AD0A9',
+                      backgroundColor: com.status === 'MISSED' ? (isLight ? '#FEE2E2' : 'rgba(239, 68, 68, 0.15)') : tokens.accentSoft,
+                      color: com.status === 'MISSED' ? (isLight ? '#B91C1C' : '#FCA5A5') : '#00A581',
                       fontSize: '11px',
                       padding: '2px 8px',
                       borderRadius: '4px',
-                      fontWeight: '600',
+                      fontWeight: '700',
                     }}>
                       {com.status}
                     </span>
@@ -441,7 +455,7 @@ export default function CustomerDetailPage() {
         {activeTab === 'TIMELINE' && (
           <div>
             {activities.length === 0 ? (
-              <p style={{ color: '#8FB7C7', fontSize: '13px', textAlign: 'center', padding: '30px' }}>
+              <p style={{ color: tokens.textMuted, fontSize: '13px', textAlign: 'center', padding: '30px' }}>
                 No collection activities recorded in the timeline yet.
               </p>
             ) : (
@@ -451,24 +465,24 @@ export default function CustomerDetailPage() {
                     key={act.id}
                     style={{
                       padding: '14px',
-                      backgroundColor: '#001D31',
+                      backgroundColor: isLight ? '#F8FAFC' : '#001D31',
                       borderRadius: '8px',
-                      border: '1px solid #0F5470',
+                      border: `1px solid ${tokens.surfaceBorder}`,
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#00A581' }}>
                         {act.channel} • {act.type}
                       </span>
-                      <span style={{ fontSize: '11px', color: '#8FB7C7' }}>
+                      <span style={{ fontSize: '11px', color: tokens.textMuted }}>
                         {formatDate(act.occurredAt)}
                       </span>
                     </div>
-                    <p style={{ fontSize: '13px', color: '#DCEAF0', marginTop: '6px' }}>
-                      Outcome: <strong style={{ color: '#FFFFFF' }}>{act.outcome}</strong>
+                    <p style={{ fontSize: '13px', color: tokens.textSecondary, marginTop: '6px', marginBottom: 0 }}>
+                      Outcome: <strong style={{ color: tokens.textPrimary }}>{act.outcome}</strong>
                     </p>
                     {act.notes && (
-                      <p style={{ fontSize: '12px', color: '#8FB7C7', marginTop: '4px' }}>
+                      <p style={{ fontSize: '12px', color: tokens.textMuted, marginTop: '4px', marginBottom: 0 }}>
                         {act.notes}
                       </p>
                     )}

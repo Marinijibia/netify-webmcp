@@ -45,11 +45,11 @@ export const commandCenterApi = {
     language?: SupportedLanguage;
     currency?: string;
   }): Promise<CommandCenterAttentionData> => {
-    const res = await apiClient.get<ApiResponse<CommandCenterAttentionData>>(
+    const res = await apiClient.get<CommandCenterAttentionData>(
       '/command-center/attention',
       { params }
     );
-    return res.data.data;
+    return res.data;
   },
 
   /**
@@ -60,10 +60,10 @@ export const commandCenterApi = {
     currency?: string;
     language?: SupportedLanguage;
   }) => {
-    const res = await apiClient.get<ApiResponse<any>>('/command-center/priorities', {
+    const res = await apiClient.get<any>('/command-center/priorities', {
       params,
     });
-    return res.data.data;
+    return res.data;
   },
 
   /**
@@ -73,12 +73,13 @@ export const commandCenterApi = {
     language?: SupportedLanguage;
     currency?: string;
   }) => {
-    const res = await apiClient.get<ApiResponse<{
+    const res = await apiClient.get<{
       briefing: string;
       facts: CommandCenterAttentionData['facts'];
       inferences: AttentionInference[];
       calculatedAt: string;
-    }>>('/command-center/briefing', { params });
-    return res.data.data;
+    }>('/command-center/briefing', { params });
+    return res.data;
   },
 };
+

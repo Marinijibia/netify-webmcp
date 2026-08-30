@@ -15,9 +15,13 @@ import {
   AlertCircle, 
   Loader2 
 } from 'lucide-react';
+import { useTheme } from '@/lib/theme/theme-context';
+import { useLanguage } from '@/lib/i18n';
 
 export default function CreateCustomerPage() {
   const router = useRouter();
+  const { tokens, isLight } = useTheme();
+  const { t } = useLanguage();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -68,6 +72,7 @@ export default function CreateCustomerPage() {
           color: '#00A581',
           fontSize: '13px',
           fontWeight: '600',
+          textDecoration: 'none',
         }}
       >
         <ArrowLeft size={16} />
@@ -76,24 +81,27 @@ export default function CreateCustomerPage() {
 
       {/* Form Card */}
       <div style={{
-        backgroundColor: '#003051',
+        backgroundColor: tokens.surface,
         borderRadius: '12px',
-        border: '1px solid #0F5470',
+        border: `1px solid ${tokens.surfaceBorder}`,
         padding: '32px',
+        boxShadow: isLight ? tokens.shadowCard : 'none',
       }}>
         <div style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Users size={22} color="#00A581" />
-            <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#FFFFFF' }}>Add New Customer Account</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
+              {t('customers.addCustomerModalTitle')}
+            </h2>
           </div>
-          <p style={{ color: '#8FB7C7', fontSize: '13px', marginTop: '4px' }}>
+          <p style={{ color: tokens.textSecondary, fontSize: '13px', marginTop: '4px' }}>
             Register a debtor or buyer account for credit tracking and business memory intelligence.
           </p>
         </div>
 
         {error && (
           <div style={{
-            backgroundColor: 'rgba(239, 68, 68, 0.15)',
+            backgroundColor: isLight ? '#FEE2E2' : 'rgba(239, 68, 68, 0.15)',
             border: '1px solid #EF4444',
             borderRadius: '8px',
             padding: '12px 14px',
@@ -101,7 +109,7 @@ export default function CreateCustomerPage() {
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
-            color: '#FCA5A5',
+            color: isLight ? '#B91C1C' : '#FCA5A5',
             fontSize: '13px',
           }}>
             <AlertCircle size={16} color="#EF4444" />
@@ -111,7 +119,7 @@ export default function CreateCustomerPage() {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#8FB7C7', marginBottom: '6px', textTransform: 'uppercase' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
               Customer / Business Name *
             </label>
             <input
@@ -123,23 +131,24 @@ export default function CreateCustomerPage() {
               style={{
                 width: '100%',
                 padding: '11px 14px',
-                backgroundColor: '#001D31',
-                border: '1px solid #0F5470',
+                backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                border: `1px solid ${tokens.surfaceBorder}`,
                 borderRadius: '8px',
-                color: '#FFFFFF',
+                color: tokens.textPrimary,
                 fontSize: '14px',
                 outline: 'none',
+                boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
               }}
             />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#8FB7C7', marginBottom: '6px', textTransform: 'uppercase' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
                 Primary Phone Number
               </label>
               <div style={{ position: 'relative' }}>
-                <Phone size={15} color="#8FB7C7" style={{ position: 'absolute', left: '12px', top: '13px' }} />
+                <Phone size={15} color={tokens.textMuted} style={{ position: 'absolute', left: '12px', top: '13px' }} />
                 <input
                   type="text"
                   value={phone}
@@ -148,23 +157,24 @@ export default function CreateCustomerPage() {
                   style={{
                     width: '100%',
                     padding: '10px 12px 10px 36px',
-                    backgroundColor: '#001D31',
-                    border: '1px solid #0F5470',
+                    backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                    border: `1px solid ${tokens.surfaceBorder}`,
                     borderRadius: '8px',
-                    color: '#FFFFFF',
+                    color: tokens.textPrimary,
                     fontSize: '13px',
                     outline: 'none',
+                    boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
                   }}
                 />
               </div>
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#8FB7C7', marginBottom: '6px', textTransform: 'uppercase' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
                 Email Address
               </label>
               <div style={{ position: 'relative' }}>
-                <Mail size={15} color="#8FB7C7" style={{ position: 'absolute', left: '12px', top: '13px' }} />
+                <Mail size={15} color={tokens.textMuted} style={{ position: 'absolute', left: '12px', top: '13px' }} />
                 <input
                   type="email"
                   value={email}
@@ -173,12 +183,13 @@ export default function CreateCustomerPage() {
                   style={{
                     width: '100%',
                     padding: '10px 12px 10px 36px',
-                    backgroundColor: '#001D31',
-                    border: '1px solid #0F5470',
+                    backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                    border: `1px solid ${tokens.surfaceBorder}`,
                     borderRadius: '8px',
-                    color: '#FFFFFF',
+                    color: tokens.textPrimary,
                     fontSize: '13px',
                     outline: 'none',
+                    boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
                   }}
                 />
               </div>
@@ -186,11 +197,11 @@ export default function CreateCustomerPage() {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#8FB7C7', marginBottom: '6px', textTransform: 'uppercase' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
               Physical Address / Market Location
             </label>
             <div style={{ position: 'relative' }}>
-              <MapPin size={15} color="#8FB7C7" style={{ position: 'absolute', left: '12px', top: '13px' }} />
+              <MapPin size={15} color={tokens.textMuted} style={{ position: 'absolute', left: '12px', top: '13px' }} />
               <input
                 type="text"
                 value={address}
@@ -199,19 +210,20 @@ export default function CreateCustomerPage() {
                 style={{
                   width: '100%',
                   padding: '10px 12px 10px 36px',
-                  backgroundColor: '#001D31',
-                  border: '1px solid #0F5470',
+                  backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                  border: `1px solid ${tokens.surfaceBorder}`,
                   borderRadius: '8px',
-                  color: '#FFFFFF',
+                  color: tokens.textPrimary,
                   fontSize: '13px',
                   outline: 'none',
+                  boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
                 }}
               />
             </div>
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#8FB7C7', marginBottom: '6px', textTransform: 'uppercase' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
               Customer Relationship Notes
             </label>
             <textarea
@@ -222,13 +234,14 @@ export default function CreateCustomerPage() {
               style={{
                 width: '100%',
                 padding: '10px 12px',
-                backgroundColor: '#001D31',
-                border: '1px solid #0F5470',
+                backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                border: `1px solid ${tokens.surfaceBorder}`,
                 borderRadius: '8px',
-                color: '#FFFFFF',
+                color: tokens.textPrimary,
                 fontSize: '13px',
                 outline: 'none',
                 resize: 'none',
+                boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
               }}
             />
           </div>
@@ -248,6 +261,9 @@ export default function CreateCustomerPage() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
+              cursor: 'pointer',
+              border: 'none',
+              boxShadow: '0 4px 14px rgba(0, 165, 129, 0.35)',
               opacity: isSubmitting || !name.trim() ? 0.6 : 1,
             }}
           >
@@ -259,7 +275,7 @@ export default function CreateCustomerPage() {
             ) : (
               <>
                 <CheckCircle2 size={16} />
-                <span>Create Customer Account</span>
+                <span>{t('customers.addCustomerSubmit')}</span>
               </>
             )}
           </button>

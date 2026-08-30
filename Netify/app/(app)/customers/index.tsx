@@ -26,12 +26,14 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 import { customersApi, CustomerItem } from '@/services/api/customers';
 import { GRADIENTS, GRADIENT_DIRECTION } from '@/design/tokens/gradients';
+import { useLanguageStore } from '@/store/language-store';
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
 
 export default function CustomersListScreen() {
   const router = useRouter();
   const { tokens, isDark } = useTheme();
+  const { t } = useLanguageStore();
 
   const [customers, setCustomers] = useState<CustomerItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -223,7 +225,7 @@ export default function CustomersListScreen() {
             <ChevronLeftIcon size={18} color="#FFFFFF" />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerTitle}>Customers</Text>
+            <Text style={styles.headerTitle}>{t('customers.title')}</Text>
             <Text style={styles.headerSubtitle}>Client records & accounts</Text>
           </View>
         </View>
@@ -240,7 +242,7 @@ export default function CustomersListScreen() {
             style={styles.addBtn}
           >
             <Feather name="user-plus" size={14} color="#FFFFFF" />
-            <Text style={styles.addBtnText}>Add</Text>
+            <Text style={styles.addBtnText}>{t('commandCenter.addCustomer')}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </LinearGradient>
@@ -250,7 +252,7 @@ export default function CustomersListScreen() {
         <View style={[styles.searchBar, { backgroundColor: tokens.surfaceMuted, borderColor: tokens.border }]}>
           <SearchIcon size={16} color={tokens.textMuted} />
           <TextInput
-            placeholder="Search by name, phone or email..."
+            placeholder={t('customers.searchPlaceholder')}
             placeholderTextColor={tokens.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -267,6 +269,14 @@ export default function CustomersListScreen() {
         <View style={styles.tabsRow}>
           {(['ALL', 'ACTIVE', 'INACTIVE', 'ARCHIVED'] as StatusFilter[]).map((tab) => {
             const isSelected = statusFilter === tab;
+            const tabLabel =
+              tab === 'ALL'
+                ? t('common.all')
+                : tab === 'ACTIVE'
+                ? t('common.active')
+                : tab === 'INACTIVE'
+                ? t('common.pending')
+                : t('common.broken');
             return (
               <TouchableOpacity
                 key={tab}
@@ -281,11 +291,11 @@ export default function CustomersListScreen() {
                     end={GRADIENT_DIRECTION.toRight.end}
                     style={styles.tabActive}
                   >
-                    <Text style={styles.tabActiveText}>{tab}</Text>
+                    <Text style={styles.tabActiveText}>{tabLabel}</Text>
                   </LinearGradient>
                 ) : (
                   <View style={[styles.tabInactive, { backgroundColor: tokens.surfaceMuted, borderColor: tokens.border }]}>
-                    <Text style={[styles.tabInactiveText, { color: tokens.textSecondary }]}>{tab}</Text>
+                    <Text style={[styles.tabInactiveText, { color: tokens.textSecondary }]}>{tabLabel}</Text>
                   </View>
                 )}
               </TouchableOpacity>

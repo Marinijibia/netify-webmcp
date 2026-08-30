@@ -215,7 +215,7 @@ export const webMCPTools: WebMCPToolDefinition[] = [
           recipientName: draft.recipientName,
           channel: draft.channel,
           tone: draft.tone,
-          messageBody: draft.messageBody,
+          messageBody: draft.messageBody || (draft as any).messageText || '',
           verifiedOutstandingAmount: draft.verifiedOutstandingAmount,
           currency: draft.currency,
           reviewUrl: `/messages/draft?customerId=${input.customerId}`,

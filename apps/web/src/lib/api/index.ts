@@ -13,3 +13,4 @@ export * from './ai';
 export * from './ai-chat';
 export * from './business-memory';
 export * from './notifications';
+export * from './onboarding';

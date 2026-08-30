@@ -31,12 +31,16 @@ import {
   ShieldCheck,
   Building
 } from 'lucide-react';
+import { useTheme } from '@/lib/theme/theme-context';
+import { useLanguage } from '@/lib/i18n';
 
 export default function ReceivableDetailPage() {
   const params = useParams();
   const router = useRouter();
   const receivableId = params?.id as string;
   const { organization } = useAuth();
+  const { tokens, isLight } = useTheme();
+  const { t } = useLanguage();
 
   const [receivable, setReceivable] = useState<ReceivableItem | null>(null);
   const [payments, setPayments] = useState<PaymentItem[]>([]);
@@ -101,7 +105,8 @@ export default function ReceivableDetailPage() {
       setPaymentReference('');
       await loadData();
     } catch (err: any) {
-      alert(err?.message || 'Failed to record payment');
+      console.warn('Failed to record payment:', err);
+      alert(err?.message || 'Failed to record payment.');
     } finally {
       setIsSubmittingPayment(false);
     }
@@ -118,11 +123,11 @@ export default function ReceivableDetailPage() {
   if (error || !receivable) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <Link href="/receivables" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#00A581', fontSize: '13px', fontWeight: '600' }}>
+        <Link href="/receivables" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#00A581', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}>
           <ArrowLeft size={16} />
           <span>Back to Receivables</span>
         </Link>
-        <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', border: '1px solid #EF4444', borderRadius: '8px', padding: '20px', color: '#FCA5A5' }}>
+        <div style={{ backgroundColor: isLight ? '#FEE2E2' : 'rgba(239, 68, 68, 0.15)', border: '1px solid #EF4444', borderRadius: '8px', padding: '20px', color: isLight ? '#B91C1C' : '#FCA5A5' }}>
           {error || 'Receivable record not found.'}
         </div>
       </div>
@@ -134,56 +139,67 @@ export default function ReceivableDetailPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Back Link */}
-      <Link href="/receivables" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#00A581', fontSize: '13px', fontWeight: '600' }}>
+      <Link href="/receivables" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#00A581', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}>
         <ArrowLeft size={16} />
         <span>Back to Receivables Ledger</span>
       </Link>
 
       {/* Main Receivable Card */}
       <div style={{
-        backgroundColor: '#003051',
+        backgroundColor: tokens.surface,
         borderRadius: '12px',
-        border: '1px solid #0F5470',
+        border: `1px solid ${tokens.surfaceBorder}`,
         padding: '28px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
+        flexWrap: 'wrap',
+        gap: '20px',
+        boxShadow: isLight ? tokens.shadowCard : 'none',
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#FFFFFF' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
               {receivable.reference || `REC-${receivable.id.slice(0, 8)}`}
             </h2>
             <span style={{
-              backgroundColor: isOverdue ? 'rgba(239, 68, 68, 0.15)' : receivable.status === 'PAID' ? 'rgba(0, 165, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-              color: isOverdue ? '#FCA5A5' : receivable.status === 'PAID' ? '#3AD0A9' : '#FCD34D',
-              padding: '2px 8px',
+              backgroundColor: isOverdue ? (isLight ? '#FEE2E2' : 'rgba(239, 68, 68, 0.15)') : receivable.status === 'PAID' ? tokens.accentSoft : (isLight ? '#FEF3C7' : 'rgba(245, 158, 11, 0.15)'),
+              color: isOverdue ? (isLight ? '#B91C1C' : '#FCA5A5') : receivable.status === 'PAID' ? '#00A581' : (isLight ? '#B45309' : '#FCD34D'),
+              padding: '3px 8px',
               borderRadius: '4px',
               fontSize: '11px',
-              fontWeight: '600',
+              fontWeight: '700',
             }}>
               {receivable.status}
             </span>
           </div>
 
-          <p style={{ color: '#8FB7C7', fontSize: '13px', marginTop: '4px' }}>
+          <p style={{ color: tokens.textSecondary, fontSize: '13px', marginTop: '4px' }}>
             Source: <strong>{receivable.source}</strong> • Created: {formatDate(receivable.createdAt)}
           </p>
 
           {receivable.customer && (
             <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <User size={16} color="#00A581" />
-              <Link href={`/customers/${receivable.customer.id}`} style={{ color: '#3AD0A9', fontWeight: 'bold', fontSize: '14px' }}>
+              <Link href={`/customers/${receivable.customer.id}`} style={{ color: '#00A581', fontWeight: 'bold', fontSize: '14px', textDecoration: 'none' }}>
                 {receivable.customer.name}
               </Link>
               {receivable.customer.phone && (
-                <span style={{ color: '#8FB7C7', fontSize: '12px' }}>({receivable.customer.phone})</span>
+                <span style={{ color: tokens.textMuted, fontSize: '12px' }}>({receivable.customer.phone})</span>
               )}
             </div>
           )}
 
           {receivable.description && (
-            <p style={{ marginTop: '12px', color: '#DCEAF0', fontSize: '13px', backgroundColor: '#001D31', padding: '10px 14px', borderRadius: '6px', border: '1px solid #0F5470' }}>
+            <p style={{
+              marginTop: '12px',
+              color: tokens.textPrimary,
+              fontSize: '13px',
+              backgroundColor: isLight ? '#F8FAFC' : '#001D31',
+              padding: '10px 14px',
+              borderRadius: '6px',
+              border: `1px solid ${tokens.surfaceBorder}`
+            }}>
               {receivable.description}
             </p>
           )}
@@ -191,13 +207,13 @@ export default function ReceivableDetailPage() {
 
         <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'flex-end' }}>
           <div>
-            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#8FB7C7', textTransform: 'uppercase' }}>
-              Remaining Balance
+            <span style={{ fontSize: '11px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase' }}>
+              {t('commandCenter.totalOutstanding')}
             </span>
-            <div style={{ fontSize: '28px', fontWeight: 'bold', color: isOverdue ? '#EF4444' : '#FFFFFF', marginTop: '2px' }}>
+            <div style={{ fontSize: '28px', fontWeight: 'bold', color: isOverdue ? '#EF4444' : tokens.textPrimary, marginTop: '2px' }}>
               {formatCurrency(receivable.balance, currency)}
             </div>
-            <p style={{ fontSize: '12px', color: '#8FB7C7', marginTop: '2px' }}>
+            <p style={{ fontSize: '12px', color: tokens.textMuted, marginTop: '2px' }}>
               Original: {formatCurrency(receivable.originalAmount, currency)}
             </p>
           </div>
@@ -216,6 +232,9 @@ export default function ReceivableDetailPage() {
                   borderRadius: '8px',
                   fontSize: '13px',
                   fontWeight: 'bold',
+                  cursor: 'pointer',
+                  border: 'none',
+                  boxShadow: '0 4px 14px rgba(0, 165, 129, 0.35)',
                 }}
               >
                 <DollarSign size={15} />
@@ -230,17 +249,19 @@ export default function ReceivableDetailPage() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  backgroundColor: '#003051',
-                  border: '1px solid #0F5470',
-                  color: '#DCEAF0',
+                  backgroundColor: isLight ? '#FFFFFF' : '#003051',
+                  border: `1px solid ${tokens.surfaceBorder}`,
+                  color: tokens.textSecondary,
                   padding: '9px 14px',
                   borderRadius: '8px',
                   fontSize: '13px',
                   fontWeight: '600',
+                  textDecoration: 'none',
+                  boxShadow: isLight ? tokens.shadowCard : 'none',
                 }}
               >
                 <MessageSquareQuote size={15} />
-                <span>Follow Up</span>
+                <span>{t('common.followUp')}</span>
               </Link>
             )}
           </div>
@@ -248,20 +269,21 @@ export default function ReceivableDetailPage() {
       </div>
 
       {/* Grid: Payments & Commitments */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
         {/* Payments History */}
         <div style={{
-          backgroundColor: '#003051',
+          backgroundColor: tokens.surface,
           borderRadius: '12px',
-          border: '1px solid #0F5470',
+          border: `1px solid ${tokens.surfaceBorder}`,
           padding: '20px',
+          boxShadow: isLight ? tokens.shadowCard : 'none',
         }}>
-          <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: '#FFFFFF', marginBottom: '14px' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: tokens.textPrimary, marginBottom: '14px' }}>
             Payment History ({payments.length})
           </h3>
 
           {payments.length === 0 ? (
-            <p style={{ color: '#8FB7C7', fontSize: '13px', textAlign: 'center', padding: '24px' }}>
+            <p style={{ color: tokens.textMuted, fontSize: '13px', textAlign: 'center', padding: '24px' }}>
               No payments recorded against this invoice yet.
             </p>
           ) : (
@@ -272,19 +294,19 @@ export default function ReceivableDetailPage() {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   padding: '10px 12px',
-                  backgroundColor: '#001D31',
+                  backgroundColor: isLight ? '#F8FAFC' : '#001D31',
                   borderRadius: '6px',
-                  border: '1px solid #0F5470',
+                  border: `1px solid ${tokens.surfaceBorder}`,
                 }}>
                   <div>
                     <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#00A581' }}>
                       {formatCurrency(p.amount, p.currency || currency)}
                     </span>
-                    <p style={{ fontSize: '11px', color: '#8FB7C7' }}>
+                    <p style={{ fontSize: '11px', color: tokens.textMuted, margin: '2px 0 0' }}>
                       {p.method} {p.reference ? `• Ref: ${p.reference}` : ''}
                     </p>
                   </div>
-                  <span style={{ fontSize: '11.5px', color: '#DCEAF0' }}>
+                  <span style={{ fontSize: '11.5px', color: tokens.textSecondary }}>
                     {formatDate(p.paidAt)}
                   </span>
                 </div>
@@ -295,17 +317,18 @@ export default function ReceivableDetailPage() {
 
         {/* Payment Commitments */}
         <div style={{
-          backgroundColor: '#003051',
+          backgroundColor: tokens.surface,
           borderRadius: '12px',
-          border: '1px solid #0F5470',
+          border: `1px solid ${tokens.surfaceBorder}`,
           padding: '20px',
+          boxShadow: isLight ? tokens.shadowCard : 'none',
         }}>
-          <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: '#FFFFFF', marginBottom: '14px' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: tokens.textPrimary, marginBottom: '14px' }}>
             Payment Commitments ({commitments.length})
           </h3>
 
           {commitments.length === 0 ? (
-            <p style={{ color: '#8FB7C7', fontSize: '13px', textAlign: 'center', padding: '24px' }}>
+            <p style={{ color: tokens.textMuted, fontSize: '13px', textAlign: 'center', padding: '24px' }}>
               No promises or payment commitments scheduled for this invoice.
             </p>
           ) : (
@@ -316,25 +339,25 @@ export default function ReceivableDetailPage() {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   padding: '10px 12px',
-                  backgroundColor: '#001D31',
+                  backgroundColor: isLight ? '#F8FAFC' : '#001D31',
                   borderRadius: '6px',
-                  border: '1px solid #0F5470',
+                  border: `1px solid ${tokens.surfaceBorder}`,
                 }}>
                   <div>
-                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#FFFFFF' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: tokens.textPrimary }}>
                       Promised: {formatCurrency(com.amount, com.currency || currency)}
                     </span>
-                    <p style={{ fontSize: '11px', color: '#8FB7C7' }}>
+                    <p style={{ fontSize: '11px', color: tokens.textMuted, margin: '2px 0 0' }}>
                       Due: {formatDate(com.promisedFor)}
                     </p>
                   </div>
                   <span style={{
-                    backgroundColor: com.status === 'MISSED' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(0, 165, 129, 0.15)',
-                    color: com.status === 'MISSED' ? '#FCA5A5' : '#3AD0A9',
+                    backgroundColor: com.status === 'MISSED' ? (isLight ? '#FEE2E2' : 'rgba(239, 68, 68, 0.15)') : tokens.accentSoft,
+                    color: com.status === 'MISSED' ? (isLight ? '#B91C1C' : '#FCA5A5') : '#00A581',
                     fontSize: '11px',
                     padding: '2px 8px',
                     borderRadius: '4px',
-                    fontWeight: '600',
+                    fontWeight: '700',
                   }}>
                     {com.status}
                   </span>
@@ -350,7 +373,8 @@ export default function ReceivableDetailPage() {
         <div style={{
           position: 'fixed',
           inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          backgroundColor: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(4px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -358,23 +382,33 @@ export default function ReceivableDetailPage() {
           padding: '20px',
         }}>
           <div style={{
-            backgroundColor: '#003051',
+            backgroundColor: tokens.surface,
             borderRadius: '12px',
-            border: '1px solid #0F5470',
+            border: `1px solid ${tokens.surfaceBorder}`,
             padding: '28px',
             width: '100%',
             maxWidth: '440px',
+            boxShadow: isLight ? '0 20px 40px rgba(0,0,0,0.15)' : '0 20px 40px rgba(0,0,0,0.5)',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#FFFFFF' }}>Record Customer Payment</h3>
-              <button onClick={() => setShowPaymentModal(false)} style={{ color: '#8FB7C7' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>Record Customer Payment</h3>
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: tokens.textMuted,
+                  cursor: 'pointer',
+                  padding: '4px',
+                }}
+              >
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleRecordPayment} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#8FB7C7', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px' }}>
                   Amount Paid ({currency}) *
                 </label>
                 <input
@@ -387,19 +421,20 @@ export default function ReceivableDetailPage() {
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    backgroundColor: '#001D31',
-                    border: '1px solid #0F5470',
+                    backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                    border: `1px solid ${tokens.surfaceBorder}`,
                     borderRadius: '8px',
-                    color: '#FFFFFF',
+                    color: tokens.textPrimary,
                     fontSize: '15px',
                     fontWeight: 'bold',
                     outline: 'none',
+                    boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
                   }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#8FB7C7', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px' }}>
                   Payment Method
                 </label>
                 <select
@@ -408,12 +443,13 @@ export default function ReceivableDetailPage() {
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    backgroundColor: '#001D31',
-                    border: '1px solid #0F5470',
+                    backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                    border: `1px solid ${tokens.surfaceBorder}`,
                     borderRadius: '8px',
-                    color: '#FFFFFF',
+                    color: tokens.textPrimary,
                     fontSize: '13px',
                     outline: 'none',
+                    boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
                   }}
                 >
                   <option value="BANK_TRANSFER">Bank Transfer (Direct / Wire)</option>
@@ -425,7 +461,7 @@ export default function ReceivableDetailPage() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#8FB7C7', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px' }}>
                   Transaction Reference
                 </label>
                 <input
@@ -436,12 +472,13 @@ export default function ReceivableDetailPage() {
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    backgroundColor: '#001D31',
-                    border: '1px solid #0F5470',
+                    backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                    border: `1px solid ${tokens.surfaceBorder}`,
                     borderRadius: '8px',
-                    color: '#FFFFFF',
+                    color: tokens.textPrimary,
                     fontSize: '13px',
                     outline: 'none',
+                    boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
                   }}
                 />
               </div>
@@ -453,11 +490,12 @@ export default function ReceivableDetailPage() {
                   style={{
                     flex: 1,
                     padding: '10px',
-                    backgroundColor: '#001D31',
-                    border: '1px solid #0F5470',
-                    color: '#8FB7C7',
+                    backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                    border: `1px solid ${tokens.surfaceBorder}`,
+                    color: tokens.textSecondary,
                     borderRadius: '8px',
                     fontSize: '13px',
+                    cursor: 'pointer',
                   }}
                 >
                   Cancel
@@ -477,6 +515,9 @@ export default function ReceivableDetailPage() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '6px',
+                    cursor: 'pointer',
+                    border: 'none',
+                    boxShadow: '0 4px 14px rgba(0, 165, 129, 0.35)',
                   }}
                 >
                   {isSubmittingPayment ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}

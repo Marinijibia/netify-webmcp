@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/design/theme';
+import { useLanguageStore } from '@/store/language-store';
 import {
   Input,
   Button,
@@ -47,6 +48,7 @@ export default function CustomerDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { tokens, isDark } = useTheme();
+  const { t } = useLanguageStore();
 
   const [customer, setCustomer] = useState<CustomerItem | null>(null);
   const [timelineEvents, setTimelineEvents] = useState<BusinessEventItem[]>([]);
@@ -184,7 +186,7 @@ export default function CustomerDetailScreen() {
             <ChevronLeftIcon size={18} color="#FFFFFF" />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerTitle}>Customer Profile</Text>
+            <Text style={styles.headerTitle}>{t('customers.title')}</Text>
             {customer?.name ? (
               <Text style={styles.headerSub}>{customer.name}</Text>
             ) : null}

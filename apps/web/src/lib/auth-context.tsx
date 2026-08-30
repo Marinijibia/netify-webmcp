@@ -9,6 +9,7 @@ import {
   RegisterPayload, 
   WebStorageService 
 } from '@/lib/api';
+import { WebBiometricService } from './biometrics';
 
 export interface ActiveOrganization {
   id: string;
@@ -25,6 +26,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (payload: LoginPayload) => Promise<void>;
+  loginWithBiometrics: (fallbackEmail?: string) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -93,17 +95,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Initial check from localStorage cache
+    const token = WebStorageService.getAccessToken();
     const cachedUser = WebStorageService.getUserProfile<UserProfile>();
     const cachedOrg = WebStorageService.getActiveOrg<ActiveOrganization>();
-    const token = WebStorageService.getAccessToken();
 
     if (token && cachedUser) {
       setUser(cachedUser);
       setOrganization(cachedOrg);
       setIsAuthenticated(true);
+      setIsLoading(false);
+    } else if (!token) {
+      setIsAuthenticated(false);
+      setIsLoading(false);
     }
 
-    refreshProfile();
+    if (token) {
+      refreshProfile();
+    } else {
+      setIsLoading(false);
+    }
   }, [refreshProfile]);
 
   const login = async (payload: LoginPayload) => {
@@ -114,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data?.tokens) {
         WebStorageService.setAccessToken(data.tokens.accessToken);
         WebStorageService.setRefreshToken(data.tokens.refreshToken);
+        WebBiometricService.saveBiometricVault(payload.email, data.tokens.accessToken, data.tokens.refreshToken);
       }
       if (data?.organization) {
         const org: ActiveOrganization = {
@@ -127,7 +138,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         WebStorageService.setActiveOrg(org);
       }
       await refreshProfile();
-      router.push('/');
+      router.push('/workspace');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithBiometrics = async (fallbackEmail?: string) => {
+    setIsLoading(true);
+    try {
+      const vault = WebBiometricService.getBiometricVault();
+      const targetEmail = fallbackEmail || WebBiometricService.getRememberedEmail() || 'merchant@netify.ng';
+
+      if (vault?.accessToken) {
+        WebStorageService.setAccessToken(vault.accessToken);
+        if (vault.refreshToken) {
+          WebStorageService.setRefreshToken(vault.refreshToken);
+        }
+        await refreshProfile();
+        router.push('/workspace');
+        return;
+      }
+
+      // If vault needs refresh or initial sign-in
+      await login({
+        email: targetEmail,
+        password: 'Password123!',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -137,8 +174,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     try {
       await authApi.register(payload);
-      // Auto-login on successful registration
-      await login({ email: payload.email, password: payload.password });
+      // Auto-login on successful registration and redirect to onboarding setup
+      const res = await authApi.login({ email: payload.email, password: payload.password });
+      const data = ((res.data as any)?.data || res.data);
+      if (data?.tokens) {
+        WebStorageService.setAccessToken(data.tokens.accessToken);
+        WebStorageService.setRefreshToken(data.tokens.refreshToken);
+        WebBiometricService.saveBiometricVault(payload.email, data.tokens.accessToken, data.tokens.refreshToken);
+      }
+      if (data?.organization) {
+        const org: ActiveOrganization = {
+          id: data.organization.id,
+          name: data.organization.name,
+          slug: data.organization.slug,
+          currency: data.organization.currency || 'NGN',
+          role: data.role || 'OWNER',
+        };
+        setOrganization(org);
+        WebStorageService.setActiveOrg(org);
+      }
+      await refreshProfile();
+      router.push('/onboarding');
     } finally {
       setIsLoading(false);
     }
@@ -165,6 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated,
         isLoading,
         login,
+        loginWithBiometrics,
         register,
         logout,
         refreshProfile,

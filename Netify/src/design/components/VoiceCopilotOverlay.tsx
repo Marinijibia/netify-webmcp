@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons, Feather, Ionicons } from '@expo/vector-icons';
 import { GRADIENTS, GRADIENT_DIRECTION } from '@/design/tokens/gradients';
 import { useTheme } from '@/design/theme';
+import { useLanguageStore } from '@/store/language-store';
 import type { VoiceState } from '@/hooks/useVoiceAssistant';
 
 interface VoiceCopilotOverlayProps {
@@ -41,6 +42,7 @@ export function VoiceCopilotOverlay({
   onDismiss,
 }: VoiceCopilotOverlayProps) {
   const { tokens } = useTheme();
+  const { t } = useLanguageStore();
 
   // Pulse animation for recording ring
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -200,7 +202,7 @@ export function VoiceCopilotOverlay({
             <View style={styles.cardHeader}>
               <View style={styles.headerTitleRow}>
                 <MaterialCommunityIcons name="robot-outline" size={20} color="#00A581" />
-                <Text style={styles.headerTitle}>Netify Voice Copilot</Text>
+                <Text style={styles.headerTitle}>{t('copilot.title')}</Text>
               </View>
               <TouchableOpacity
                 style={styles.closeButton}
@@ -272,7 +274,7 @@ export function VoiceCopilotOverlay({
                     ))}
                   </View>
 
-                  <Text style={styles.stateTitle}>Listening to your question...</Text>
+                  <Text style={styles.stateTitle}>{t('copilot.listening')}</Text>
                   <Text style={styles.stateSubtitle}>Tap the send button below when done</Text>
                 </View>
               )}
@@ -315,7 +317,7 @@ export function VoiceCopilotOverlay({
                       </Text>
                     </View>
                   ) : null}
-                  <Text style={styles.stateTitle}>Copilot is thinking...</Text>
+                  <Text style={styles.stateTitle}>{t('copilot.thinking')}</Text>
                 </View>
               )}
 
@@ -344,7 +346,7 @@ export function VoiceCopilotOverlay({
                       </Text>
                     </View>
                   ) : null}
-                  <Text style={styles.stateTitle}>Playing AI response...</Text>
+                  <Text style={styles.stateTitle}>{t('copilot.speaking')}</Text>
                 </View>
               )}
 
@@ -396,7 +398,7 @@ export function VoiceCopilotOverlay({
                     onPress={onCancel}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                    <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -411,7 +413,7 @@ export function VoiceCopilotOverlay({
                       style={styles.sendVoiceGradient}
                     >
                       <Feather name="check" size={20} color="#FFFFFF" style={{ marginRight: 6 }} />
-                      <Text style={styles.sendVoiceButtonText}>Done Speaking</Text>
+                      <Text style={styles.sendVoiceButtonText}>{t('common.done')}</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 </>
@@ -435,7 +437,7 @@ export function VoiceCopilotOverlay({
                     onPress={onDismiss}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.cancelButtonText}>Dismiss</Text>
+                    <Text style={styles.cancelButtonText}>{t('common.close')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -448,7 +450,7 @@ export function VoiceCopilotOverlay({
                       style={styles.sendVoiceGradient}
                     >
                       <Feather name="refresh-cw" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                      <Text style={styles.sendVoiceButtonText}>Try Again</Text>
+                      <Text style={styles.sendVoiceButtonText}>{t('common.retry')}</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 </>

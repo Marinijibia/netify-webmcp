@@ -40,7 +40,7 @@ export function NetifyLogo({
       {showIcon ? (
         <View className="items-center justify-center mb-2">
           <Image
-            source={require('@/../assets/images/logo-icon.png')}
+            source={require('../../../assets/images/logo-icon.png')}
             style={{
               width: iconDimensions[size].width,
               height: iconDimensions[size].height,
@@ -48,6 +48,7 @@ export function NetifyLogo({
             resizeMode="contain"
           />
         </View>
+
       ) : null}
 
       {/* Official Netify Dual-Tone Wordmark */}

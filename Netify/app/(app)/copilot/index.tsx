@@ -11,7 +11,7 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '@/store/auth-store';
 import { useBillingStore } from '@/store/billing-store';
@@ -29,12 +29,12 @@ import {
   VoiceCopilotOverlay,
 } from '@/design/components';
 import { useVoiceAssistant } from '@/hooks/useVoiceAssistant';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { useTheme } from '@/design/theme';
 import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { GRADIENTS, GRADIENT_DIRECTION } from '@/design/tokens/gradients';
-
 
 interface ChatMessage {
   id: string;
@@ -52,6 +52,14 @@ interface ChatMessage {
   suggestedFollowUps?: string[];
   createdAt: string;
 }
+
+// Module-level session memory so navigating away and returning preserves conversation history
+let activeCopilotSession: {
+  conversationId?: string;
+  messages: ChatMessage[];
+} = {
+  messages: [],
+};
 
 function TypingDots() {
   const dot1 = useRef(new Animated.Value(0.3)).current;
@@ -96,15 +104,25 @@ function TypingDots() {
 
 export default function MultilingualCopilotScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ initialPrompt?: string }>();
   const { tokens, isDark } = useTheme();
   const { organization } = useAuthStore();
   const { canAccessFeature, openProPaywall } = useBillingStore();
   const { currentLanguage, openLanguageModal, closeLanguageModal, isLanguageModalOpen, t } = useLanguageStore();
+  const { keyboardHeight, isKeyboardVisible } = useKeyboardHeight();
 
-  const [inputQuery, setInputQuery] = useState('');
-  const [conversationId, setConversationId] = useState<string | undefined>();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputQuery, setInputQuery] = useState(params?.initialPrompt || '');
+  const [conversationId, setConversationId] = useState<string | undefined>(activeCopilotSession.conversationId);
+  const [messages, setMessages] = useState<ChatMessage[]>(activeCopilotSession.messages);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (params?.initialPrompt) {
+      setInputQuery(params.initialPrompt);
+    }
+  }, [params?.initialPrompt]);
+
+
   const [activeEvidence, setActiveEvidence] = useState<{
     visible: boolean;
     evidence: any;
@@ -118,6 +136,56 @@ export default function MultilingualCopilotScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const langInfo = LANGUAGE_REGISTRY[currentLanguage] || LANGUAGE_REGISTRY.en;
 
+  const updateMessages = (updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
+    setMessages((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      activeCopilotSession.messages = next;
+      return next;
+    });
+  };
+
+  const updateConversationId = (id: string | undefined) => {
+    setConversationId(id);
+    activeCopilotSession.conversationId = id;
+  };
+
+  const handleStartNewChat = () => {
+    const welcomeText = langInfo.greeting + '! ' + t('copilot.placeholder');
+    const initialMessages: ChatMessage[] = [
+      {
+        id: `welcome-${Date.now()}`,
+        sender: 'COPILOT',
+        content: welcomeText,
+        suggestedFollowUps: [
+          t('copilot.q1'),
+          t('copilot.q2'),
+          t('copilot.q3'),
+        ],
+        createdAt: new Date().toISOString(),
+      },
+    ];
+    updateConversationId(undefined);
+    updateMessages(initialMessages);
+  };
+
+  useEffect(() => {
+    // Refresh welcome message if no active chat or only welcome greeting exists
+    if (
+      activeCopilotSession.messages.length === 0 ||
+      (activeCopilotSession.messages.length === 1 && activeCopilotSession.messages[0].id.startsWith('welcome-'))
+    ) {
+      handleStartNewChat();
+    }
+  }, [currentLanguage]);
+
+  useEffect(() => {
+    if (isKeyboardVisible) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [isKeyboardVisible]);
+
   const handleSendMessage = async (queryText?: string, isVoiceInitiated = false) => {
     const text = (queryText || inputQuery).trim();
     if (!text) return;
@@ -129,7 +197,7 @@ export default function MultilingualCopilotScreen() {
       createdAt: new Date().toISOString(),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    updateMessages((prev) => [...prev, userMsg]);
     setInputQuery('');
     setLoading(true);
 
@@ -144,7 +212,7 @@ export default function MultilingualCopilotScreen() {
         language: currentLanguage,
       });
 
-      setConversationId(response.conversationId);
+      updateConversationId(response.conversationId);
 
       const copilotMsg: ChatMessage = {
         id: response.messageId || `copilot-${Date.now()}`,
@@ -158,15 +226,19 @@ export default function MultilingualCopilotScreen() {
         createdAt: new Date().toISOString(),
       };
 
-      setMessages((prev) => [...prev, copilotMsg]);
+      updateMessages((prev) => [...prev, copilotMsg]);
 
       // If requested by voice, speak the answer
       if (isVoiceInitiated && response.content) {
         voice.speakText(response.content);
       }
     } catch (err: any) {
+      // If error occurs, restore the drafted text so user doesn't lose it
+      if (!isVoiceInitiated) {
+        setInputQuery(text);
+      }
+
       // 429 = monthly AI quota exhausted (20 req/mo on FREE)
-      // ApiError uses .statusCode not .status
       const statusCode = err?.statusCode ?? err?.status ?? err?.response?.status;
       const errorCode = err?.errorCode ?? err?.code;
 
@@ -176,9 +248,16 @@ export default function MultilingualCopilotScreen() {
         err?.message?.toLowerCase()?.includes('quota') ||
         err?.message?.toLowerCase()?.includes('limit exceeded');
 
-      // Residual feature-gate error (should not happen after backend fix, but handle gracefully)
       const isFeatureGateError =
         statusCode === 403 && errorCode === 'FEATURE_NOT_ENTITLED';
+
+      let userNotice = err?.message || '';
+
+      if (!userNotice || userNotice === 'Network request failed' || userNotice.includes('status 503') || userNotice.includes('An error occurred')) {
+        userNotice = 'Netify Copilot could not complete this request right now. Please tap Retry below or check your network.';
+      } else if (userNotice.includes('[GoogleGenerativeAI Error]') || userNotice.includes('generateContent') || userNotice.includes('models/')) {
+        userNotice = 'The AI model service is temporarily updating. Please tap Retry below to ask again.';
+      }
 
       const errorMsg: ChatMessage = {
         id: `error-${Date.now()}`,
@@ -187,13 +266,17 @@ export default function MultilingualCopilotScreen() {
           ? "You've used all 20 AI requests included in your Free plan this month. Upgrade to Netify Pro for 250 requests/month and unlimited business intelligence. 🚀"
           : isFeatureGateError
           ? "The AI Copilot is not available on your current plan. Upgrade to Netify Pro to unlock it. 🚀"
-          : t('common.error') + '. ' + t('common.retry'),
+          : userNotice,
         createdAt: new Date().toISOString(),
         suggestedActions: (isQuotaError || isFeatureGateError)
           ? [{ label: 'Upgrade to Pro →', action: 'UPGRADE_PRO' }]
           : undefined,
+        suggestedFollowUps: (!isQuotaError && !isFeatureGateError && text)
+          ? [`Retry: ${text.length > 28 ? text.slice(0, 28) + '...' : text}`, 'Who owes me the most?', 'Show overdue receivables']
+          : undefined,
       };
-      setMessages((prev) => [...prev, errorMsg]);
+      updateMessages((prev) => [...prev, errorMsg]);
+
 
       if (isQuotaError || isFeatureGateError) {
         setTimeout(() => openProPaywall(), 800);
@@ -221,23 +304,6 @@ export default function MultilingualCopilotScreen() {
     voice.startListening();
   };
 
-  useEffect(() => {
-    const welcomeText = langInfo.greeting + '! ' + t('copilot.placeholder');
-    setMessages([
-      {
-        id: 'welcome-0',
-        sender: 'COPILOT',
-        content: welcomeText,
-        suggestedFollowUps: [
-          t('copilot.q1'),
-          t('copilot.q2'),
-          t('copilot.q3'),
-        ],
-        createdAt: new Date().toISOString(),
-      },
-    ]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only on mount — do NOT re-run on language change or it wipes conversation history
 
 
   const handleOpenEvidence = (msg: ChatMessage) => {
@@ -281,17 +347,30 @@ export default function MultilingualCopilotScreen() {
             </View>
           </View>
 
-          {/* Language Selector Pill */}
-          <TouchableOpacity
-            onPress={openLanguageModal}
-            style={[styles.langPill, { backgroundColor: 'rgba(0,185,148,0.22)', borderColor: '#00B994' }]}
-            activeOpacity={0.75}
-          >
-            <Text style={styles.langPillFlag}>{langInfo.flag}</Text>
-            <Text style={styles.langPillText}>{langInfo.code.toUpperCase()}</Text>
-            <Feather name="chevron-down" size={12} color="#00B994" />
-          </TouchableOpacity>
+          <View style={styles.headerRight}>
+            {/* New Chat Button */}
+            <TouchableOpacity
+              onPress={handleStartNewChat}
+              style={[styles.headerActionBtn, { backgroundColor: 'rgba(255,255,255,0.18)' }]}
+              activeOpacity={0.7}
+              accessibilityLabel="New Chat"
+            >
+              <Feather name="plus" size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            {/* Language Selector Pill */}
+            <TouchableOpacity
+              onPress={openLanguageModal}
+              style={[styles.langPill, { backgroundColor: 'rgba(0,185,148,0.22)', borderColor: '#00B994' }]}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.langPillFlag}>{langInfo.flag}</Text>
+              <Text style={styles.langPillText}>{langInfo.code.toUpperCase()}</Text>
+              <Feather name="chevron-down" size={12} color="#00B994" />
+            </TouchableOpacity>
+          </View>
         </LinearGradient>
+
 
         {/* ── MESSAGE STREAM ── */}
         <ScrollView
@@ -481,9 +560,11 @@ export default function MultilingualCopilotScreen() {
             {
               backgroundColor: tokens.surface,
               borderTopColor: tokens.border,
+              paddingBottom: Platform.OS === 'android' ? (isKeyboardVisible ? keyboardHeight + 8 : 12) : 12,
             },
           ]}
         >
+
           <TextInput
             value={inputQuery}
             onChangeText={setInputQuery}
@@ -625,7 +706,20 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1.5,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerActionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   langPillFlag: {
+
     fontSize: 14,
   },
   langPillText: {

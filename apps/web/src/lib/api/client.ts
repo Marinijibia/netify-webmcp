@@ -17,7 +17,7 @@ export class ApiClient {
   private readonly defaultTimeoutMs: number;
   private refreshPromise: Promise<string | null> | null = null;
 
-  constructor(baseUrl = DEFAULT_API_URL, defaultTimeoutMs = 15000) {
+  constructor(baseUrl = DEFAULT_API_URL, defaultTimeoutMs = 45000) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
     this.defaultTimeoutMs = defaultTimeoutMs;
   }

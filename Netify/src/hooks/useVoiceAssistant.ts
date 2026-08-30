@@ -132,10 +132,32 @@ export function useVoiceAssistant(options: VoiceAssistantOptions): VoiceAssistan
         staysActiveInBackground: false,
       });
 
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets?.HIGH_QUALITY ?? {}
-      );
+      const recordingOptions = Audio.RecordingOptionsPresets?.HIGH_QUALITY ?? {
+        android: {
+          extension: '.m4a',
+          outputFormat: Audio.AndroidOutputFormat?.MPEG_4 ?? 2,
+          audioEncoder: Audio.AndroidAudioEncoder?.AAC ?? 3,
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitRate: 128000,
+        },
+        ios: {
+          extension: '.m4a',
+          audioQuality: Audio.IOSAudioQuality?.HIGH ?? 0x60,
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitRate: 128000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+        },
+        web: {
+          mimeType: 'audio/webm',
+          bitsPerSecond: 128000,
+        },
+      };
 
+      const { recording } = await Audio.Recording.createAsync(recordingOptions);
 
       recordingRef.current = recording;
       recordingStartRef.current = Date.now();
@@ -153,11 +175,14 @@ export function useVoiceAssistant(options: VoiceAssistantOptions): VoiceAssistan
         );
       } else if (msg.includes('network') || msg.includes('offline')) {
         setErrorMessage('Voice input requires an active internet connection.');
+      } else if (msg.includes('not available')) {
+        setErrorMessage('Microphone hardware is not ready or not permitted on this device.');
       } else {
-        setErrorMessage('Could not start microphone. Please try again.');
+        setErrorMessage(err?.message || 'Could not start microphone. Please try again.');
       }
       setVoiceState('ERROR');
     }
+
   }, [voiceState, stopPlayback]);
 
   const stopListening = useCallback(async () => {

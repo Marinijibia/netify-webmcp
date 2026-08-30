@@ -121,6 +121,7 @@ export class BusinessQAService {
         const topCustomers = priorityData.items.map((p) => {
           citations.push(p.customerName);
           return {
+            customerId: p.customerId,
             customerName: p.customerName,
             totalOutstanding: `${p.currency} ${p.totalOutstanding.toLocaleString()}`,
             totalOverdue: `${p.currency} ${p.totalOverdue.toLocaleString()}`,
@@ -167,6 +168,7 @@ export class BusinessQAService {
           citations.push(rec.customer.name);
 
           return {
+            customerId: rec.customer.id,
             customer: rec.customer.name,
             overdueAmount: `${rec.currency} ${rem.toLocaleString()}`,
             dueDate: rec.dueDate.toISOString().split('T')[0],
