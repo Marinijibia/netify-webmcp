@@ -18,6 +18,11 @@ export interface ActiveOrganization {
   currency: string;
   country?: string;
   role?: string;
+  settings?: any;
+  myMembership?: {
+    role?: string;
+    status?: string;
+  };
 }
 
 interface AuthContextValue {

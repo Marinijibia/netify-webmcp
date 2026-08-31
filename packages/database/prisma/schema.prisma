@@ -436,6 +436,7 @@ model User {
   aiConversations         AIConversation[]
   aiActionProposals       AIActionProposal[]
   voiceUsages             VoiceUsage[]
+  assignedCustomers       Customer[]               @relation("AssignedCustomers")
 
   @@map("users")
 }
@@ -470,10 +471,12 @@ model Customer {
   notes          String?
   tags           String[]       @default([])
   metadata       Json?
+  assignedStaffId String?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
   organization         Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedStaff        User?                @relation("AssignedCustomers", fields: [assignedStaffId], references: [id], onDelete: SetNull)
   contacts             CustomerContact[]
   receivables          Receivable[]
   collectionActivities CollectionActivity[]
@@ -493,6 +496,7 @@ model Customer {
   memoryItems          MemoryItem[]
 
   @@index([organizationId])
+  @@index([organizationId, assignedStaffId])
   @@index([organizationId, status])
   @@index([organizationId, name])
   @@index([organizationId, createdAt])

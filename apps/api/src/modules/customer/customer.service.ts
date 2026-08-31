@@ -129,7 +129,7 @@ export class CustomerService {
           },
           receivables: {
             where: {
-              status: { in: [ReceivableStatus.OPEN, ReceivableStatus.PARTIALLY_PAID] },
+              status: { in: ['OPEN', 'PARTIALLY_PAID'] as any },
             },
             select: {
               id: true,
@@ -144,9 +144,18 @@ export class CustomerService {
           },
           paymentCommitments: {
             where: {
-              status: CommitmentStatus.MISSED,
+              status: 'MISSED' as any,
             },
             select: { id: true },
+          },
+          assignedStaff: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              avatarUrl: true,
+            },
           },
         },
       }),
@@ -161,7 +170,7 @@ export class CustomerService {
         pageSize,
         totalCount,
         totalPages: Math.ceil(totalCount / pageSize),
-        hasMore: page * pageSize < totalCount,
+        hasMore: skip + customers.length < totalCount,
       },
     };
   }
@@ -182,7 +191,7 @@ export class CustomerService {
         },
         receivables: {
           where: {
-            status: { in: [ReceivableStatus.OPEN, ReceivableStatus.PARTIALLY_PAID] },
+            status: { in: ['OPEN', 'PARTIALLY_PAID'] as any },
           },
           select: {
             id: true,
@@ -197,9 +206,18 @@ export class CustomerService {
         },
         paymentCommitments: {
           where: {
-            status: CommitmentStatus.MISSED,
+            status: 'MISSED' as any,
           },
           select: { id: true },
+        },
+        assignedStaff: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            avatarUrl: true,
+          },
         },
       },
     });
@@ -494,5 +512,44 @@ export class CustomerService {
     });
 
     return { success: true, message: 'Contact deleted successfully' };
+  }
+
+  /**
+   * Assigns or reassigns a customer to a staff member.
+   */
+  async assignStaff(organizationId: string, customerId: string, staffUserId: string | null, actorUserId: string) {
+    await this.getById(organizationId, customerId);
+
+    if (staffUserId) {
+      const membership = await prisma.membership.findFirst({
+        where: {
+          organizationId,
+          userId: staffUserId,
+          status: 'ACTIVE',
+        },
+      });
+
+      if (!membership) {
+        throw new BadRequestException('The selected staff member does not have an active membership in this organization.');
+      }
+    }
+
+    const updated = await prisma.customer.update({
+      where: { id: customerId },
+      data: { assignedStaffId: staffUserId },
+      include: {
+        assignedStaff: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+
+    return updated;
   }
 }

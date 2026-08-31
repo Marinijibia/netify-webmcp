@@ -70,6 +70,10 @@ export default function WorkspacePage() {
 
   const facts = attention?.facts;
 
+  // Role & Privacy Shield Check
+  const isStaffUser = (organization as any)?.myMembership?.role === 'STAFF';
+  const isRevenueShieldActive = isStaffUser && (organization?.settings?.delegation?.hideRevenueFromStaff ?? true);
+
   // Calculate overdue percentage for exposure gauge
   const totalOut = facts?.totalOutstanding || 0;
   const totalOver = facts?.totalOverdue || 0;
@@ -97,7 +101,7 @@ export default function WorkspacePage() {
               letterSpacing: '-0.6px',
               margin: 0,
             }}>
-              Command Center
+              {isStaffUser ? 'Field Collector Workspace' : 'Command Center'}
             </h1>
             <span style={{
               display: 'inline-flex',
@@ -112,12 +116,12 @@ export default function WorkspacePage() {
               fontWeight: '700',
             }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#00A581', boxShadow: '0 0 8px #00A581' }}></span>
-              Live Ledger Synced
+              {isRevenueShieldActive ? 'Assigned Territory Scoped' : 'Live Ledger Synced'}
             </span>
           </div>
 
           <p style={{ color: tokens.textMuted, fontSize: '13.5px', margin: '4px 0 0' }}>
-            Welcome back, <strong style={{ color: tokens.textPrimary }}>{user?.firstName || 'Business Leader'}</strong>. Real-time receivables exposure, overdue risks, and collections intelligence for <strong style={{ color: '#00A581' }}>{organization?.name || 'Netify'}</strong>.
+            Welcome back, <strong style={{ color: tokens.textPrimary }}>{user?.firstName || 'Staff Member'}</strong>. {isRevenueShieldActive ? 'Active collections queue and follow-up tools for your assigned debtor accounts.' : `Real-time receivables exposure, overdue risks, and collections intelligence for ${organization?.name || 'Netify'}.`}
           </p>
         </div>
 
@@ -127,40 +131,41 @@ export default function WorkspacePage() {
             type="button"
             onClick={() => loadData()}
             disabled={isLoading}
+            className="hover-lift tap-press"
             style={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
               backgroundColor: isLight ? '#FFFFFF' : 'rgba(0, 32, 53, 0.8)',
               border: `1px solid ${tokens.surfaceBorder}`,
-              color: tokens.textSecondary,
-              padding: '8px 14px',
+              color: tokens.textPrimary,
+              padding: '9px 16px',
               borderRadius: '8px',
               fontSize: '12.5px',
               fontWeight: '600',
-              cursor: 'pointer',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
               boxShadow: isLight ? tokens.shadowCard : 'none',
-              transition: 'all 0.15s ease',
             }}
           >
             <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
-            <span>{t('common.refresh')}</span>
+            <span>{isLoading ? t('common.loading') : t('common.refresh')}</span>
           </button>
 
           <Link
-            href="/receivables/create"
+            href="/messages/draft"
+            className="hover-lift tap-press"
             style={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              backgroundColor: tokens.accentSoft,
-              border: `1px solid ${tokens.accentBorder}`,
-              color: '#00A581',
-              padding: '8px 14px',
+              backgroundColor: '#00A581',
+              color: '#FFFFFF',
+              padding: '9px 18px',
               borderRadius: '8px',
               fontSize: '12.5px',
-              fontWeight: '600',
+              fontWeight: '700',
               textDecoration: 'none',
+              boxShadow: '0 4px 14px rgba(0, 165, 129, 0.35)',
             }}
           >
             <Plus size={14} />
@@ -274,7 +279,7 @@ export default function WorkspacePage() {
           }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <span style={{ fontSize: '12.5px', fontWeight: '700', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-              {t('commandCenter.totalOutstanding')}
+              {isRevenueShieldActive ? 'Assigned Queue Targets' : t('commandCenter.totalOutstanding')}
             </span>
             <div style={{
               width: '34px',
@@ -293,11 +298,11 @@ export default function WorkspacePage() {
 
           <div>
             <div style={{ fontSize: '28px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.6px' }}>
-              {isLoading ? '...' : formatCurrency(facts?.totalOutstanding || 0, currency)}
+              {isLoading ? '...' : isRevenueShieldActive ? `${facts?.activeCustomersCount || 0} Assigned` : formatCurrency(facts?.totalOutstanding || 0, currency)}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: tokens.textMuted, marginTop: '4px' }}>
               <Users size={13} color="#00A581" />
-              <span>Across <strong style={{ color: tokens.textPrimary }}>{facts?.activeCustomersCount || 0}</strong> active debtor accounts</span>
+              <span>{isRevenueShieldActive ? 'Assigned customer accounts requiring outreach' : `Across ${facts?.activeCustomersCount || 0} active debtor accounts`}</span>
             </div>
           </div>
         </div>

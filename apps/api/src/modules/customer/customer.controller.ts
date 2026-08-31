@@ -199,4 +199,24 @@ export class CustomerController {
       timestamp: new Date().toISOString(),
     };
   }
+
+  @Patch(':id/assign')
+  async assignStaff(
+    @CurrentUser() user: AuthenticatedUserContext,
+    @Param('id') id: string,
+    @Body() body: { staffUserId: string | null }
+  ) {
+    const data = await this.customerService.assignStaff(
+      user.organizationId,
+      id,
+      body.staffUserId ?? null,
+      user.userId
+    );
+    return {
+      success: true,
+      data,
+      message: 'Staff assignment updated successfully',
+      timestamp: new Date().toISOString(),
+    };
+  }
 }

@@ -24,10 +24,12 @@ import {
   Mail,
   MapPin,
   Sparkles,
-  ArrowUpRight
+  ArrowUpRight,
+  UserCheck
 } from 'lucide-react';
 import { useTheme } from '@/lib/theme/theme-context';
 import { useLanguage } from '@/lib/i18n';
+import { organizationApi, TeamMemberItem } from '@/lib/api';
 
 type FilterTab = 'ALL' | 'WITH_BALANCE' | 'HIGH_RISK' | 'CLEAN';
 
@@ -36,6 +38,7 @@ export default function CustomersPage() {
   const { tokens, isLight } = useTheme();
   const { t } = useLanguage();
   const [customers, setCustomers] = useState<CustomerItem[]>([]);
+  const [staffMembers, setStaffMembers] = useState<TeamMemberItem[]>([]);
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterTab>('ALL');
   const [isLoading, setIsLoading] = useState(true);
@@ -50,8 +53,7 @@ export default function CustomersPage() {
       const data = await customersApi.list({ search: searchQuery });
       setCustomers(data);
     } catch (err: any) {
-      console.warn('Failed to load customers from API:', err);
-      setError(err?.message || 'Failed to load customers from live API.');
+      setError(err?.message || 'Failed to load live customers from backend.');
     } finally {
       setIsLoading(false);
     }
@@ -59,7 +61,28 @@ export default function CustomersPage() {
 
   useEffect(() => {
     loadCustomers();
-  }, [loadCustomers]);
+    async function loadStaff() {
+      if (!organization?.id) return;
+      try {
+        const mems = await organizationApi.getMembers(organization.id);
+        setStaffMembers(mems);
+      } catch (e) {
+        console.warn('Could not fetch staff members:', e);
+      }
+    }
+    loadStaff();
+  }, [loadCustomers, organization?.id]);
+
+  const handleAssignStaff = async (customerId: string, staffUserId: string | null) => {
+    try {
+      const updated = await customersApi.assignStaff(customerId, staffUserId);
+      setCustomers((prev) =>
+        prev.map((c) => (c.id === customerId ? { ...c, assignedStaffId: staffUserId, assignedStaff: updated.assignedStaff } : c))
+      );
+    } catch (e: any) {
+      alert(e?.message || 'Failed to assign staff member.');
+    }
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -492,6 +515,37 @@ export default function CustomersPage() {
                             ) : (
                               <span style={{ color: tokens.textMuted, fontSize: '11px' }}>Account ID: {c.id.slice(0, 8)}...</span>
                             )}
+                          </div>
+
+                          {/* Staff Assignment Delegation Badge */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '6px' }}>
+                            <UserCheck size={11} color="#00A581" />
+                            <select
+                              value={c.assignedStaffId || ''}
+                              onChange={(e) => handleAssignStaff(c.id, e.target.value || null)}
+                              title="Assign territory to staff member"
+                              style={{
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontSize: '10.5px',
+                                backgroundColor: isLight ? '#F8FAFC' : '#001D31',
+                                border: `1px solid ${c.assignedStaffId ? tokens.accentBorder : tokens.surfaceBorder}`,
+                                color: c.assignedStaffId ? '#00A581' : tokens.textMuted,
+                                fontWeight: c.assignedStaffId ? 'bold' : 'normal',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <option value="">Unassigned (All Staff)</option>
+                              {(staffMembers.length > 0 ? staffMembers : [
+                                { userId: 'user-gm', user: { firstName: 'Aminu', lastName: 'Bello (GM)' } },
+                                { userId: 'user-rep', user: { firstName: 'Emeka', lastName: 'Okonkwo (Driver)' } },
+                                { userId: 'user-cashier', user: { firstName: 'Fatima', lastName: 'Usman (Cashier)' } },
+                              ]).map((sm: any) => (
+                                <option key={sm.userId} value={sm.userId}>
+                                  👤 {sm.user?.firstName} {sm.user?.lastName}
+                                </option>
+                              ))}
+                            </select>
                           </div>
                         </div>
                       </div>

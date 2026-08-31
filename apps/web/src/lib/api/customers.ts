@@ -34,6 +34,14 @@ export interface CustomerItem {
   missedPromisesCount?: number;
   riskScore?: number;
   riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | 'NORMAL';
+  assignedStaffId?: string | null;
+  assignedStaff?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    avatarUrl?: string | null;
+  } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -81,6 +89,11 @@ export const customersApi = {
 
   async update(id: string, payload: UpdateCustomerPayload): Promise<CustomerItem> {
     const res = await apiClient.patch<ApiResponse<CustomerItem>>(`/customers/${id}`, payload);
+    return res.data?.data || (res.data as unknown as CustomerItem);
+  },
+
+  async assignStaff(id: string, staffUserId: string | null): Promise<CustomerItem> {
+    const res = await apiClient.patch<ApiResponse<CustomerItem>>(`/customers/${id}/assign`, { staffUserId });
     return res.data?.data || (res.data as unknown as CustomerItem);
   },
 
