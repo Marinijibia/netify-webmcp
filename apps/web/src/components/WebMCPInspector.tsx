@@ -18,6 +18,17 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/lib/theme/theme-context';
 
+const SAMPLE_INPUTS: Record<string, any> = {
+  get_collection_priority: { limit: 5 },
+  search_customers: { query: 'ABC' },
+  get_customer_evidence: { customerId: 'f14e802a-573d-46bb-8257-317bdc3cddb0' },
+  get_customer_risk_profile: { customerId: 'f14e802a-573d-46bb-8257-317bdc3cddb0' },
+  draft_follow_up_message: { customerId: 'f14e802a-573d-46bb-8257-317bdc3cddb0', channel: 'WHATSAPP', tone: 'RESPECTFUL_REMINDER' },
+  list_receivables: { isOverdue: true },
+  create_payment_commitment: { customerId: 'f14e802a-573d-46bb-8257-317bdc3cddb0', amount: 350000, promisedFor: '2026-09-05T10:00:00.000Z', notes: 'Agreed to settle balance over WhatsApp' },
+  record_collection_activity: { customerId: 'f14e802a-573d-46bb-8257-317bdc3cddb0', type: 'PAYMENT_REMINDER', channel: 'WHATSAPP', outcome: 'PROMISED_PAYMENT', notes: 'Customer confirmed payment scheduled for Friday' },
+};
+
 export function WebMCPInspector() {
   const { isSupported, registeredTools, executionLogs, executeTool } = useWebMCP();
   const { tokens, isLight } = useTheme();
@@ -32,13 +43,8 @@ export function WebMCPInspector() {
     setSelectedTool(toolName);
     const tool = registeredTools.find((t: WebMCPToolDefinition) => t.name === toolName);
     if (tool) {
-      if (tool.name === 'search_customers') {
-        setTestInput(JSON.stringify({ query: '' }, null, 2));
-      } else if (tool.name === 'get_collection_priority') {
-        setTestInput(JSON.stringify({ limit: 5 }, null, 2));
-      } else {
-        setTestInput(JSON.stringify({}, null, 2));
-      }
+      const sample = SAMPLE_INPUTS[tool.name] || {};
+      setTestInput(JSON.stringify(sample, null, 2));
       setTestResult(null);
     }
   };

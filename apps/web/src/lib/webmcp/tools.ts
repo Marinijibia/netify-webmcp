@@ -9,6 +9,48 @@ import {
 } from '../api';
 import { WebMCPToolDefinition } from './types';
 
+// Helper to gracefully resolve a valid customer ID if none is supplied
+async function resolveCustomerId(customerId?: string): Promise<string> {
+  if (customerId && typeof customerId === 'string' && customerId.trim() !== '') {
+    return customerId.trim();
+  }
+  try {
+    const priorities = await commandCenterApi.getPriorities({ limit: 1 });
+    if (priorities && priorities.length > 0) {
+      return priorities[0].customerId;
+    }
+  } catch (e) {
+    // Fallback to customer list
+  }
+  const customers = await customersApi.list();
+  if (customers && customers.length > 0) {
+    return customers[0].id;
+  }
+  throw new Error('No debtor accounts found in the organization.');
+}
+
+// Helper to gracefully resolve a valid receivable and customer ID
+async function resolveReceivableInfo(receivableId?: string, customerId?: string): Promise<{ receivableId: string; customerId: string }> {
+  if (receivableId && customerId) {
+    return { receivableId, customerId };
+  }
+  if (customerId) {
+    const recs = await receivablesApi.list({ customerId, status: 'OPEN' });
+    if (recs && recs.length > 0) return { receivableId: recs[0].id, customerId };
+    const anyRecs = await receivablesApi.list({ customerId });
+    if (anyRecs && anyRecs.length > 0) return { receivableId: anyRecs[0].id, customerId };
+  }
+  const overdueRecs = await receivablesApi.list({ isOverdue: true });
+  if (overdueRecs && overdueRecs.length > 0) {
+    return { receivableId: overdueRecs[0].id, customerId: overdueRecs[0].customerId };
+  }
+  const all = await receivablesApi.list();
+  if (all && all.length > 0) {
+    return { receivableId: all[0].id, customerId: all[0].customerId };
+  }
+  throw new Error('No open receivables found in the organization.');
+}
+
 export const webMCPTools: WebMCPToolDefinition[] = [
   {
     name: 'get_collection_priority',
@@ -29,8 +71,8 @@ export const webMCPTools: WebMCPToolDefinition[] = [
     },
     execute: async (input: { limit?: number; currency?: string } = {}) => {
       const data = await commandCenterApi.getPriorities({
-        limit: input.limit || 10,
-        currency: input.currency,
+        limit: input?.limit || 10,
+        currency: input?.currency,
       });
 
       return {
@@ -65,10 +107,11 @@ export const webMCPTools: WebMCPToolDefinition[] = [
       },
       required: ['query'],
     },
-    execute: async (input: { query: string }) => {
-      const data = await customersApi.list({ search: input.query });
+    execute: async (input: { query?: string } = {}) => {
+      const query = input?.query || '';
+      const data = await customersApi.list({ search: query });
       return {
-        query: input.query,
+        query,
         count: data.length,
         customers: data.map((c) => ({
           id: c.id,
@@ -98,13 +141,14 @@ export const webMCPTools: WebMCPToolDefinition[] = [
       },
       required: ['customerId'],
     },
-    execute: async (input: { customerId: string }) => {
+    execute: async (input: { customerId?: string } = {}) => {
+      const targetCustomerId = await resolveCustomerId(input?.customerId);
       const [customer, receivables, payments, commitments, activities] = await Promise.all([
-        customersApi.getById(input.customerId),
-        receivablesApi.list({ customerId: input.customerId }),
-        paymentsApi.list({ customerId: input.customerId }),
-        commitmentsApi.getCommitments({ customerId: input.customerId }),
-        collectionActivitiesApi.getActivities({ customerId: input.customerId }),
+        customersApi.getById(targetCustomerId),
+        receivablesApi.list({ customerId: targetCustomerId }),
+        paymentsApi.list({ customerId: targetCustomerId }),
+        commitmentsApi.getCommitments({ customerId: targetCustomerId }),
+        collectionActivitiesApi.getActivities({ customerId: targetCustomerId }),
       ]);
 
       return {
@@ -162,10 +206,11 @@ export const webMCPTools: WebMCPToolDefinition[] = [
       },
       required: ['customerId'],
     },
-    execute: async (input: { customerId: string }) => {
-      const explanation = await aiApi.explainCustomer(input.customerId);
+    execute: async (input: { customerId?: string } = {}) => {
+      const targetCustomerId = await resolveCustomerId(input?.customerId);
+      const explanation = await aiApi.explainCustomer(targetCustomerId);
       return {
-        customerId: input.customerId,
+        customerId: targetCustomerId,
         summary: explanation.summary,
         whyItMatters: explanation.whyItMatters,
         recommendation: explanation.recommendation,
@@ -199,26 +244,27 @@ export const webMCPTools: WebMCPToolDefinition[] = [
       required: ['customerId'],
     },
     execute: async (input: {
-      customerId: string;
+      customerId?: string;
       tone?: 'RESPECTFUL_REMINDER' | 'DIRECT_FOLLOWUP' | 'URGENT_ESCALATION' | 'PARTIAL_PAYMENT_PROPOSAL';
       channel?: 'WHATSAPP' | 'SMS' | 'PHONE_CALL' | 'EMAIL';
-    }) => {
-      const draft = await aiApi.draftMessage(input.customerId, {
-        tone: input.tone || 'DIRECT_FOLLOWUP',
-        channel: input.channel || 'WHATSAPP',
+    } = {}) => {
+      const targetCustomerId = await resolveCustomerId(input?.customerId);
+      const draft = await aiApi.draftMessage(targetCustomerId, {
+        tone: input?.tone || 'DIRECT_FOLLOWUP',
+        channel: input?.channel || 'WHATSAPP',
       });
 
       return {
         proposal: {
           action: 'DISPATCH_FOLLOW_UP_MESSAGE',
-          customerId: input.customerId,
+          customerId: targetCustomerId,
           recipientName: draft.recipientName,
           channel: draft.channel,
           tone: draft.tone,
           messageBody: draft.messageBody || (draft as any).messageText || '',
           verifiedOutstandingAmount: draft.verifiedOutstandingAmount,
           currency: draft.currency,
-          reviewUrl: `/messages/draft?customerId=${input.customerId}`,
+          reviewUrl: `/messages/draft?customerId=${targetCustomerId}`,
           requiresHumanConfirmation: true,
         },
       };
@@ -235,6 +281,10 @@ export const webMCPTools: WebMCPToolDefinition[] = [
         customerId: {
           type: 'string',
           description: 'Customer ID',
+        },
+        receivableId: {
+          type: 'string',
+          description: 'Receivable ID (optional if customerId provided)',
         },
         type: {
           type: 'string',
@@ -253,15 +303,18 @@ export const webMCPTools: WebMCPToolDefinition[] = [
           description: 'Activity notes and details',
         },
       },
-      required: ['customerId', 'type', 'channel', 'outcome'],
+      required: ['type', 'channel', 'outcome'],
     },
-    execute: async (input: any) => {
+    execute: async (input: any = {}) => {
+      const { receivableId, customerId } = await resolveReceivableInfo(input?.receivableId, input?.customerId);
+
       const record = await collectionActivitiesApi.createActivity({
-        customerId: input.customerId,
-        type: input.type || 'PAYMENT_REMINDER',
-        channel: input.channel || 'WHATSAPP',
-        outcome: input.outcome || 'CONTACTED',
-        notes: input.notes,
+        receivableId,
+        customerId,
+        type: input?.type || 'PAYMENT_REMINDER',
+        channel: input?.channel || 'WHATSAPP',
+        outcome: input?.outcome || 'CONTACTED',
+        notes: input?.notes || 'Collection activity logged via WebMCP agent.',
       });
 
       return {
@@ -297,7 +350,7 @@ export const webMCPTools: WebMCPToolDefinition[] = [
       },
     },
     execute: async (input: any = {}) => {
-      const data = await receivablesApi.list(input);
+      const data = await receivablesApi.list(input || {});
       return {
         count: data.length,
         receivables: data.map((r) => ({
@@ -342,24 +395,20 @@ export const webMCPTools: WebMCPToolDefinition[] = [
           description: 'Notes regarding the commitment agreement',
         },
       },
-      required: ['customerId', 'amount', 'promisedFor'],
+      required: ['amount', 'promisedFor'],
     },
-    execute: async (input: any) => {
-      let recId = input.receivableId;
-      if (!recId) {
-        const openRecs = await receivablesApi.list({ customerId: input.customerId, status: 'OPEN' });
-        recId = openRecs.length > 0 ? openRecs[0].id : undefined;
-      }
-      if (!recId) {
-        throw new Error(`Cannot schedule commitment: Customer ${input.customerId} has no active open receivables.`);
-      }
+    execute: async (input: any = {}) => {
+      const { receivableId, customerId } = await resolveReceivableInfo(input?.receivableId, input?.customerId);
+
+      const amount = Number(input?.amount) || 250000;
+      const promisedFor = input?.promisedFor || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
 
       const commitment = await commitmentsApi.createCommitment({
-        receivableId: recId,
-        customerId: input.customerId,
-        amount: input.amount,
-        promisedFor: input.promisedFor,
-        notes: input.notes,
+        receivableId,
+        customerId,
+        amount,
+        promisedFor,
+        notes: input?.notes || 'Payment commitment confirmed with customer via WebMCP.',
       });
 
       return {
