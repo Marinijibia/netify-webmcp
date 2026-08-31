@@ -8,10 +8,16 @@ export class HealthController {
   private redisClient: Redis | null = null;
 
   constructor(private readonly configService: ConfigService) {
+    const redisUrl = this.configService.get<string>('REDIS_URL');
     const host = this.configService.get<string>('REDIS_HOST') || 'localhost';
     const port = this.configService.get<number>('REDIS_PORT') || 6379;
+    const password = this.configService.get<string>('REDIS_PASSWORD');
     try {
-      this.redisClient = new Redis({ host, port, lazyConnect: true, maxRetriesPerRequest: 1 });
+      if (redisUrl) {
+        this.redisClient = new Redis(redisUrl, { lazyConnect: true, maxRetriesPerRequest: 1 });
+      } else {
+        this.redisClient = new Redis({ host, port, password: password || undefined, lazyConnect: true, maxRetriesPerRequest: 1 });
+      }
     } catch {
       this.redisClient = null;
     }

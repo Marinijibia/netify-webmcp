@@ -1,16 +1,28 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { Mail, CheckCircle2, ArrowRight, ArrowLeft, RefreshCw, Loader2, Sparkles } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Mail, CheckCircle2, ArrowRight, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 import { useTheme } from '@/lib/theme/theme-context';
+import { authApi } from '@/lib/api/auth';
+import { WebStorageService } from '@/lib/api/storage';
 
-export default function VerifyEmailPage() {
+function VerifyEmailForm() {
   const { tokens, isLight } = useTheme();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const emailParam = searchParams.get('email') || '';
+  const tokenParam = searchParams.get('token') || '';
+
+  const [email, setEmail] = useState(emailParam);
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isVerified, setIsVerified] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [resendCountdown, setResendCountdown] = useState(0);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   const handleCodeChange = (index: number, val: string) => {
     if (val.length > 1) val = val[val.length - 1];
@@ -32,17 +44,61 @@ export default function VerifyEmailPage() {
     }
   };
 
-  const handleVerify = (e: React.FormEvent) => {
+  const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
+    const fullCode = code.join('').trim();
+    if (!email) {
+      setError('Please provide your account email address.');
+      return;
+    }
+    if (fullCode.length !== 6) {
+      setError('Please enter all 6 digits of your verification code.');
+      return;
+    }
+
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    setError(null);
+
+    try {
+      const res = await authApi.verifyEmail({ email: email.trim().toLowerCase(), code: fullCode });
+      const data = ((res.data as any)?.data || res.data);
+      if (data?.tokens) {
+        WebStorageService.setAccessToken(data.tokens.accessToken);
+        WebStorageService.setRefreshToken(data.tokens.refreshToken);
+      }
       setIsVerified(true);
-    }, 700);
+      setTimeout(() => {
+        router.push('/workspace');
+      }, 1200);
+    } catch (err: any) {
+      setError(err?.message || 'Invalid or expired verification code. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
+    if (!email) {
+      setError('Please enter your email to resend the code.');
+      return;
+    }
     setResendCountdown(60);
+    setResendSuccess(false);
+    setError(null);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.app.netify.ng/api/v1';
+      const res = await fetch(`${apiUrl}/auth/resend-verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      if (res.ok) {
+        setResendSuccess(true);
+      }
+    } catch (e) {
+      console.error('Failed to resend code:', e);
+    }
+
     const interval = setInterval(() => {
       setResendCountdown((prev) => {
         if (prev <= 1) {
@@ -125,9 +181,45 @@ export default function VerifyEmailPage() {
             Verify Your Email
           </h1>
           <p style={{ color: tokens.textSecondary, fontSize: '13.5px', marginTop: '6px', lineHeight: '1.5' }}>
-            We've sent a 6-digit confirmation code to your email. Enter it below to activate your organization workspace.
+            We've sent a 6-digit confirmation code to {email ? <strong style={{ color: tokens.textPrimary }}>{email}</strong> : 'your email'}. Enter it below to activate your organization workspace.
           </p>
         </div>
+
+        {error && (
+          <div style={{
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid #EF4444',
+            color: '#EF4444',
+            padding: '12px 14px',
+            borderRadius: '10px',
+            fontSize: '13px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            marginBottom: '20px',
+          }}>
+            <AlertCircle size={16} style={{ flexShrink: 0 }} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {resendSuccess && (
+          <div style={{
+            backgroundColor: tokens.accentSoft,
+            border: '1px solid #00A581',
+            color: '#00A581',
+            padding: '12px 14px',
+            borderRadius: '10px',
+            fontSize: '13px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            marginBottom: '20px',
+          }}>
+            <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+            <span>New 6-digit code has been sent to your email.</span>
+          </div>
+        )}
 
         {isVerified ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -145,7 +237,7 @@ export default function VerifyEmailPage() {
               <CheckCircle2 size={24} color="#00A581" style={{ flexShrink: 0 }} />
               <div>
                 <strong style={{ color: tokens.textPrimary, display: 'block' }}>Email Verified Successfully!</strong>
-                Your workspace is ready. You can now start tracking receivables.
+                Your workspace is ready. Redirecting you now...
               </div>
             </div>
 
@@ -172,6 +264,32 @@ export default function VerifyEmailPage() {
           </div>
         ) : (
           <form onSubmit={handleVerify} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Email field if not provided in URL */}
+            {!emailParam && (
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '600', color: tokens.textSecondary, marginBottom: '6px' }}>
+                  Account Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@business.ng"
+                  style={{
+                    width: '100%',
+                    padding: '11px 14px',
+                    borderRadius: '10px',
+                    backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                    border: `1px solid ${tokens.surfaceBorder}`,
+                    color: tokens.textPrimary,
+                    fontSize: '14px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            )}
+
             {/* 6 Digit Input Group */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
               {code.map((digit, idx) => (
@@ -254,5 +372,17 @@ export default function VerifyEmailPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Loader2 size={32} className="animate-spin" color="#00A581" />
+      </div>
+    }>
+      <VerifyEmailForm />
+    </Suspense>
   );
 }

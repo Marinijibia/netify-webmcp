@@ -174,27 +174,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     try {
       await authApi.register(payload);
-      // Auto-login on successful registration and redirect to onboarding setup
-      const res = await authApi.login({ email: payload.email, password: payload.password });
-      const data = ((res.data as any)?.data || res.data);
-      if (data?.tokens) {
-        WebStorageService.setAccessToken(data.tokens.accessToken);
-        WebStorageService.setRefreshToken(data.tokens.refreshToken);
-        WebBiometricService.saveBiometricVault(payload.email, data.tokens.accessToken, data.tokens.refreshToken);
-      }
-      if (data?.organization) {
-        const org: ActiveOrganization = {
-          id: data.organization.id,
-          name: data.organization.name,
-          slug: data.organization.slug,
-          currency: data.organization.currency || 'NGN',
-          role: data.role || 'OWNER',
-        };
-        setOrganization(org);
-        WebStorageService.setActiveOrg(org);
-      }
-      await refreshProfile();
-      router.push('/onboarding');
+      // Redirect to verification code entry page
+      router.push(`/verify-email?email=${encodeURIComponent(payload.email)}`);
     } finally {
       setIsLoading(false);
     }

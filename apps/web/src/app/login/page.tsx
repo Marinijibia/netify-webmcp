@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { 
   Lock, 
@@ -27,6 +28,7 @@ import { useTheme } from '@/lib/theme/theme-context';
 import { useLanguage } from '@/lib/i18n';
 
 export default function LoginPage() {
+  const router = useRouter();
   const { login, loginWithBiometrics } = useAuth();
   const { tokens, isLight } = useTheme();
   const { t, currentLanguageInfo, openLanguageModal } = useLanguage();
@@ -86,6 +88,10 @@ export default function LoginPage() {
     try {
       await login({ email, password });
     } catch (err: any) {
+      if (err?.message?.includes('EMAIL_NOT_VERIFIED') || err?.message?.includes('verify your email')) {
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        return;
+      }
       setError(err?.message || 'Login failed. Please check your credentials or register a new account.');
     } finally {
       setIsSubmitting(false);
@@ -130,18 +136,17 @@ export default function LoginPage() {
         <div>
           {/* Top Logo Link */}
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              backgroundColor: '#00A581',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 20px rgba(0, 165, 129, 0.4)',
-            }}>
-              <Sparkles size={22} color="#FFFFFF" />
-            </div>
+            <img
+              src="/logo-icon.png"
+              alt="Netify Logo"
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                objectFit: 'contain',
+                boxShadow: '0 0 20px rgba(0, 165, 129, 0.4)',
+              }}
+            />
             <div>
               <span style={{ fontSize: '20px', fontWeight: '900', letterSpacing: '-0.5px', color: tokens.textPrimary }}>NETIFY</span>
               <span style={{ fontSize: '11px', color: '#00A581', marginLeft: '6px', fontWeight: 'bold' }}>WebMCP</span>

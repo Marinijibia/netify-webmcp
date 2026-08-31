@@ -1,0 +1,11 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: [
+    'build',
+    '--build-arg', 'NEXT_PUBLIC_API_URL=https://api.app.netify.ng/api/v1',
+    '-f', 'apps/web/Dockerfile',
+    '-t', 'europe-west1-docker.pkg.dev/netify-development/netify/netify-web:latest',
+    '.'
+  ]
+images:
+- 'europe-west1-docker.pkg.dev/netify-development/netify/netify-web:latest'

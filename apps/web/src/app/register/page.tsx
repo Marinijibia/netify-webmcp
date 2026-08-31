@@ -97,18 +97,17 @@ export default function RegisterPage() {
         <div>
           {/* Logo */}
           <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '10px',
-              backgroundColor: '#00A581',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 20px rgba(0, 165, 129, 0.4)',
-            }}>
-              <Sparkles size={22} color="#FFFFFF" />
-            </div>
+            <img
+              src="/logo-icon.png"
+              alt="Netify Logo"
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                objectFit: 'contain',
+                boxShadow: '0 0 20px rgba(0, 165, 129, 0.4)',
+              }}
+            />
             <div>
               <span style={{ fontSize: '20px', fontWeight: '900', letterSpacing: '-0.5px', color: tokens.textPrimary }}>NETIFY</span>
               <span style={{ fontSize: '11px', color: '#00A581', marginLeft: '6px', fontWeight: 'bold' }}>WebMCP</span>

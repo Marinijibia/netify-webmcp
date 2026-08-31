@@ -46,18 +46,17 @@ export function PublicHeader() {
       }}>
         {/* Brand Logo */}
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-          <div style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '10px',
-            backgroundColor: '#00A581',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 0 15px rgba(0, 165, 129, 0.4)',
-          }}>
-            <Sparkles size={20} color="#FFFFFF" />
-          </div>
+          <img
+            src="/logo-icon.png"
+            alt="Netify Logo"
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              objectFit: 'contain',
+              boxShadow: '0 0 15px rgba(0, 165, 129, 0.4)',
+            }}
+          />
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '18px', fontWeight: '900', letterSpacing: '-0.5px', color: tokens.textPrimary }}>

@@ -1,0 +1,34 @@
+# Dependencies and builds
+node_modules
+*/node_modules
+*/*/node_modules
+.next
+*/.next
+dist
+*/dist
+*/*/dist
+.turbo
+*/.turbo
+
+# Git and OS
+.git
+.gitignore
+.DS_Store
+Thumbs.db
+
+# Logs and Caches
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.eslintcache
+coverage
+DevCacheYarn
+DevCachenpm
+*/DevCacheYarn
+*/DevCachenpm
+
+# Local Environment files
+.env
+.env*.local
+!.env.example

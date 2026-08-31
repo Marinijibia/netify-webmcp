@@ -92,22 +92,17 @@ export function Sidebar() {
         textDecoration: 'none',
         borderBottom: `1px solid ${tokens.surfaceBorder}`,
       }}>
-        <div style={{
-          background: 'linear-gradient(135deg, #00A581 0%, #007D62 100%)',
-          width: '38px',
-          height: '38px',
-          borderRadius: '11px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#FFFFFF',
-          fontWeight: '900',
-          fontSize: '20px',
-          boxShadow: '0 0 16px rgba(0, 165, 129, 0.4)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-        }}>
-          N
-        </div>
+        <img
+          src="/logo-icon.png"
+          alt="Netify Logo"
+          style={{
+            width: '38px',
+            height: '38px',
+            borderRadius: '11px',
+            objectFit: 'contain',
+            boxShadow: '0 0 16px rgba(0, 165, 129, 0.4)',
+          }}
+        />
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '18px', fontWeight: '800', color: tokens.textPrimary, letterSpacing: '-0.4px' }}>Netify</span>

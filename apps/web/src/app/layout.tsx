@@ -9,6 +9,14 @@ import '../styles/globals.css';
 export const metadata = {
   title: 'Netify — AI Collections & Business Memory for African SMEs',
   description: 'Know who owes you. Remember what they promised. Know who needs attention. Get paid.',
+  icons: {
+    icon: [
+      { url: '/favicon.png', type: 'image/png' },
+      { url: '/favicon.ico' },
+    ],
+    shortcut: '/favicon.png',
+    apple: '/logo-icon.png',
+  },
 };
 
 export default function RootLayout({
