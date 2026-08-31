@@ -65,21 +65,24 @@ export default function CustomerDetailPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [cust, recs, pays, comms, acts] = await Promise.all([
-        customersApi.getById(customerId),
+      // 1. Fetch customer profile as required primary
+      const cust = await customersApi.getById(customerId);
+      setCustomer(cust);
+
+      // 2. Fetch associated sub-resources safely in parallel
+      const [recsRes, paysRes, commsRes, actsRes] = await Promise.allSettled([
         receivablesApi.list({ customerId }),
         paymentsApi.list({ customerId }),
         commitmentsApi.getCommitments({ customerId }),
         collectionActivitiesApi.getActivities({ customerId }),
       ]);
 
-      setCustomer(cust);
-      setReceivables(recs);
-      setPayments(pays);
-      setCommitments(comms);
-      setActivities(acts);
+      if (recsRes.status === 'fulfilled') setReceivables(Array.isArray(recsRes.value) ? recsRes.value : []);
+      if (paysRes.status === 'fulfilled') setPayments(Array.isArray(paysRes.value) ? paysRes.value : []);
+      if (commsRes.status === 'fulfilled') setCommitments(Array.isArray(commsRes.value) ? commsRes.value : []);
+      if (actsRes.status === 'fulfilled') setActivities(Array.isArray(actsRes.value) ? actsRes.value : []);
 
-      // Attempt AI explanation in background
+      // 3. Attempt AI explanation in background
       try {
         const exp = await aiApi.explainCustomer(customerId);
         setAiExplanation(exp);

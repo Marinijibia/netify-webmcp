@@ -958,7 +958,7 @@ export default function SettingsPage() {
                   userId: 'user-gm',
                   role: 'MANAGER',
                   status: 'ACTIVE',
-                  user: { id: 'u-1', firstName: 'Aminu', lastName: 'Bello', email: 'aminu.manager@netify.ng', status: 'ACTIVE' },
+                  user: { id: 'u-1', firstName: 'Operations', lastName: 'Manager', email: 'admin@netify.ng', status: 'ACTIVE' },
                   createdAt: '',
                   updatedAt: ''
                 },
@@ -967,7 +967,7 @@ export default function SettingsPage() {
                   userId: 'user-cashier',
                   role: 'ADMIN',
                   status: 'ACTIVE',
-                  user: { id: 'u-2', firstName: 'Fatima', lastName: 'Usman', email: 'fatima.cashier@netify.ng', status: 'ACTIVE' },
+                  user: { id: 'u-2', firstName: 'Finance', lastName: 'Cashier', email: 'support@netify.ng', status: 'ACTIVE' },
                   createdAt: '',
                   updatedAt: ''
                 },
@@ -976,7 +976,7 @@ export default function SettingsPage() {
                   userId: 'user-rep',
                   role: 'STAFF',
                   status: 'ACTIVE',
-                  user: { id: 'u-3', firstName: 'Emeka', lastName: 'Okonkwo', email: 'emeka.driver@netify.ng', status: 'ACTIVE' },
+                  user: { id: 'u-3', firstName: 'Field', lastName: 'Collector', email: 'support@netify.ng', status: 'ACTIVE' },
                   createdAt: '',
                   updatedAt: ''
                 }

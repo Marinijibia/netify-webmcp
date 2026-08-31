@@ -71,11 +71,11 @@ async function main() {
   const passwordHash = await bcrypt.hash('Password123!', 10);
   const user = await prisma.user.create({
     data: {
-      email: 'owner@netify.ng',
+      email: 'admin@netify.ng',
       passwordHash,
       firstName: 'Tunde',
       lastName: 'Balogun',
-      phone: '+2348031234567',
+      phone: '+2348063005402',
       isEmailVerified: true,
       emailVerifiedAt: now,
       onboardingCompleted: true,
@@ -97,7 +97,7 @@ async function main() {
       passwordHash,
       firstName: 'Demo',
       lastName: 'Merchant',
-      phone: '+2348000000000',
+      phone: '+2349128230649',
       isEmailVerified: true,
       emailVerifiedAt: now,
       onboardingCompleted: true,
@@ -132,14 +132,14 @@ async function main() {
     ],
   });
 
-  // 3. Create Key Customers
+  // 3. Create Key Customers (All mapped to authorized company contact channels)
   // Customer 1: ABC Stores (HIGH RISK - Core Demo Star)
   const abcStores = await prisma.customer.create({
     data: {
       organizationId: org.id,
       name: 'ABC Stores',
-      phone: '+2348029988771',
-      email: 'procurement@abcstores.ng',
+      phone: '+2348063005402',
+      email: 'admin@netify.ng',
       address: 'Plot 14 Commercial Ave, Ikeja, Lagos',
       country: 'Nigeria',
       currency: 'NGN',
@@ -154,8 +154,8 @@ async function main() {
     data: {
       organizationId: org.id,
       name: 'Musa Enterprises',
-      phone: '+2348051122334',
-      email: 'musa@musaenterprises.com',
+      phone: '+2349128230649',
+      email: 'support@netify.ng',
       address: '22 Kano St, Central Business District, Abuja',
       country: 'Nigeria',
       currency: 'NGN',
@@ -170,8 +170,8 @@ async function main() {
     data: {
       organizationId: org.id,
       name: 'Greenfield Supplies',
-      phone: '+2348074455667',
-      email: 'accounts@greenfield.ng',
+      phone: '+2348063005402',
+      email: 'admin@netify.ng',
       address: '8 Trans-Amadi Road, Port Harcourt',
       country: 'Nigeria',
       currency: 'NGN',
@@ -186,8 +186,8 @@ async function main() {
     data: {
       organizationId: org.id,
       name: 'Northern Distribution',
-      phone: '+2348098877665',
-      email: 'ops@northerndist.ng',
+      phone: '+2349128230649',
+      email: 'support@netify.ng',
       address: '10 Ahmadu Bello Way, Kaduna',
       country: 'Nigeria',
       currency: 'NGN',

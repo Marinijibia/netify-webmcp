@@ -537,9 +537,9 @@ export default function CustomersPage() {
                             >
                               <option value="">Unassigned (All Staff)</option>
                               {(staffMembers.length > 0 ? staffMembers : [
-                                { userId: 'user-gm', user: { firstName: 'Aminu', lastName: 'Bello (GM)' } },
-                                { userId: 'user-rep', user: { firstName: 'Emeka', lastName: 'Okonkwo (Driver)' } },
-                                { userId: 'user-cashier', user: { firstName: 'Fatima', lastName: 'Usman (Cashier)' } },
+                                { userId: 'user-gm', user: { firstName: 'Operations', lastName: 'Manager' } },
+                                { userId: 'user-rep', user: { firstName: 'Field', lastName: 'Driver' } },
+                                { userId: 'user-cashier', user: { firstName: 'Finance', lastName: 'Cashier' } },
                               ]).map((sm: any) => (
                                 <option key={sm.userId} value={sm.userId}>
                                   👤 {sm.user?.firstName} {sm.user?.lastName}
