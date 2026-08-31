@@ -9,6 +9,7 @@ import { Navbar } from './Navbar';
 import { PublicHeader } from './PublicHeader';
 import { PublicFooter } from './PublicFooter';
 import { WebMCPInspector } from './WebMCPInspector';
+import { webMCPTools } from '@/lib/webmcp/tools';
 
 const PUBLIC_PAGES = [
   '/',
@@ -65,6 +66,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [isProtectedRoute, isLoading, isAuthenticated, router]);
 
+  const webmcpScript = (
+    <script
+      id="webmcp-tools-manifest"
+      type="application/json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify({
+          standard: 'document.modelContext.registerTool',
+          status: 'ACTIVE',
+          toolCount: webMCPTools.length,
+          tools: webMCPTools.map((t) => ({
+            name: t.name,
+            description: t.description,
+            category: t.category,
+            inputSchema: t.inputSchema,
+          })),
+        }),
+      }}
+    />
+  );
+
   // Dedicated clean layout for auth screens
   if (isAuthRoute) {
     return (
@@ -73,6 +94,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
         <WebMCPInspector />
+        {webmcpScript}
       </div>
     );
   }
@@ -87,6 +109,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
         <PublicFooter />
         <WebMCPInspector />
+        {webmcpScript}
       </div>
     );
   }
@@ -108,6 +131,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <WebMCPInspector />
+      {webmcpScript}
     </div>
   );
 }
