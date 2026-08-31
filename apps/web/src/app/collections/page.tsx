@@ -131,6 +131,43 @@ export default function CollectionsPage() {
         </button>
       </div>
 
+      {/* WebMCP Tool Integration Notice */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px',
+        padding: '14px 20px',
+        borderRadius: '12px',
+        backgroundColor: isLight ? '#F0FDF4' : 'rgba(0, 37, 27, 0.8)',
+        border: '1px solid rgba(0, 165, 129, 0.4)',
+        fontSize: '12.5px',
+        color: tokens.textSecondary,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Sparkles size={16} color="#00A581" />
+          <span>
+            This priority queue is exposed directly to autonomous browser agents via the <strong style={{ color: '#00A581' }}>get_collection_priority</strong> WebMCP tool. Rankings and broken commitments update in real time.
+          </span>
+        </div>
+        <Link
+          href="/webmcp"
+          style={{
+            color: '#00A581',
+            fontWeight: '700',
+            fontSize: '12px',
+            textDecoration: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+        >
+          <span>Test in WebMCP Sandbox</span>
+          <ChevronRight size={13} />
+        </Link>
+      </div>
+
       {/* 2. Executive KPI Bento Summary Cards */}
       <div style={{
         display: 'grid',
@@ -138,7 +175,7 @@ export default function CollectionsPage() {
         gap: '16px',
       }}>
         {/* Total Overdue in Queue */}
-        <div style={{
+        <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
           padding: '20px',
           borderRadius: '12px',
@@ -161,7 +198,7 @@ export default function CollectionsPage() {
         </div>
 
         {/* High Urgency Cases */}
-        <div style={{
+        <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
           padding: '20px',
           borderRadius: '12px',
@@ -183,7 +220,7 @@ export default function CollectionsPage() {
         </div>
 
         {/* Broken Promises */}
-        <div style={{
+        <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
           padding: '20px',
           borderRadius: '12px',
@@ -296,6 +333,7 @@ export default function CollectionsPage() {
             return (
               <div
                 key={item.customerId}
+                className="hover-lift"
                 style={{
                   backgroundColor: tokens.surface,
                   borderRadius: '14px',
@@ -361,18 +399,24 @@ export default function CollectionsPage() {
                     </p>
 
                     <div style={{ display: 'flex', gap: '12px', marginTop: '8px', fontSize: '11.5px', color: tokens.textSecondary, flexWrap: 'wrap' }}>
-                      <span>Invoices: <strong style={{ color: tokens.textPrimary }}>{item.openReceivablesCount}</strong></span>
+                      <span>Overdue: <strong style={{ color: item.oldestOverdueDays > 30 ? '#DC2626' : tokens.textPrimary }}>{item.oldestOverdueDays} days</strong></span>
                       <span>•</span>
-                      <span>Missed Promises: <strong style={{ color: item.missedCommitmentsCount > 0 ? '#EF4444' : '#00A581' }}>{item.missedCommitmentsCount}</strong></span>
-                      <span>•</span>
-                      <span>Overdue Days: <strong style={{ color: item.oldestOverdueDays > 30 ? '#EF4444' : tokens.textPrimary }}>{item.oldestOverdueDays} days</strong></span>
+                      <span>{item.openReceivablesCount} open invoice{item.openReceivablesCount > 1 ? 's' : ''}</span>
+                      {item.missedCommitmentsCount > 0 ? (
+                        <>
+                          <span>•</span>
+                          <span style={{ color: isLight ? '#D97706' : '#FCD34D', fontWeight: 'bold' }}>
+                            {item.missedCommitmentsCount} missed promise{item.missedCommitmentsCount > 1 ? 's' : ''}
+                          </span>
+                        </>
+                      ) : null}
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '19px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.4px' }}>
+                    <div style={{ fontSize: '18px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.4px' }}>
                       {formatCurrency(item.totalOutstanding, item.currency || currency)}
                     </div>
                     <p style={{ fontSize: '12px', color: '#EF4444', fontWeight: '700', marginTop: '2px' }}>
@@ -383,6 +427,7 @@ export default function CollectionsPage() {
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <Link
                       href={`/customers/${item.customerId}`}
+                      className="hover-lift tap-press"
                       style={{
                         padding: '8px 12px',
                         borderRadius: '7px',
@@ -404,6 +449,7 @@ export default function CollectionsPage() {
 
                     <Link
                       href={`/messages/draft?customerId=${item.customerId}`}
+                      className="hover-lift tap-press"
                       style={{
                         display: 'flex',
                         alignItems: 'center',

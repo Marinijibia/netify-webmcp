@@ -87,6 +87,7 @@ export default function HomePage() {
         {/* WebMCP Standard Announcement Pill */}
         <Link
           href="/webmcp"
+          className="hover-lift tap-press"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -158,6 +159,7 @@ export default function HomePage() {
           {isAuthenticated ? (
             <Link
               href="/workspace"
+              className="hover-lift tap-press"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -179,6 +181,7 @@ export default function HomePage() {
           ) : (
             <Link
               href="/register"
+              className="hover-lift tap-press"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -201,6 +204,7 @@ export default function HomePage() {
 
           <Link
             href="/webmcp"
+            className="hover-lift tap-press"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -759,7 +763,7 @@ export default function HomePage() {
         {/* Bento Grid Container */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
           {/* Bento Cell 1 (Wide: 2 cols) */}
-          <div style={{
+          <div className="hover-lift" style={{
             gridColumn: 'span 2',
             backgroundColor: tokens.surface,
             borderRadius: '20px',
@@ -795,7 +799,7 @@ export default function HomePage() {
           </div>
 
           {/* Bento Cell 2 (Tall / Single col) */}
-          <div style={{
+          <div className="hover-lift" style={{
             backgroundColor: tokens.surface,
             borderRadius: '20px',
             border: `1px solid ${tokens.surfaceBorder}`,
@@ -826,7 +830,7 @@ export default function HomePage() {
           </div>
 
           {/* Bento Cell 3 (Single col) */}
-          <div style={{
+          <div className="hover-lift" style={{
             backgroundColor: tokens.surface,
             borderRadius: '20px',
             border: `1px solid ${tokens.surfaceBorder}`,
@@ -846,7 +850,7 @@ export default function HomePage() {
           </div>
 
           {/* Bento Cell 4 (Wide: 2 cols) */}
-          <div style={{
+          <div className="hover-lift" style={{
             gridColumn: 'span 2',
             backgroundColor: tokens.surface,
             borderRadius: '20px',

@@ -170,6 +170,34 @@ export default function CustomersPage() {
         </div>
       </div>
 
+      {/* WebMCP Tool Reference Badge */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '10px',
+        padding: '12px 18px',
+        borderRadius: '10px',
+        backgroundColor: isLight ? '#F0FDF4' : 'rgba(0, 37, 27, 0.7)',
+        border: '1px solid rgba(0, 165, 129, 0.35)',
+        fontSize: '12.5px',
+        color: tokens.textSecondary,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Sparkles size={15} color="#00A581" />
+          <span>
+            Debtor accounts & behavioral risk profiles are searchable by browser agents via <strong style={{ color: '#00A581' }}>search_customers</strong> & <strong style={{ color: '#00A581' }}>get_customer_risk_profile</strong>.
+          </span>
+        </div>
+        <Link
+          href="/webmcp"
+          style={{ color: '#00A581', fontWeight: '700', fontSize: '12px', textDecoration: 'none' }}
+        >
+          View Tool Schema →
+        </Link>
+      </div>
+
       {/* 2. Executive KPI Bento Summary Cards */}
       <div style={{
         display: 'grid',
@@ -177,7 +205,7 @@ export default function CustomersPage() {
         gap: '14px',
       }}>
         {/* Total Exposure */}
-        <div style={{
+        <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
           padding: '18px 20px',
           borderRadius: '12px',
@@ -199,7 +227,7 @@ export default function CustomersPage() {
         </div>
 
         {/* High / Critical Risk */}
-        <div style={{
+        <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
           padding: '18px 20px',
           borderRadius: '12px',
@@ -222,7 +250,7 @@ export default function CustomersPage() {
         </div>
 
         {/* Total Accounts */}
-        <div style={{
+        <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
           padding: '18px 20px',
           borderRadius: '12px',
@@ -233,23 +261,23 @@ export default function CustomersPage() {
           gap: '6px',
         }}>
           <span style={{ fontSize: '11.5px', fontWeight: '700', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-            Total Directory Accounts
+            Total Registered Customers
           </span>
           <div style={{ fontSize: '24px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
             {isLoading ? '...' : customers.length}
           </div>
           <span style={{ fontSize: '11.5px', color: tokens.textSecondary }}>
-            Registered customers
+            In commercial directory
           </span>
         </div>
 
-        {/* Zero Balance / Paid Clean */}
-        <div style={{
+        {/* Zero Balance / Good Standing */}
+        <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
           padding: '18px 20px',
           borderRadius: '12px',
-          border: `1px solid ${tokens.accentBorder}`,
-          background: isLight ? tokens.accentSoft : 'rgba(0, 32, 53, 0.7)',
+          border: `1px solid ${isLight ? '#A7F3D0' : 'rgba(0, 165, 129, 0.35)'}`,
+          background: isLight ? '#F0FDF4' : 'rgba(0, 32, 53, 0.7)',
           boxShadow: isLight ? tokens.shadowCard : 'none',
           display: 'flex',
           flexDirection: 'column',

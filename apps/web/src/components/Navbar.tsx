@@ -9,6 +9,7 @@ import { notificationApi } from '@/lib/api';
 import { useLanguage } from '@/lib/i18n';
 import { useTheme } from '@/lib/theme/theme-context';
 import LiveVoiceAssistantModal from './LiveVoiceAssistantModal';
+import { AgentCoPilotDrawer } from './AgentCoPilotDrawer';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -17,6 +18,7 @@ export function Navbar() {
   const { tokens, isLight, toggleTheme } = useTheme();
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [isVoiceAssistantOpen, setIsVoiceAssistantOpen] = React.useState(false);
+  const [isCoPilotDrawerOpen, setIsCoPilotDrawerOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (isAuthenticated) {
@@ -84,6 +86,7 @@ export function Navbar() {
         {/* Quick Create Invoice Button */}
         <Link
           href="/receivables/create"
+          className="hover-lift tap-press"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -103,9 +106,11 @@ export function Navbar() {
           <span>{t('commandCenter.addInvoice')}</span>
         </Link>
 
-        {/* Ask Copilot Button */}
-        <Link
-          href="/chat"
+        {/* WebMCP Agent Copilot Button */}
+        <button
+          type="button"
+          onClick={() => setIsCoPilotDrawerOpen(true)}
+          className="hover-lift tap-press animate-beacon"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -116,19 +121,23 @@ export function Navbar() {
             borderRadius: '8px',
             fontSize: '12.5px',
             fontWeight: '700',
-            textDecoration: 'none',
+            border: 'none',
+            cursor: 'pointer',
             boxShadow: '0 2px 10px rgba(0, 165, 129, 0.3)',
+            transition: 'all 0.15s ease',
           }}
+          title="Open WebMCP Agent Co-Pilot (Live Ledger Discovery & Follow-up Proposals)"
         >
           <Sparkles size={13} />
-          <span>{t('common.askCopilot')}</span>
-        </Link>
+          <span>WebMCP Co-Pilot</span>
+        </button>
 
         {/* Live AI Voice Assistant Button */}
         <button
           type="button"
           onClick={() => setIsVoiceAssistantOpen(true)}
           title="Open Live Hands-Free AI Voice Assistant"
+          className="hover-lift tap-press"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -153,6 +162,7 @@ export function Navbar() {
           type="button"
           onClick={toggleTheme}
           title={isLight ? 'Switch to Dark Mode (🌙)' : 'Switch to Light Mode (☀️)'}
+          className="hover-lift tap-press"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -179,6 +189,7 @@ export function Navbar() {
           type="button"
           onClick={openLanguageModal}
           title="Change language / Harshe / Èdè / Asụsụ"
+          className="hover-lift tap-press"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -288,6 +299,12 @@ export function Navbar() {
       <LiveVoiceAssistantModal
         isOpen={isVoiceAssistantOpen}
         onClose={() => setIsVoiceAssistantOpen(false)}
+      />
+
+      {/* WebMCP Agent Co-Pilot Sliding Drawer */}
+      <AgentCoPilotDrawer
+        isOpen={isCoPilotDrawerOpen}
+        onClose={() => setIsCoPilotDrawerOpen(false)}
       />
     </header>
   );

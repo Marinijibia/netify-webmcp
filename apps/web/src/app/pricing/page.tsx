@@ -167,7 +167,7 @@ export default function PricingPage() {
         zIndex: 1,
       }}>
         {/* Starter Plan */}
-        <div style={{
+        <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
           borderRadius: '24px',
           border: `1px solid ${tokens.surfaceBorder}`,
@@ -211,6 +211,7 @@ export default function PricingPage() {
 
           <Link
             href="/register"
+            className="hover-lift tap-press"
             style={{
               textAlign: 'center',
               padding: '14px',
@@ -229,7 +230,7 @@ export default function PricingPage() {
         </div>
 
         {/* Growth Pro (Featured Luxury Card) */}
-        <div style={{
+        <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
           borderRadius: '24px',
           border: '2px solid #00A581',
@@ -294,6 +295,7 @@ export default function PricingPage() {
 
           <Link
             href={isAuthenticated ? "/workspace" : "/register"}
+            className="hover-lift tap-press"
             style={{
               textAlign: 'center',
               padding: '14px',
@@ -311,7 +313,7 @@ export default function PricingPage() {
         </div>
 
         {/* Enterprise Scale */}
-        <div style={{
+        <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
           borderRadius: '24px',
           border: `1px solid ${tokens.surfaceBorder}`,

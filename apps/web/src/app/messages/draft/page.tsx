@@ -31,6 +31,7 @@ import { useLanguage, SUPPORTED_LANGUAGES, SupportedLanguage, LANGUAGE_REGISTRY 
 import CallAssistantModal from '@/components/CallAssistantModal';
 import PhoneQrBridgeModal from '@/components/PhoneQrBridgeModal';
 import { useTheme } from '@/lib/theme/theme-context';
+import { speakText, stopSpeech } from '@/lib/voice/voice-service';
 import { 
   MessageSquareQuote, 
   CheckCircle2, 
@@ -39,21 +40,23 @@ import {
   ArrowLeft, 
   Sparkles, 
   Clock, 
-  AlertCircle,
-  Copy,
-  Loader2,
-  Check,
-  Building,
-  PhoneCall,
-  MessageSquare,
-  Mail,
-  ExternalLink,
-  Calendar,
-  DollarSign,
-  ThumbsUp,
-  X,
-  QrCode,
-  Smartphone
+  AlertCircle, 
+  Copy, 
+  Loader2, 
+  Check, 
+  Building, 
+  PhoneCall, 
+  MessageSquare, 
+  Mail, 
+  ExternalLink, 
+  Calendar, 
+  DollarSign, 
+  ThumbsUp, 
+  X, 
+  QrCode, 
+  Smartphone,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 
 function DraftContent() {
@@ -78,6 +81,21 @@ function DraftContent() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedEmailOnly, setCopiedEmailOnly] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+
+  const handleToggleVoicePreview = () => {
+    if (isPlayingAudio) {
+      stopSpeech();
+      setIsPlayingAudio(false);
+    } else {
+      if (!editableBody) return;
+      setIsPlayingAudio(true);
+      speakText(editableBody, (draftLanguage || 'en') as any, {
+        onEnd: () => setIsPlayingAudio(false),
+        onError: () => setIsPlayingAudio(false),
+      });
+    }
+  };
 
   // Desktop vs Mobile Detection & QR Phone Bridge State
   const [isMobileClient, setIsMobileClient] = useState(false);
@@ -597,6 +615,7 @@ function DraftContent() {
                     key={ch.id}
                     type="button"
                     onClick={() => setChannel(ch.id as any)}
+                    className="tap-press hover-lift"
                     style={{
                       padding: '10px 12px',
                       borderRadius: '8px',
@@ -643,6 +662,7 @@ function DraftContent() {
                   key={t.id}
                   type="button"
                   onClick={() => setTone(t.id as any)}
+                  className="tap-press hover-lift"
                   style={{
                     textAlign: 'left',
                     padding: '10px 12px',
@@ -686,6 +706,7 @@ function DraftContent() {
                     key={l.code}
                     type="button"
                     onClick={() => setDraftLanguage(l.code)}
+                    className="tap-press hover-lift"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -753,6 +774,31 @@ function DraftContent() {
                 >
                   {copied ? <Check size={14} color="#00A581" /> : <Copy size={14} />}
                   <span>{copied ? 'Copied' : 'Copy Text'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleToggleVoicePreview}
+                  disabled={!editableBody || isDrafting}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    backgroundColor: isPlayingAudio ? '#EF4444' : tokens.accentSoft,
+                    border: `1px solid ${isPlayingAudio ? '#DC2626' : tokens.accentBorder}`,
+                    color: isPlayingAudio ? '#FFFFFF' : '#00A581',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: !editableBody || isDrafting ? 'not-allowed' : 'pointer',
+                    boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                  title="Listen to browser voice preview of this collection reminder"
+                >
+                  {isPlayingAudio ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                  <span>{isPlayingAudio ? 'Stop Audio' : 'Voice Preview'}</span>
                 </button>
 
                 <button
@@ -859,6 +905,7 @@ function DraftContent() {
                   type="button"
                   onClick={() => handleNativeDispatch('WHATSAPP')}
                   disabled={isApproving || !(editableBody || '').trim() || isDrafting}
+                  className="hover-lift tap-press"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -894,6 +941,7 @@ function DraftContent() {
                   type="button"
                   onClick={() => handleNativeDispatch('SMS')}
                   disabled={isApproving || !(editableBody || '').trim() || isDrafting}
+                  className="hover-lift tap-press"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -929,6 +977,7 @@ function DraftContent() {
                   type="button"
                   onClick={() => handleNativeDispatch('PHONE_CALL')}
                   disabled={isDrafting}
+                  className="hover-lift tap-press"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -965,6 +1014,7 @@ function DraftContent() {
                     type="button"
                     onClick={() => handleNativeDispatch('EMAIL', 'GMAIL')}
                     disabled={isApproving || !(editableBody || '').trim() || isDrafting}
+                    className="hover-lift tap-press"
                     style={{
                       display: 'flex',
                       alignItems: 'center',

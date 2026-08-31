@@ -330,6 +330,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={fillDemoCredentials}
+              className="hover-lift tap-press"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -378,6 +379,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setIsFingerprintModalOpen(true)}
+                className="hover-lift tap-press"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -402,6 +404,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setIsFaceModalOpen(true)}
+                className="hover-lift tap-press"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -549,6 +552,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isSubmitting}
+              className="hover-lift tap-press"
               style={{
                 display: 'flex',
                 alignItems: 'center',

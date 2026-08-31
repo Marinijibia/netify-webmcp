@@ -1,0 +1,134 @@
+{
+  "$schema": "https://webmcp.org/schemas/v1/manifest.json",
+  "name": "Netify",
+  "description": "Agent-native accounts receivable and relational trade credit recovery workspace for African SMEs",
+  "version": "1.0.0",
+  "protocol": "WebMCP",
+  "standard": "document.modelContext.registerTool",
+  "homepage": "https://app.netify.ng",
+  "documentation": "https://app.netify.ng/webmcp",
+  "apiDocumentation": "https://app.netify.ng/api/webmcp",
+  "executionEndpoint": "https://app.netify.ng/api/webmcp/execute",
+  "demoAccount": {
+    "loginUrl": "https://app.netify.ng/login",
+    "email": "merchant@netify.ng",
+    "password": "Password123!"
+  },
+  "tools": [
+    {
+      "name": "get_collection_priority",
+      "category": "READ_ONLY",
+      "description": "Retrieve prioritized debtor accounts ranked by urgency, aging days, risk score, and broken commitments from the live collections queue.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": { "type": "number", "description": "Maximum number of priority customers to return (default: 10)" },
+          "currency": { "type": "string", "description": "Currency filter e.g. NGN, KES, GHS, USD" }
+        }
+      },
+      "executeUrl": "https://app.netify.ng/api/webmcp/execute?tool=get_collection_priority"
+    },
+    {
+      "name": "search_customers",
+      "category": "READ_ONLY",
+      "description": "Search customer accounts by business name or address with live ledger balances and risk status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "Customer name or location to search" }
+        },
+        "required": ["query"]
+      },
+      "executeUrl": "https://app.netify.ng/api/webmcp/execute?tool=search_customers"
+    },
+    {
+      "name": "get_customer_evidence",
+      "category": "READ_ONLY",
+      "description": "Fetch detailed debtor evidence for a specific customer: active invoices, historical payments, WhatsApp/SMS commitment logs, and past collection activities.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": { "type": "string", "description": "The unique ID of the customer account" }
+        },
+        "required": ["customerId"]
+      },
+      "executeUrl": "https://app.netify.ng/api/webmcp/execute?tool=get_customer_evidence"
+    },
+    {
+      "name": "get_customer_risk_profile",
+      "category": "READ_ONLY",
+      "description": "Retrieve AI-grounded risk explanation, behavioral patterns, and recommended recovery strategy for a customer.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": { "type": "string", "description": "The unique ID of the customer account" }
+        },
+        "required": ["customerId"]
+      },
+      "executeUrl": "https://app.netify.ng/api/webmcp/execute?tool=get_customer_risk_profile"
+    },
+    {
+      "name": "draft_follow_up_message",
+      "category": "PROPOSAL",
+      "description": "Generate a culturally appropriate, evidence-grounded collection reminder draft for a customer with specific channel and tone in 6 regional languages (English, Hausa, Yoruba, Igbo, Pidgin, Fulfulde). Does NOT send message without human review.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": { "type": "string", "description": "The unique customer ID" },
+          "tone": { "type": "string", "enum": ["RESPECTFUL_REMINDER", "DIRECT_FOLLOWUP", "URGENT_ESCALATION", "PARTIAL_PAYMENT_PROPOSAL"] },
+          "channel": { "type": "string", "enum": ["WHATSAPP", "SMS", "PHONE_CALL", "EMAIL"] }
+        },
+        "required": ["customerId"]
+      },
+      "executeUrl": "https://app.netify.ng/api/webmcp/execute?tool=draft_follow_up_message"
+    },
+    {
+      "name": "record_collection_activity",
+      "category": "MUTATING",
+      "description": "Persist a verified collection activity record or customer payment promise into the live timeline. Requires human review.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": { "type": "string", "description": "Customer ID" },
+          "receivableId": { "type": "string", "description": "Receivable ID" },
+          "type": { "type": "string", "description": "Activity type e.g. PAYMENT_REMINDER, FOLLOW_UP, CALL" },
+          "channel": { "type": "string", "description": "Channel e.g. WHATSAPP, SMS, PHONE, IN_PERSON" },
+          "outcome": { "type": "string", "description": "Outcome e.g. CONTACTED, PROMISED_PAYMENT, NO_RESPONSE" },
+          "notes": { "type": "string", "description": "Activity notes and details" }
+        },
+        "required": ["type", "channel", "outcome"]
+      },
+      "executeUrl": "https://app.netify.ng/api/webmcp/execute?tool=record_collection_activity"
+    },
+    {
+      "name": "list_receivables",
+      "category": "READ_ONLY",
+      "description": "Query live invoices and receivables filtered by status (OPEN, OVERDUE, PAID) or customer ID.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": { "type": "string", "description": "Filter receivables by customer ID" },
+          "status": { "type": "string", "enum": ["OPEN", "OVERDUE", "PARTIALLY_PAID", "PAID"] },
+          "isOverdue": { "type": "boolean", "description": "Filter only overdue receivables" }
+        }
+      },
+      "executeUrl": "https://app.netify.ng/api/webmcp/execute?tool=list_receivables"
+    },
+    {
+      "name": "create_payment_commitment",
+      "category": "MUTATING",
+      "description": "Record a customer promise-to-pay date and amount into the live database. Requires human confirmation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "customerId": { "type": "string", "description": "The unique customer ID" },
+          "amount": { "type": "number", "description": "Amount the customer promised to pay" },
+          "promisedFor": { "type": "string", "description": "Date customer promised to pay (ISO 8601 string)" },
+          "notes": { "type": "string", "description": "Notes regarding commitment agreement" }
+        },
+        "required": ["amount", "promisedFor"]
+      },
+      "executeUrl": "https://app.netify.ng/api/webmcp/execute?tool=create_payment_commitment"
+    }
+  ]
+}

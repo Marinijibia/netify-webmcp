@@ -165,3 +165,95 @@ input, select, textarea {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
 }
+
+/* ==========================================================================
+   ENTERPRISE MOTION DESIGN SYSTEM: RESPONSIVE FINTECH ANIMATIONS
+   ========================================================================== */
+
+@keyframes springSlideRight {
+  0% {
+    transform: translateX(100%);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulseEmeraldRing {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 165, 129, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 165, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 165, 129, 0);
+  }
+}
+
+@keyframes shimmerScan {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes countUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tactile Physics Classes */
+.hover-lift {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -4px rgba(0, 48, 81, 0.12), 0 4px 12px -2px rgba(0, 165, 129, 0.1);
+}
+
+.tap-press {
+  transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.12s ease;
+}
+
+.tap-press:active {
+  transform: scale(0.98);
+}
+
+.animate-spring-slide {
+  animation: springSlideRight 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-beacon {
+  animation: pulseEmeraldRing 2s infinite cubic-bezier(0.24, 0, 0.38, 1);
+}
+
+.animate-shimmer-scan {
+  background: linear-gradient(90deg, transparent, rgba(0, 165, 129, 0.18), transparent);
+  background-size: 200% 100%;
+  animation: shimmerScan 2s infinite linear;
+}
+
+/* Accessibility: Respect Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

@@ -46,6 +46,7 @@ export default function WebMCPPage() {
   const [testResult, setTestResult] = useState<any>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedChatGptPrompt, setCopiedChatGptPrompt] = useState(false);
 
   const handleSelectTool = (tool: WebMCPToolDefinition) => {
     setSelectedTool(tool);
@@ -266,6 +267,105 @@ document.modelContext.registerTool({
               Browse to Netify inside ChatGPT. ChatGPT will autonomously inspect the registered tools and invoke them during conversation.
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* 1-Click ChatGPT Evaluation Card */}
+      <div style={{
+        backgroundColor: isLight ? '#F0FDF4' : 'rgba(0, 37, 27, 0.9)',
+        borderRadius: '20px',
+        border: '1px solid rgba(0, 165, 129, 0.5)',
+        padding: '28px 32px',
+        boxShadow: isLight ? '0 4px 20px rgba(0, 165, 129, 0.1)' : '0 8px 30px rgba(0, 0, 0, 0.4)',
+        position: 'relative',
+        zIndex: 1,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              backgroundColor: '#10a37f',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#FFFFFF',
+            }}>
+              <Zap size={18} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '17px', fontWeight: '800', color: tokens.textPrimary, margin: 0 }}>
+                1-Click ChatGPT Evaluation Test
+              </h3>
+              <p style={{ fontSize: '12px', color: tokens.textSecondary, margin: '2px 0 0' }}>
+                Ask ChatGPT to query our live WebMCP execution endpoint and reason about overdue debtor rankings in real time.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => {
+                const prompt = "Browse to https://app.netify.ng/api/webmcp/execute?tool=get_collection_priority&limit=3 and https://app.netify.ng/api/webmcp. Using the live execution results from the get_collection_priority WebMCP tool, report my top 3 overdue debtor accounts, their outstanding balances, and why each customer is flagged for follow-up.";
+                navigator.clipboard.writeText(prompt);
+                setCopiedChatGptPrompt(true);
+                setTimeout(() => setCopiedChatGptPrompt(false), 2000);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: '#00A581',
+                color: '#FFFFFF',
+                padding: '9px 16px',
+                borderRadius: '8px',
+                fontSize: '12.5px',
+                fontWeight: '700',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              {copiedChatGptPrompt ? <Check size={14} /> : <Copy size={14} />}
+              <span>{copiedChatGptPrompt ? 'Prompt Copied!' : 'Copy ChatGPT Prompt'}</span>
+            </button>
+
+            <a
+              href="https://chatgpt.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: isLight ? '#FFFFFF' : '#001A2C',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                color: tokens.textPrimary,
+                padding: '9px 16px',
+                borderRadius: '8px',
+                fontSize: '12.5px',
+                fontWeight: '600',
+                textDecoration: 'none',
+              }}
+            >
+              <span>Open ChatGPT</span>
+              <ExternalLink size={13} />
+            </a>
+          </div>
+        </div>
+
+        <div style={{
+          backgroundColor: isLight ? '#FFFFFF' : '#001524',
+          border: `1px solid ${tokens.surfaceBorder}`,
+          borderRadius: '10px',
+          padding: '14px 18px',
+          fontSize: '13px',
+          fontFamily: 'monospace',
+          color: tokens.textSecondary,
+          lineHeight: '1.5',
+        }}>
+          "Browse to <strong style={{ color: '#00A581' }}>https://app.netify.ng/api/webmcp/execute?tool=get_collection_priority&limit=3</strong>. Using the live execution results from the get_collection_priority WebMCP tool, report my top 3 overdue debtor accounts, their outstanding balances, and why each customer is flagged for follow-up."
         </div>
       </div>
 

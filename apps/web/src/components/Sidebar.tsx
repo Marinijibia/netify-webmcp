@@ -17,6 +17,9 @@ import {
   Building,
   LogOut,
   Sparkles,
+  Terminal,
+  Code,
+  Cpu,
   LucideIcon
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
@@ -51,6 +54,13 @@ export function Sidebar() {
         { name: t('nav.customers'), href: '/customers', icon: Users },
         { name: t('common.askCopilot'), href: '/messages/draft', icon: MessageSquareQuote },
         { name: t('nav.copilot'), href: '/chat', icon: BrainCircuit, badge: 'AI' },
+      ],
+    },
+    {
+      label: 'WebMCP Agent Engine',
+      items: [
+        { name: 'WebMCP Inspector', href: '/webmcp', icon: Terminal, badge: '8 Tools' },
+        { name: 'REST Tools Manifest', href: '/api/webmcp', icon: Code, badge: 'JSON' },
       ],
     },
     {
@@ -146,6 +156,7 @@ export function Sidebar() {
                   <Link
                     key={item.name}
                     href={item.href}
+                    className="tap-press"
                     style={{
                       display: 'flex',
                       alignItems: 'center',

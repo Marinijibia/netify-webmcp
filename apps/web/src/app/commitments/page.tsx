@@ -21,7 +21,8 @@ import {
   Loader2,
   ChevronRight,
   TrendingUp,
-  User
+  User,
+  Sparkles
 } from 'lucide-react';
 import { useTheme } from '@/lib/theme/theme-context';
 import { useLanguage } from '@/lib/i18n';
@@ -109,9 +110,37 @@ export default function CommitmentsPage() {
         </button>
       </div>
 
+      {/* WebMCP Tool Reference Badge */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '10px',
+        padding: '12px 18px',
+        borderRadius: '10px',
+        backgroundColor: isLight ? '#F0FDF4' : 'rgba(0, 37, 27, 0.7)',
+        border: '1px solid rgba(0, 165, 129, 0.35)',
+        fontSize: '12.5px',
+        color: tokens.textSecondary,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Sparkles size={15} color="#00A581" />
+          <span>
+            Payment arrangements and broken promises are recorded & audited by browser agents via <strong style={{ color: '#00A581' }}>create_payment_commitment</strong>.
+          </span>
+        </div>
+        <Link
+          href="/webmcp"
+          style={{ color: '#00A581', fontWeight: '700', fontSize: '12px', textDecoration: 'none' }}
+        >
+          View Tool Schema →
+        </Link>
+      </div>
+
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-        <div style={{
+        <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
           padding: '18px 20px',
           borderRadius: '12px',
@@ -126,7 +155,7 @@ export default function CommitmentsPage() {
           </div>
         </div>
 
-        <div style={{
+        <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
           padding: '18px 20px',
           borderRadius: '12px',
@@ -144,7 +173,7 @@ export default function CommitmentsPage() {
           </div>
         </div>
 
-        <div style={{
+        <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
           padding: '18px 20px',
           borderRadius: '12px',
@@ -178,6 +207,7 @@ export default function CommitmentsPage() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
+              className="tap-press hover-lift"
               style={{
                 padding: '8px 16px',
                 borderRadius: '6px',

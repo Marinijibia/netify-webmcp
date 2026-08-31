@@ -454,40 +454,109 @@ export default function CustomerDetailPage() {
 
         {activeTab === 'TIMELINE' && (
           <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: tokens.textSecondary }}>
+                <span>Total Activities: <strong>{activities.length}</strong></span>
+                <span>•</span>
+                <span style={{ color: '#00A581', fontWeight: 'bold' }}>
+                  WebMCP Agent Logged: {activities.filter(a => a.notes?.toLowerCase().includes('webmcp') || a.notes?.toLowerCase().includes('agent') || a.notes?.toLowerCase().includes('follow-up draft screen')).length}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await collectionActivitiesApi.createActivity({
+                      customerId,
+                      receivableId: receivables[0]?.id,
+                      type: 'PAYMENT_REMINDER',
+                      channel: 'WHATSAPP',
+                      outcome: 'PROMISED_PAYMENT',
+                      notes: 'Autonomous WebMCP audit event: Agent verified overdue balance and prepared follow-up reminder for merchant confirmation.',
+                    });
+                    const updated = await collectionActivitiesApi.getActivities({ customerId });
+                    setActivities(updated);
+                  } catch (e) {
+                    console.error('Failed to log audit activity:', e);
+                  }
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: tokens.accentSoft,
+                  border: `1px solid ${tokens.accentBorder}`,
+                  color: '#00A581',
+                  padding: '5px 10px',
+                  borderRadius: '6px',
+                  fontSize: '11.5px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                }}
+                title="Persist a verified WebMCP agent audit event to the live PostgreSQL timeline"
+              >
+                <Sparkles size={12} />
+                <span>Log WebMCP Audit Event</span>
+              </button>
+            </div>
+
             {activities.length === 0 ? (
               <p style={{ color: tokens.textMuted, fontSize: '13px', textAlign: 'center', padding: '30px' }}>
                 No collection activities recorded in the timeline yet.
               </p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {activities.map((act) => (
-                  <div
-                    key={act.id}
-                    style={{
-                      padding: '14px',
-                      backgroundColor: isLight ? '#F8FAFC' : '#001D31',
-                      borderRadius: '8px',
-                      border: `1px solid ${tokens.surfaceBorder}`,
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#00A581' }}>
-                        {act.channel} • {act.type}
-                      </span>
-                      <span style={{ fontSize: '11px', color: tokens.textMuted }}>
-                        {formatDate(act.occurredAt)}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: '13px', color: tokens.textSecondary, marginTop: '6px', marginBottom: 0 }}>
-                      Outcome: <strong style={{ color: tokens.textPrimary }}>{act.outcome}</strong>
-                    </p>
-                    {act.notes && (
-                      <p style={{ fontSize: '12px', color: tokens.textMuted, marginTop: '4px', marginBottom: 0 }}>
-                        {act.notes}
+                {activities.map((act) => {
+                  const isAgentAction = act.notes?.toLowerCase().includes('webmcp') || act.notes?.toLowerCase().includes('agent') || act.notes?.toLowerCase().includes('follow-up draft screen');
+                  return (
+                    <div
+                      key={act.id}
+                      style={{
+                        padding: '14px',
+                        backgroundColor: isLight ? '#F8FAFC' : '#001D31',
+                        borderRadius: '8px',
+                        border: isAgentAction ? '1px solid rgba(0, 165, 129, 0.4)' : `1px solid ${tokens.surfaceBorder}`,
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 'bold', color: isAgentAction ? '#00A581' : tokens.textPrimary }}>
+                            {act.channel} • {act.type}
+                          </span>
+                          {isAgentAction && (
+                            <span style={{
+                              backgroundColor: 'rgba(0, 165, 129, 0.12)',
+                              color: '#00A581',
+                              fontSize: '10px',
+                              fontWeight: '700',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              border: '1px solid rgba(0, 165, 129, 0.25)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}>
+                              <Sparkles size={10} />
+                              WebMCP Agent Action
+                            </span>
+                          )}
+                        </div>
+                        <span style={{ fontSize: '11px', color: tokens.textMuted }}>
+                          {formatDate(act.occurredAt)}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '13px', color: tokens.textSecondary, marginTop: '6px', marginBottom: 0 }}>
+                        Outcome: <strong style={{ color: tokens.textPrimary }}>{act.outcome}</strong>
                       </p>
-                    )}
-                  </div>
-                ))}
+                      {act.notes && (
+                        <p style={{ fontSize: '12px', color: tokens.textMuted, marginTop: '4px', marginBottom: 0 }}>
+                          {act.notes}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

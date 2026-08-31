@@ -510,6 +510,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isSubmitting}
+              className="hover-lift tap-press"
               style={{
                 display: 'flex',
                 alignItems: 'center',

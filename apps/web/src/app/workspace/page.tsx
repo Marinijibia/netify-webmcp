@@ -28,7 +28,9 @@ import {
   ArrowRight,
   Send,
   Zap,
-  Activity
+  Activity,
+  Bot,
+  Terminal
 } from 'lucide-react';
 import { useTheme } from '@/lib/theme/theme-context';
 import { useLanguage } from '@/lib/i18n';
@@ -248,7 +250,7 @@ export default function WorkspacePage() {
         gap: '16px',
       }}>
         {/* Card 1: Total Outstanding Exposure */}
-        <div style={{
+        <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
           padding: '22px',
           borderRadius: '14px',
@@ -301,7 +303,7 @@ export default function WorkspacePage() {
         </div>
 
         {/* Card 2: Overdue Receivables */}
-        <div style={{
+        <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
           padding: '22px',
           borderRadius: '14px',
@@ -353,7 +355,7 @@ export default function WorkspacePage() {
         </div>
 
         {/* Card 3: Defaulted Commitments */}
-        <div style={{
+        <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
           padding: '22px',
           borderRadius: '14px',
@@ -405,7 +407,7 @@ export default function WorkspacePage() {
         </div>
 
         {/* Card 4: Scheduled Due Today */}
-        <div style={{
+        <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
           padding: '22px',
           borderRadius: '14px',
@@ -586,6 +588,99 @@ export default function WorkspacePage() {
         </div>
       )}
 
+      {/* WebMCP Autonomous Agent Runtime Banner */}
+      <div style={{
+        backgroundColor: isLight ? '#F0FDF4' : 'rgba(0, 37, 27, 0.85)',
+        border: '1px solid rgba(0, 165, 129, 0.4)',
+        borderRadius: '16px',
+        padding: '20px 24px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '16px',
+        boxShadow: isLight ? '0 2px 10px rgba(0, 165, 129, 0.08)' : '0 4px 20px rgba(0, 0, 0, 0.4)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '10px',
+            background: 'linear-gradient(135deg, #00A581 0%, #007C61 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#FFFFFF',
+            boxShadow: '0 4px 12px rgba(0, 165, 129, 0.3)',
+          }}>
+            <Bot size={22} />
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: '800', color: tokens.textPrimary, margin: 0 }}>
+                WebMCP Autonomous Agent Runtime: Active
+              </h3>
+              <span style={{
+                backgroundColor: 'rgba(0, 165, 129, 0.15)',
+                color: '#00A581',
+                fontSize: '11px',
+                fontWeight: '700',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                border: '1px solid rgba(0, 165, 129, 0.3)',
+              }}>
+                8 Live Tools Registered
+              </span>
+            </div>
+            <p style={{ fontSize: '12.5px', color: tokens.textSecondary, margin: '3px 0 0' }}>
+              Deterministic collections math and multi-dialect follow-up drafting exposed via <code style={{ color: '#00A581' }}>document.modelContext.registerTool</code>.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <Link
+            href="/webmcp"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#00A581',
+              color: '#FFFFFF',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              fontSize: '12.5px',
+              fontWeight: '700',
+              textDecoration: 'none',
+              boxShadow: '0 2px 10px rgba(0, 165, 129, 0.3)',
+            }}
+          >
+            <Terminal size={14} />
+            <span>Interactive WebMCP Sandbox</span>
+          </Link>
+          <a
+            href="/api/webmcp"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: isLight ? '#FFFFFF' : '#001A2C',
+              border: `1px solid ${tokens.surfaceBorder}`,
+              color: tokens.textSecondary,
+              padding: '8px 14px',
+              borderRadius: '8px',
+              fontSize: '12.5px',
+              fontWeight: '600',
+              textDecoration: 'none',
+            }}
+          >
+            <span>REST Schema</span>
+          </a>
+        </div>
+      </div>
+
       {/* 4. Primary Split Section: Priority Queue & Operations Sidebar */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
         
@@ -661,6 +756,7 @@ export default function WorkspacePage() {
                 return (
                   <div
                     key={item.customerId}
+                    className="hover-lift"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -697,7 +793,7 @@ export default function WorkspacePage() {
                           <Link
                             href={`/customers/${item.customerId}`}
                             style={{
-                              fontWeight: '700',
+                              fontWeight: '800',
                               fontSize: '14.5px',
                               color: tokens.textPrimary,
                               textDecoration: 'none',
@@ -744,6 +840,7 @@ export default function WorkspacePage() {
 
                       <Link
                         href={`/messages/draft?customerId=${item.customerId}`}
+                        className="hover-lift tap-press"
                         style={{
                           display: 'flex',
                           alignItems: 'center',
