@@ -245,6 +245,266 @@ input, select, textarea {
   animation: shimmerScan 2s infinite linear;
 }
 
+/* ==========================================================================
+   RESPONSIVE UTILITY SYSTEM
+   ========================================================================== */
+
+/* Responsive Container & Padding */
+.responsive-container {
+  width: 100%;
+  max-width: 1240px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+@media (min-width: 640px) {
+  .responsive-container {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-container {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+}
+
+/* Responsive Split Layout (1 col on mobile, 2 col on tablet/desktop) */
+.responsive-split-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 768px) {
+  .responsive-split-2 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+  }
+}
+
+/* Responsive Split (Hero / Calculator / WebMCP: 1.2fr 1fr on desktop) */
+.responsive-split-asymmetric {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 768px) {
+  .responsive-split-asymmetric {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-split-asymmetric {
+    grid-template-columns: 1.2fr 1fr;
+    gap: 40px;
+  }
+}
+
+/* Responsive 3-Column Grid */
+.responsive-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 640px) {
+  .responsive-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+  }
+}
+
+/* Responsive 4-Column Grid (2x2 on mobile, 4-col on desktop) */
+.responsive-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .responsive-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+  }
+}
+
+/* Responsive Bento Grid */
+.responsive-bento {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 768px) {
+  .responsive-bento {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+  .bento-span-2 {
+    grid-column: span 2;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-bento {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+  }
+}
+
+/* Responsive WebMCP Tool Explorer */
+.responsive-webmcp-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 1024px) {
+  .responsive-webmcp-layout {
+    grid-template-columns: 300px 1fr;
+  }
+}
+
+/* Responsive Auth Split Screen */
+.responsive-auth-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 100vh;
+}
+
+@media (min-width: 1024px) {
+  .responsive-auth-grid {
+    grid-template-columns: 1.1fr 1fr;
+  }
+}
+
+/* Visibility Helpers */
+.desktop-nav {
+  display: none !important;
+}
+
+@media (min-width: 768px) {
+  .desktop-nav {
+    display: flex !important;
+  }
+  .mobile-menu-btn {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .mobile-menu-btn {
+    display: flex !important;
+  }
+  .auth-showcase-panel {
+    display: none !important;
+  }
+  .hide-on-mobile {
+    display: none !important;
+  }
+}
+
+/* App Sidebar Responsive */
+@media (max-width: 1023px) {
+  .app-sidebar {
+    display: none !important;
+  }
+  .mobile-sidebar-toggle {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-sidebar-toggle {
+    display: none !important;
+  }
+}
+
+/* Code & Pre responsiveness */
+.responsive-pre-wrap {
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-x: auto !important;
+  max-width: 100% !important;
+}
+
+/* Horizontal Chip & Tab Scroll on Mobile */
+.responsive-horizontal-chips {
+  display: flex;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  gap: 8px;
+  padding-bottom: 4px;
+  max-width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .responsive-horizontal-chips {
+    flex-direction: column;
+    overflow-x: visible;
+  }
+}
+
+/* Responsive Table & Container Wrappers */
+.responsive-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.responsive-table-wrapper table {
+  min-width: 680px;
+  width: 100%;
+}
+
+.responsive-table-wrapper th {
+  white-space: nowrap;
+}
+
+/* Full Width Button on Mobile */
+@media (max-width: 640px) {
+  .mobile-full-width {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .mobile-stack {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+}
+
+/* Horizontal Scroll Safe */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* Accessibility: Respect Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -257,3 +517,12 @@ input, select, textarea {
   }
 }
 
+/* Mobile Sidebar Drawer Slide-in */
+@keyframes slideInFromLeft {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+
+.animate-spring-slide {
+  animation: slideInFromLeft 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}

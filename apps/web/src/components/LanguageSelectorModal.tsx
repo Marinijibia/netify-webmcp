@@ -22,7 +22,7 @@ export default function LanguageSelectorModal() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px',
+        padding: 'clamp(12px, 3vw, 24px)',
       }}
       onClick={closeLanguageModal}
     >
@@ -30,9 +30,10 @@ export default function LanguageSelectorModal() {
         style={{
           backgroundColor: tokens.surface,
           border: `1px solid ${tokens.surfaceBorder}`,
-          borderRadius: '16px',
+          borderRadius: 'clamp(12px, 2vw, 16px)',
           width: '100%',
-          maxWidth: '560px',
+          maxWidth: 'min(560px, calc(100vw - 24px))',
+          maxHeight: '90svh',
           boxShadow: isLight ? tokens.shadowCard : '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
           overflow: 'hidden',
           display: 'flex',

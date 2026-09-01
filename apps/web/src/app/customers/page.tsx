@@ -113,15 +113,15 @@ export default function CustomersPage() {
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         flexWrap: 'wrap',
         gap: '16px',
         paddingBottom: '20px',
         borderBottom: `1px solid ${tokens.surfaceBorder}`,
       }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h1 style={{ fontSize: '26px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.6px', margin: 0 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <h1 style={{ fontSize: 'clamp(20px, 3.5vw, 26px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.6px', margin: 0 }}>
               {t('customers.title')}
             </h1>
             <span style={{
@@ -184,6 +184,7 @@ export default function CustomersPage() {
               fontSize: '12.5px',
               fontWeight: '700',
               textDecoration: 'none',
+              whiteSpace: 'nowrap',
               boxShadow: '0 4px 14px rgba(0, 165, 129, 0.3)',
             }}
           >
@@ -222,11 +223,7 @@ export default function CustomersPage() {
       </div>
 
       {/* 2. Executive KPI Bento Summary Cards */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-        gap: '14px',
-      }}>
+      <div className="responsive-grid-4">
         {/* Total Exposure */}
         <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
@@ -237,11 +234,12 @@ export default function CustomersPage() {
           display: 'flex',
           flexDirection: 'column',
           gap: '6px',
+          minWidth: 0,
         }}>
           <span style={{ fontSize: '11.5px', fontWeight: '700', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Total Debtor Exposure
           </span>
-          <div style={{ fontSize: '24px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 24px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
             {isLoading ? '...' : formatCurrency(totalExposureAmount, currency)}
           </div>
           <span style={{ fontSize: '11.5px', color: '#00A581', fontWeight: '600' }}>
@@ -260,11 +258,12 @@ export default function CustomersPage() {
           display: 'flex',
           flexDirection: 'column',
           gap: '6px',
+          minWidth: 0,
         }}>
           <span style={{ fontSize: '11.5px', fontWeight: '700', color: isLight ? '#DC2626' : '#FCA5A5', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             High / Critical Risk
           </span>
-          <div style={{ fontSize: '24px', fontWeight: '900', color: '#EF4444', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 24px)', fontWeight: '900', color: '#EF4444', letterSpacing: '-0.5px' }}>
             {isLoading ? '...' : highRiskCount}
           </div>
           <span style={{ fontSize: '11.5px', color: isLight ? '#B91C1C' : '#FCA5A5' }}>
@@ -282,11 +281,12 @@ export default function CustomersPage() {
           display: 'flex',
           flexDirection: 'column',
           gap: '6px',
+          minWidth: 0,
         }}>
           <span style={{ fontSize: '11.5px', fontWeight: '700', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Total Registered Customers
           </span>
-          <div style={{ fontSize: '24px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 24px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
             {isLoading ? '...' : customers.length}
           </div>
           <span style={{ fontSize: '11.5px', color: tokens.textSecondary }}>
@@ -305,11 +305,12 @@ export default function CustomersPage() {
           display: 'flex',
           flexDirection: 'column',
           gap: '6px',
+          minWidth: 0,
         }}>
           <span style={{ fontSize: '11.5px', fontWeight: '700', color: '#00A581', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Clean / Zero Balance
           </span>
-          <div style={{ fontSize: '24px', fontWeight: '900', color: '#00A581', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 24px)', fontWeight: '900', color: '#00A581', letterSpacing: '-0.5px' }}>
             {isLoading ? '...' : cleanCount}
           </div>
           <span style={{ fontSize: '11.5px', color: '#00A581' }}>
@@ -327,7 +328,7 @@ export default function CustomersPage() {
         gap: '12px',
       }}>
         {/* Filter Pills */}
-        <div style={{
+        <div className="no-scrollbar" style={{
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
@@ -335,6 +336,9 @@ export default function CustomersPage() {
           padding: '4px',
           borderRadius: '10px',
           border: `1px solid ${tokens.surfaceBorder}`,
+          overflowX: 'auto',
+          maxWidth: '100%',
+          WebkitOverflowScrolling: 'touch' as any,
         }}>
           {[
             { id: 'ALL', label: `All (${customers.length})` },
@@ -355,6 +359,8 @@ export default function CustomersPage() {
                 backgroundColor: activeFilter === tab.id ? '#00A581' : 'transparent',
                 border: activeFilter === tab.id ? '1px solid #00A581' : '1px solid transparent',
                 cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
                 transition: 'all 0.15s ease',
               }}
             >
@@ -364,7 +370,7 @@ export default function CustomersPage() {
         </div>
 
         {/* Search Input */}
-        <form onSubmit={handleSearchSubmit} style={{ position: 'relative', minWidth: '280px' }}>
+        <form onSubmit={handleSearchSubmit} style={{ position: 'relative', width: 'clamp(200px, 30vw, 320px)' }}>
           <Search size={15} color={tokens.textMuted} style={{ position: 'absolute', left: '12px', top: '11px' }} />
           <input
             type="text"
@@ -404,7 +410,7 @@ export default function CustomersPage() {
         </div>
       )}
 
-      {/* 4. Customers Directory Table */}
+      {/* 4. Customers Directory Table — outer card clips border-radius, inner div scrolls */}
       <div style={{
         backgroundColor: tokens.surface,
         borderRadius: '14px',
@@ -413,7 +419,7 @@ export default function CustomersPage() {
         boxShadow: isLight ? tokens.shadowCard : 'none',
       }}>
         {isLoading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '70px', gap: '10px', color: tokens.textMuted }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'clamp(40px, 8vw, 70px)', gap: '10px', color: tokens.textMuted }}>
             <Loader2 size={30} className="animate-spin text-teal-500" />
             <span style={{ fontSize: '13px' }}>Loading live customer balances & ledger metrics...</span>
           </div>
@@ -426,17 +432,18 @@ export default function CustomersPage() {
             </p>
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
-            <thead>
-              <tr style={{ backgroundColor: isLight ? '#F8FAFC' : 'rgba(0, 20, 36, 0.85)', borderBottom: `1px solid ${tokens.surfaceBorder}`, color: tokens.textMuted, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                <th style={{ padding: '14px 20px' }}>CUSTOMER & TAGS</th>
-                <th style={{ padding: '14px 20px' }}>CONTACT CHANNELS</th>
-                <th style={{ padding: '14px 20px' }}>RISK CLASSIFICATION</th>
-                <th style={{ padding: '14px 20px', textAlign: 'right' }}>OUTSTANDING BALANCE</th>
-                <th style={{ padding: '14px 20px', textAlign: 'right' }}>ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
+          <div className="responsive-table-wrapper">
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
+              <thead>
+                <tr style={{ backgroundColor: isLight ? '#F8FAFC' : 'rgba(0, 20, 36, 0.85)', borderBottom: `1px solid ${tokens.surfaceBorder}`, color: tokens.textMuted, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                  <th style={{ padding: '14px 20px', whiteSpace: 'nowrap' }}>CUSTOMER &amp; TAGS</th>
+                  <th style={{ padding: '14px 20px', whiteSpace: 'nowrap' }}>CONTACT CHANNELS</th>
+                  <th style={{ padding: '14px 20px', whiteSpace: 'nowrap' }}>RISK CLASSIFICATION</th>
+                  <th style={{ padding: '14px 20px', textAlign: 'right', whiteSpace: 'nowrap' }}>OUTSTANDING BALANCE</th>
+                  <th style={{ padding: '14px 20px', textAlign: 'right', whiteSpace: 'nowrap' }}>ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
               {filteredCustomers.map((c) => {
                 const outstanding = c.totalOutstanding ?? 0;
                 const overdue = c.totalOverdue ?? 0;
@@ -672,6 +679,7 @@ export default function CustomersPage() {
               })}
             </tbody>
           </table>
+        </div>
         )}
       </div>
     </div>

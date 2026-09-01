@@ -234,17 +234,17 @@ export default function PhoneQrBridgeModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px',
+        padding: 'clamp(12px, 3vw, 16px)',
       }}
     >
       <div
         style={{
           backgroundColor: tokens.surface,
           border: `1px solid ${tokens.surfaceBorder}`,
-          borderRadius: '16px',
+          borderRadius: 'clamp(12px, 2vw, 16px)',
           width: '100%',
-          maxWidth: '780px',
-          maxHeight: '90vh',
+          maxWidth: 'min(780px, calc(100vw - 24px))',
+          maxHeight: '92svh',
           display: 'flex',
           flexDirection: 'column',
           boxShadow: isLight ? '0 20px 40px rgba(0, 0, 0, 0.15)' : '0 20px 40px rgba(0, 0, 0, 0.6)',
@@ -546,7 +546,7 @@ export default function PhoneQrBridgeModal({
                   Schedule Promise into Collections Queue:
                 </span>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div className="responsive-split-2">
                   <div>
                     <label style={{ fontSize: '11px', color: tokens.textSecondary, display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
                       Agreed Amount (₦)

@@ -71,12 +71,12 @@ export default function HomePage() {
       }} />
 
       {/* ========================================================================= */}
-      {/* 1. HERO SECTION                                                           */}
+      {/* 1. HERO SECTION & MASTER VALUE PROPOSITION                                */}
       {/* ========================================================================= */}
       <section style={{
         maxWidth: '1240px',
         margin: '0 auto',
-        padding: '80px 24px 20px',
+        padding: 'clamp(40px, 6vw, 80px) clamp(16px, 3vw, 24px) 20px',
         textAlign: 'center',
         display: 'flex',
         flexDirection: 'column',
@@ -91,17 +91,20 @@ export default function HomePage() {
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '10px',
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+            gap: '8px',
             backgroundColor: isLight ? '#FFFFFF' : 'rgba(0, 48, 81, 0.8)',
             backdropFilter: 'blur(12px)',
             border: `1px solid ${tokens.accentBorder}`,
-            padding: '7px 18px',
+            padding: '7px 16px',
             borderRadius: '30px',
-            fontSize: '12.5px',
+            fontSize: '12px',
             fontWeight: '600',
             color: '#00A581',
-            marginBottom: '32px',
+            marginBottom: '28px',
             textDecoration: 'none',
+            maxWidth: '100%',
             boxShadow: isLight ? tokens.shadowCard : '0 0 25px rgba(0, 165, 129, 0.25)',
             transition: 'transform 0.15s ease',
           }}
@@ -113,6 +116,7 @@ export default function HomePage() {
             borderRadius: '50%',
             backgroundColor: '#00A581',
             boxShadow: '0 0 10px #00A581',
+            flexShrink: 0,
           }} />
           <span>The WebMCP Challenge Submission</span>
           <span style={{ color: tokens.textMuted, margin: '0 2px' }}>•</span>
@@ -124,13 +128,13 @@ export default function HomePage() {
 
         {/* Master Headline */}
         <h1 style={{
-          fontSize: 'clamp(40px, 6vw, 68px)',
+          fontSize: 'clamp(32px, 5.5vw, 64px)',
           fontWeight: '900',
-          lineHeight: '1.08',
-          letterSpacing: '-2px',
+          lineHeight: '1.1',
+          letterSpacing: '-1.5px',
           color: tokens.textPrimary,
           maxWidth: '980px',
-          marginBottom: '24px',
+          marginBottom: '20px',
         }}>
           Turn Verbal Promises into{' '}
           <span style={{
@@ -144,31 +148,32 @@ export default function HomePage() {
 
         {/* Subtitle */}
         <p style={{
-          fontSize: 'clamp(16px, 2.2vw, 21px)',
+          fontSize: 'clamp(15px, 2.2vw, 20px)',
           lineHeight: '1.6',
           color: tokens.textSecondary,
           maxWidth: '780px',
-          marginBottom: '44px',
+          marginBottom: '36px',
           fontWeight: '400',
         }}>
           The AI-powered collections workspace designed for African trade credit. Track informal WhatsApp commitments, prioritize overdue debtors with deterministic math, and draft respectful reminders with human approval.
         </p>
 
         {/* Dual Primary Call-to-Actions */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'center', marginBottom: '56px' }}>
+        <div className="mobile-stack" style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', justifyContent: 'center', marginBottom: '48px', width: '100%', maxWidth: '540px' }}>
           {isAuthenticated ? (
             <Link
               href="/workspace"
-              className="hover-lift tap-press"
+              className="hover-lift tap-press mobile-full-width"
               style={{
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '10px',
                 backgroundColor: '#00A581',
                 color: '#FFFFFF',
-                padding: '16px 36px',
+                padding: '15px 32px',
                 borderRadius: '12px',
-                fontSize: '16px',
+                fontSize: '15px',
                 fontWeight: 'bold',
                 textDecoration: 'none',
                 boxShadow: '0 12px 35px rgba(0, 165, 129, 0.45)',
@@ -181,16 +186,17 @@ export default function HomePage() {
           ) : (
             <Link
               href="/register"
-              className="hover-lift tap-press"
+              className="hover-lift tap-press mobile-full-width"
               style={{
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: '10px',
                 backgroundColor: '#00A581',
                 color: '#FFFFFF',
-                padding: '16px 36px',
+                padding: '15px 32px',
                 borderRadius: '12px',
-                fontSize: '16px',
+                fontSize: '15px',
                 fontWeight: 'bold',
                 textDecoration: 'none',
                 boxShadow: '0 12px 35px rgba(0, 165, 129, 0.45)',
@@ -204,19 +210,20 @@ export default function HomePage() {
 
           <Link
             href="/webmcp"
-            className="hover-lift tap-press"
+            className="hover-lift tap-press mobile-full-width"
             style={{
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '10px',
               backgroundColor: isLight ? '#FFFFFF' : 'rgba(0, 48, 81, 0.6)',
               backdropFilter: 'blur(12px)',
               color: tokens.textPrimary,
               border: `1px solid ${tokens.surfaceBorder}`,
               boxShadow: isLight ? tokens.shadowCard : 'none',
-              padding: '16px 28px',
+              padding: '15px 26px',
               borderRadius: '12px',
-              fontSize: '15px',
+              fontSize: '14.5px',
               fontWeight: '600',
               textDecoration: 'none',
               transition: 'all 0.15s ease',
@@ -262,7 +269,7 @@ export default function HomePage() {
       {/* ========================================================================= */}
       {/* 2. THE 21ST-CENTURY INTERACTIVE SAAS PRODUCT FRAME                       */}
       {/* ========================================================================= */}
-      <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 1 }}>
+      <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 clamp(12px, 3vw, 24px)', position: 'relative', zIndex: 1 }}>
         <div style={{
           backgroundColor: tokens.surface,
           borderRadius: '24px',
@@ -276,12 +283,14 @@ export default function HomePage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '14px 20px',
+            padding: '14px clamp(12px, 2vw, 20px)',
             backgroundColor: isLight ? '#F1F5F9' : '#00192B',
             borderBottom: `1px solid ${tokens.surfaceBorder}`,
+            gap: '8px',
+            flexWrap: 'wrap',
           }}>
             {/* Window Traffic Lights */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
               <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#FF5F56' }} />
               <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#FFBD2E' }} />
               <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#27C93F' }} />
@@ -294,30 +303,33 @@ export default function HomePage() {
               gap: '8px',
               backgroundColor: isLight ? '#FFFFFF' : '#00253E',
               border: `1px solid ${tokens.surfaceBorder}`,
-              padding: '4px 18px',
+              padding: '4px 14px',
               borderRadius: '20px',
               fontSize: '12px',
               color: tokens.textMuted,
-              width: '320px',
+              maxWidth: 'clamp(160px, 40vw, 320px)',
+              flex: 1,
               justifyContent: 'center',
+              overflow: 'hidden',
             }}>
-              <Lock size={11} color="#00A581" />
-              <span>https://netify.ng/workspace</span>
+              <Lock size={11} color="#00A581" style={{ flexShrink: 0 }} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>https://netify.ng/workspace</span>
             </div>
 
-            {/* Window Tag */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#00A581', fontWeight: 'bold' }}>
+            {/* Window Tag — hidden on very small screens */}
+            <div className="hide-on-mobile" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#00A581', fontWeight: 'bold', flexShrink: 0 }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#00A581' }} />
               <span>W3C WebMCP Live</span>
             </div>
           </div>
 
           {/* Interactive Feature Demo Tabs */}
-          <div style={{
+          <div className="no-scrollbar" style={{
             display: 'flex',
             backgroundColor: isLight ? '#F8FAFC' : '#001D31',
             borderBottom: `1px solid ${tokens.surfaceBorder}`,
             overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
           }}>
             {[
               { id: 'COMMAND', label: 'Command Center', icon: Layers, subtitle: 'Real-time financial exposure' },
@@ -333,23 +345,24 @@ export default function HomePage() {
                   onClick={() => setActiveDemoTab(tab.id as any)}
                   style={{
                     flex: 1,
-                    minWidth: '220px',
+                    minWidth: '170px',
                     textAlign: 'left',
-                    padding: '16px 20px',
+                    padding: '14px 16px',
                     border: 'none',
                     backgroundColor: isActive ? (isLight ? '#FFFFFF' : '#00253E') : 'transparent',
                     borderBottom: isActive ? '3px solid #00A581' : '3px solid transparent',
                     cursor: 'pointer',
+                    flexShrink: 0,
                     transition: 'all 0.15s ease',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Icon size={16} color={isActive ? '#00A581' : tokens.textMuted} />
-                    <span style={{ fontWeight: 'bold', fontSize: '13.5px', color: isActive ? tokens.textPrimary : tokens.textSecondary }}>
+                    <span style={{ fontWeight: 'bold', fontSize: '13.5px', color: isActive ? tokens.textPrimary : tokens.textSecondary, whiteSpace: 'nowrap' }}>
                       {tab.label}
                     </span>
                   </div>
-                  <div style={{ fontSize: '11px', color: tokens.textMuted, marginTop: '3px', paddingLeft: '24px' }}>
+                  <div style={{ fontSize: '11px', color: tokens.textMuted, marginTop: '3px', paddingLeft: '24px', whiteSpace: 'nowrap' }}>
                     {tab.subtitle}
                   </div>
                 </button>
@@ -358,31 +371,31 @@ export default function HomePage() {
           </div>
 
           {/* Simulated Screen Displays */}
-          <div style={{ padding: '36px', minHeight: '440px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div style={{ padding: 'clamp(16px, 3vw, 36px)', minHeight: 'clamp(320px, 50vw, 440px)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             {/* TAB 1: COMMAND CENTER */}
             {activeDemoTab === 'COMMAND' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                {/* 4 Financial Exposure Metrics */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                  <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#001D31', padding: '20px', borderRadius: '14px', border: `1px solid ${tokens.surfaceBorder}` }}>
-                    <span style={{ fontSize: '12px', color: tokens.textMuted, fontWeight: '500' }}>Total Trade Receivables</span>
-                    <div style={{ fontSize: '26px', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>₦28,450,000</div>
-                    <div style={{ fontSize: '11.5px', color: '#00A581', marginTop: '4px' }}>Across 84 merchant accounts</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* 4 Financial Exposure Metrics — 2x2 on mobile, 4-col on desktop */}
+                <div className="responsive-grid-4">
+                  <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#001D31', padding: 'clamp(14px, 2vw, 18px)', borderRadius: '14px', border: `1px solid ${tokens.surfaceBorder}`, minWidth: 0 }}>
+                    <span style={{ fontSize: '11px', color: tokens.textMuted, fontWeight: '500' }}>Total Trade Receivables</span>
+                    <div style={{ fontSize: 'clamp(17px, 2.5vw, 24px)', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>₦28,450,000</div>
+                    <div style={{ fontSize: '11px', color: '#00A581', marginTop: '4px' }}>84 merchant accounts</div>
                   </div>
-                  <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#001D31', padding: '20px', borderRadius: '14px', border: `1px solid ${isLight ? '#FCA5A5' : '#0F5470'}` }}>
-                    <span style={{ fontSize: '12px', color: isLight ? '#DC2626' : '#FCA5A5', fontWeight: '500' }}>Past Payment Terms</span>
-                    <div style={{ fontSize: '26px', fontWeight: 'bold', color: '#DC2626', marginTop: '6px' }}>₦7,820,000</div>
-                    <div style={{ fontSize: '11.5px', color: isLight ? '#B91C1C' : '#FCA5A5', marginTop: '4px' }}>19 invoices require attention</div>
+                  <div style={{ backgroundColor: isLight ? '#FEF2F2' : '#001D31', padding: 'clamp(14px, 2vw, 18px)', borderRadius: '14px', border: `1px solid ${isLight ? '#FCA5A5' : 'rgba(239,68,68,0.3)'}`, minWidth: 0 }}>
+                    <span style={{ fontSize: '11px', color: isLight ? '#DC2626' : '#FCA5A5', fontWeight: '500' }}>Past Payment Terms</span>
+                    <div style={{ fontSize: 'clamp(17px, 2.5vw, 24px)', fontWeight: 'bold', color: '#DC2626', marginTop: '6px' }}>₦7,820,000</div>
+                    <div style={{ fontSize: '11px', color: isLight ? '#B91C1C' : '#FCA5A5', marginTop: '4px' }}>19 invoices overdue</div>
                   </div>
-                  <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#001D31', padding: '20px', borderRadius: '14px', border: `1px solid ${isLight ? '#FCD34D' : '#0F5470'}` }}>
-                    <span style={{ fontSize: '12px', color: isLight ? '#D97706' : '#FCD34D', fontWeight: '500' }}>Defaulted Promises</span>
-                    <div style={{ fontSize: '26px', fontWeight: 'bold', color: isLight ? '#D97706' : '#F59E0B', marginTop: '6px' }}>12 Broken</div>
-                    <div style={{ fontSize: '11.5px', color: isLight ? '#B45309' : '#FCD34D', marginTop: '4px' }}>WhatsApp commitments missed</div>
+                  <div style={{ backgroundColor: isLight ? '#FFFBEB' : '#001D31', padding: 'clamp(14px, 2vw, 18px)', borderRadius: '14px', border: `1px solid ${isLight ? '#FCD34D' : 'rgba(245,158,11,0.3)'}`, minWidth: 0 }}>
+                    <span style={{ fontSize: '11px', color: isLight ? '#D97706' : '#FCD34D', fontWeight: '500' }}>Defaulted Promises</span>
+                    <div style={{ fontSize: 'clamp(17px, 2.5vw, 24px)', fontWeight: 'bold', color: isLight ? '#D97706' : '#F59E0B', marginTop: '6px' }}>12 Broken</div>
+                    <div style={{ fontSize: '11px', color: isLight ? '#B45309' : '#FCD34D', marginTop: '4px' }}>WhatsApp commitments</div>
                   </div>
-                  <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#001D31', padding: '20px', borderRadius: '14px', border: `1px solid ${tokens.surfaceBorder}` }}>
-                    <span style={{ fontSize: '12px', color: tokens.textMuted, fontWeight: '500' }}>Expected Today</span>
-                    <div style={{ fontSize: '26px', fontWeight: 'bold', color: '#00A581', marginTop: '6px' }}>₦2,150,000</div>
-                    <div style={{ fontSize: '11.5px', color: isLight ? '#047857' : '#93C5FD', marginTop: '4px' }}>6 commitments due today</div>
+                  <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#001D31', padding: 'clamp(14px, 2vw, 18px)', borderRadius: '14px', border: `1px solid ${tokens.surfaceBorder}`, minWidth: 0 }}>
+                    <span style={{ fontSize: '11px', color: tokens.textMuted, fontWeight: '500' }}>Expected Today</span>
+                    <div style={{ fontSize: 'clamp(17px, 2.5vw, 24px)', fontWeight: 'bold', color: '#00A581', marginTop: '6px' }}>₦2,150,000</div>
+                    <div style={{ fontSize: '11px', color: isLight ? '#047857' : '#93C5FD', marginTop: '4px' }}>6 commitments due</div>
                   </div>
                 </div>
 
@@ -391,23 +404,31 @@ export default function HomePage() {
                   backgroundColor: isLight ? '#ECFDF8' : '#001D31',
                   borderRadius: '12px',
                   border: `1px solid ${tokens.accentBorder}`,
-                  padding: '18px 24px',
+                  padding: 'clamp(12px, 2vw, 16px) clamp(14px, 2vw, 20px)',
                   display: 'flex',
+                  flexWrap: 'wrap',
                   alignItems: 'center',
-                  gap: '16px',
+                  justifyContent: 'space-between',
+                  gap: '12px',
                 }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: tokens.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00A581', flexShrink: 0 }}>
-                    <Sparkles size={18} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase' }}>Daily Executive Briefing</div>
-                    <div style={{ fontSize: '13.5px', color: tokens.textPrimary, marginTop: '2px', lineHeight: '1.5' }}>
-                      Alhaji Musa missed his Friday promise for ₦350,000. Grace Wanjiku has ₦150,000 due today. Highest priority collection queue is ready with 5 pre-drafted reminders.
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flex: '1 1 240px', minWidth: 0 }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: tokens.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00A581', flexShrink: 0, marginTop: '2px' }}>
+                      <Sparkles size={16} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase' }}>Daily Executive Briefing</div>
+                      <div style={{ fontSize: 'clamp(12px, 1.8vw, 13.5px)', color: tokens.textPrimary, marginTop: '3px', lineHeight: '1.5' }}>
+                        Alhaji Musa missed his Friday promise for ₦350,000. Grace Wanjiku has ₦150,000 due today. Priority queue ready with 5 pre-drafted reminders.
+                      </div>
                     </div>
                   </div>
                   <Link
                     href="/workspace"
+                    className="mobile-full-width"
                     style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       padding: '8px 16px',
                       backgroundColor: '#00A581',
                       color: '#FFFFFF',
@@ -416,6 +437,7 @@ export default function HomePage() {
                       fontWeight: 'bold',
                       textDecoration: 'none',
                       whiteSpace: 'nowrap',
+                      boxShadow: '0 2px 8px rgba(0, 165, 129, 0.25)',
                     }}
                   >
                     Open Live Workspace
@@ -426,7 +448,7 @@ export default function HomePage() {
 
             {/* TAB 2: WHATSAPP PROMISE CAPTURE */}
             {activeDemoTab === 'WHATSAPP' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', alignItems: 'center' }}>
+              <div className="responsive-split-2" style={{ alignItems: 'center' }}>
                 {/* Simulated WhatsApp Chat */}
                 <div style={{
                   backgroundColor: isLight ? '#F8FAFC' : '#001D31',
@@ -448,10 +470,10 @@ export default function HomePage() {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
-                    <div style={{ alignSelf: 'flex-start', backgroundColor: isLight ? '#E2E8F0' : '#003051', padding: '10px 14px', borderRadius: '12px', maxWidth: '80%', color: tokens.textPrimary }}>
+                    <div style={{ alignSelf: 'flex-start', backgroundColor: isLight ? '#E2E8F0' : '#003051', padding: '10px 14px', borderRadius: '12px', maxWidth: '85%', color: tokens.textPrimary }}>
                       Salam Alhaji. Following up on the 50 bags of flour dispatched on July 14.
                     </div>
-                    <div style={{ alignSelf: 'flex-end', backgroundColor: '#005C4B', padding: '10px 14px', borderRadius: '12px', maxWidth: '85%', color: '#FFFFFF' }}>
+                    <div style={{ alignSelf: 'flex-end', backgroundColor: '#005C4B', padding: '10px 14px', borderRadius: '12px', maxWidth: '90%', color: '#FFFFFF' }}>
                       Wa alaikum salam Alhaji. Market was slow this week. I will pay ₦350,000 on Friday afternoon by 2pm once sales finish.
                     </div>
                   </div>
@@ -463,8 +485,10 @@ export default function HomePage() {
                     border: '1px dashed #00A581',
                     borderRadius: '10px',
                     display: 'flex',
+                    flexWrap: 'wrap',
                     alignItems: 'center',
                     justifyContent: 'space-between',
+                    gap: '8px',
                   }}>
                     <span style={{ fontSize: '12px', color: '#00A581', fontWeight: 'bold' }}>
                       ⚡ Netify Detected Promise: ₦350,000 on Friday
@@ -480,13 +504,13 @@ export default function HomePage() {
                   <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase', letterSpacing: '1px' }}>
                     Informal Promise Reconciliation
                   </span>
-                  <h3 style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>
+                  <h3 style={{ fontSize: 'clamp(20px, 3vw, 24px)', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>
                     Never Let a Verbal Promise Disappear Again
                   </h3>
                   <p style={{ color: tokens.textSecondary, fontSize: '14px', lineHeight: '1.6', marginTop: '12px' }}>
                     In African trade, 90% of credit terms are negotiated verbally or in WhatsApp chats. When Friday arrives and the customer forgets, Netify automatically elevates the account to your attention queue with the exact promised amount and date.
                   </p>
-                  <div style={{ display: 'flex', gap: '16px', marginTop: '20px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: tokens.textPrimary }}>
                       <Check size={16} color="#00A581" />
                       <span>Zero missed deadlines</span>
@@ -502,12 +526,12 @@ export default function HomePage() {
 
             {/* TAB 3: AI FOLLOW-UP STUDIO */}
             {activeDemoTab === 'DRAFT' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', alignItems: 'center' }}>
+              <div className="responsive-split-2" style={{ alignItems: 'center' }}>
                 <div>
                   <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase', letterSpacing: '1px' }}>
                     Culturally Grounded AI
                   </span>
-                  <h3 style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>
+                  <h3 style={{ fontSize: 'clamp(20px, 3vw, 24px)', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>
                     Remind Respectfully. Protect Customer Goodwill.
                   </h3>
                   <p style={{ color: tokens.textSecondary, fontSize: '14px', lineHeight: '1.6', marginTop: '12px' }}>
@@ -553,12 +577,12 @@ export default function HomePage() {
                   backgroundColor: isLight ? '#F8FAFC' : '#001D31',
                   borderRadius: '16px',
                   border: `1px solid ${tokens.surfaceBorder}`,
-                  padding: '24px',
+                  padding: '20px',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '16px',
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <span style={{ fontSize: '11px', backgroundColor: tokens.accentSoft, color: '#00A581', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold' }}>WhatsApp</span>
                       <span style={{ fontSize: '11px', backgroundColor: tokens.accentSoft, color: '#00A581', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold' }}>{activeTone} TONE</span>
@@ -599,7 +623,7 @@ export default function HomePage() {
                     )}
                   </div>
 
-                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                     <button style={{ padding: '8px 14px', backgroundColor: isLight ? '#FFFFFF' : '#001D31', border: `1px solid ${tokens.surfaceBorder}`, color: tokens.textSecondary, borderRadius: '6px', fontSize: '12px' }}>
                       Edit Draft
                     </button>
@@ -614,15 +638,16 @@ export default function HomePage() {
 
             {/* TAB 4: WEBMCP AGENT PROTOCOL */}
             {activeDemoTab === 'WEBMCP' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '28px', alignItems: 'center' }}>
+              <div className="responsive-split-asymmetric" style={{ alignItems: 'center' }}>
                 <div style={{
                   backgroundColor: '#001827',
                   borderRadius: '14px',
                   border: '1px solid #00A581',
-                  padding: '20px',
+                  padding: '18px',
                   fontFamily: 'monospace',
                   fontSize: '12px',
                   color: '#3AD0A9',
+                  overflowX: 'auto',
                 }}>
                   <div style={{ color: '#8FB7C7', marginBottom: '8px' }}>// W3C WebMCP Browser-Native Tool Definition</div>
                   <div>document.modelContext.registerTool({'{'}</div>
@@ -641,7 +666,7 @@ export default function HomePage() {
                   <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase', letterSpacing: '1px' }}>
                     Autonomous AI Compatibility
                   </span>
-                  <h3 style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>
+                  <h3 style={{ fontSize: 'clamp(20px, 3vw, 24px)', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>
                     Zero API Keys. Safe In-Browser Agent Execution.
                   </h3>
                   <p style={{ color: tokens.textSecondary, fontSize: '13.5px', lineHeight: '1.6', marginTop: '12px' }}>
@@ -677,27 +702,27 @@ export default function HomePage() {
       {/* ========================================================================= */}
       {/* 3. THE $330B REALITY & PARADOX COMPARISON                                 */}
       {/* ========================================================================= */}
-      <section style={{ maxWidth: '1140px', margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 1 }}>
-        <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+      <section style={{ maxWidth: '1140px', margin: '0 auto', padding: '0 clamp(12px, 3vw, 24px)', position: 'relative', zIndex: 1 }}>
+        <div style={{ textAlign: 'center', marginBottom: '44px' }}>
           <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
             The African Trade Credit Paradox
           </span>
-          <h2 style={{ fontSize: '36px', fontWeight: '900', color: tokens.textPrimary, marginTop: '8px', letterSpacing: '-1px' }}>
+          <h2 style={{ fontSize: 'clamp(26px, 4vw, 36px)', fontWeight: '900', color: tokens.textPrimary, marginTop: '8px', letterSpacing: '-1px' }}>
             Trade Runs on Supplier Credit. Traditional Collections Destroy It.
           </h2>
-          <p style={{ color: tokens.textSecondary, fontSize: '16px', maxWidth: '720px', margin: '12px auto 0', lineHeight: '1.6' }}>
-            Across wholesale hubs like Alaba (Lagos), Gikomba (Nairobi), and Makola (Accra), businesses don’t borrow from banks. Wholesalers finance retailers directly.
+          <p style={{ color: tokens.textSecondary, fontSize: '15px', maxWidth: '720px', margin: '12px auto 0', lineHeight: '1.6' }}>
+            Across wholesale hubs like Alaba (Lagos), Gikomba (Nairobi), and Makola (Accra), businesses don't borrow from banks. Wholesalers finance retailers directly.
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '28px' }}>
+        <div className="responsive-split-2">
           {/* Western Software Failure */}
           <div style={{
             backgroundColor: tokens.surface,
             borderRadius: '20px',
             border: `1px solid ${isLight ? '#FCA5A5' : 'rgba(239, 68, 68, 0.4)'}`,
             boxShadow: isLight ? tokens.shadowCard : 'none',
-            padding: '36px 32px',
+            padding: 'clamp(24px, 4vw, 36px)',
             display: 'flex',
             flexDirection: 'column',
             gap: '20px',
@@ -723,7 +748,7 @@ export default function HomePage() {
             backgroundColor: tokens.surface,
             borderRadius: '20px',
             border: '2px solid #00A581',
-            padding: '36px 32px',
+            padding: 'clamp(24px, 4vw, 36px)',
             display: 'flex',
             flexDirection: 'column',
             gap: '20px',
@@ -750,26 +775,25 @@ export default function HomePage() {
       {/* ========================================================================= */}
       {/* 4. 21ST-CENTURY BENTO GRID: CORE CAPABILITIES                            */}
       {/* ========================================================================= */}
-      <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 1 }}>
-        <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+      <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 clamp(12px, 3vw, 24px)', position: 'relative', zIndex: 1 }}>
+        <div style={{ textAlign: 'center', marginBottom: '44px' }}>
           <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
             Complete Architecture
           </span>
-          <h2 style={{ fontSize: '36px', fontWeight: '900', color: tokens.textPrimary, marginTop: '8px', letterSpacing: '-1px' }}>
+          <h2 style={{ fontSize: 'clamp(26px, 4vw, 36px)', fontWeight: '900', color: tokens.textPrimary, marginTop: '8px', letterSpacing: '-1px' }}>
             Engineered for High-Velocity African Trading Houses
           </h2>
         </div>
 
         {/* Bento Grid Container */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
+        <div className="responsive-bento">
           {/* Bento Cell 1 (Wide: 2 cols) */}
-          <div className="hover-lift" style={{
-            gridColumn: 'span 2',
+          <div className="bento-span-2 hover-lift" style={{
             backgroundColor: tokens.surface,
             borderRadius: '20px',
             border: `1px solid ${tokens.surfaceBorder}`,
             boxShadow: isLight ? tokens.shadowCard : 'none',
-            padding: '36px',
+            padding: 'clamp(24px, 4vw, 36px)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -786,7 +810,7 @@ export default function HomePage() {
                 Every invoice, cash receipt, bank transfer, WhatsApp promise, and phone note is linked to the customer debtor record. No more arguments about whether goods were delivered or when money was promised.
               </p>
             </div>
-            <div style={{ display: 'flex', gap: '20px', marginTop: '28px', borderTop: `1px solid ${tokens.surfaceBorder}`, paddingTop: '20px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', marginTop: '24px', borderTop: `1px solid ${tokens.surfaceBorder}`, paddingTop: '18px' }}>
               <div>
                 <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#00A581' }}>pgvector Memory</div>
                 <div style={{ fontSize: '12px', color: tokens.textMuted }}>Semantic trade search</div>
@@ -804,7 +828,7 @@ export default function HomePage() {
             borderRadius: '20px',
             border: `1px solid ${tokens.surfaceBorder}`,
             boxShadow: isLight ? tokens.shadowCard : 'none',
-            padding: '36px',
+            padding: 'clamp(24px, 4vw, 36px)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -835,7 +859,7 @@ export default function HomePage() {
             borderRadius: '20px',
             border: `1px solid ${tokens.surfaceBorder}`,
             boxShadow: isLight ? tokens.shadowCard : 'none',
-            padding: '36px',
+            padding: 'clamp(24px, 4vw, 36px)',
             transition: 'all 0.2s ease',
           }}>
             <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: tokens.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00A581', marginBottom: '16px' }}>
@@ -850,13 +874,12 @@ export default function HomePage() {
           </div>
 
           {/* Bento Cell 4 (Wide: 2 cols) */}
-          <div className="hover-lift" style={{
-            gridColumn: 'span 2',
+          <div className="bento-span-2 hover-lift" style={{
             backgroundColor: tokens.surface,
             borderRadius: '20px',
             border: `1px solid ${tokens.surfaceBorder}`,
             boxShadow: isLight ? tokens.shadowCard : 'none',
-            padding: '36px',
+            padding: 'clamp(24px, 4vw, 36px)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -900,16 +923,16 @@ export default function HomePage() {
       {/* ========================================================================= */}
       {/* 5. INTERACTIVE WORKING CAPITAL RECOVERY CALCULATOR                         */}
       {/* ========================================================================= */}
-      <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 1 }}>
+      <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 clamp(12px, 3vw, 24px)', position: 'relative', zIndex: 1 }}>
         <div style={{
           backgroundColor: tokens.surface,
           borderRadius: '24px',
           border: `1px solid ${isLight ? '#A7F3D0' : '#00A581'}`,
-          padding: '48px 40px',
+          padding: 'clamp(24px, 4vw, 48px)',
           boxShadow: isLight ? tokens.shadowCard : '0 0 50px rgba(0, 165, 129, 0.15)',
           transition: 'all 0.2s ease',
         }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '48px', alignItems: 'center' }}>
+          <div className="responsive-split-asymmetric" style={{ alignItems: 'center' }}>
             {/* Left Controls */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
@@ -918,7 +941,7 @@ export default function HomePage() {
                   Working Capital Impact
                 </span>
               </div>
-              <h3 style={{ fontSize: '28px', fontWeight: 'bold', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
+              <h3 style={{ fontSize: 'clamp(22px, 3.5vw, 28px)', fontWeight: 'bold', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
                 How Much Cash is Trapped in Your Overdue Receivables?
               </h3>
               <p style={{ color: tokens.textSecondary, fontSize: '14px', lineHeight: '1.6', marginTop: '10px' }}>
@@ -926,11 +949,11 @@ export default function HomePage() {
               </p>
 
               {/* Volume Selector Buttons */}
-              <div style={{ marginTop: '28px' }}>
+              <div style={{ marginTop: '24px' }}>
                 <label style={{ fontSize: '12px', fontWeight: 'bold', color: tokens.textPrimary, display: 'block', marginBottom: '10px' }}>
                   Monthly Trade Credit Dispatched:
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px' }}>
                   {[
                     { label: '₦5 Million', val: 5000000 },
                     { label: '₦25 Million', val: 25000000 },
@@ -941,13 +964,13 @@ export default function HomePage() {
                       key={tier.val}
                       onClick={() => setCalcVolume(tier.val)}
                       style={{
-                        padding: '12px',
+                        padding: '10px 8px',
                         borderRadius: '10px',
                         backgroundColor: calcVolume === tier.val ? '#00A581' : (isLight ? '#F1F5F9' : '#001D31'),
                         color: calcVolume === tier.val ? '#FFFFFF' : tokens.textPrimary,
                         border: `1px solid ${calcVolume === tier.val ? '#00A581' : tokens.surfaceBorder}`,
                         fontWeight: 'bold',
-                        fontSize: '13.5px',
+                        fontSize: '12.5px',
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
                       }}
@@ -964,16 +987,16 @@ export default function HomePage() {
               backgroundColor: isLight ? '#F8FAFC' : '#00192B',
               borderRadius: '18px',
               border: `1px solid ${tokens.surfaceBorder}`,
-              padding: '32px',
+              padding: 'clamp(20px, 3vw, 32px)',
               display: 'flex',
               flexDirection: 'column',
-              gap: '24px',
+              gap: '20px',
             }}>
               <div>
                 <span style={{ fontSize: '11px', color: tokens.textMuted, fontWeight: 'bold', textTransform: 'uppercase' }}>
                   Estimated Monthly Cash Recovered
                 </span>
-                <div style={{ fontSize: '38px', fontWeight: '900', color: '#00A581', marginTop: '4px' }}>
+                <div style={{ fontSize: 'clamp(28px, 4vw, 38px)', fontWeight: '900', color: '#00A581', marginTop: '4px' }}>
                   {formatNaira(estimatedUnlocked)}
                 </div>
                 <div style={{ fontSize: '12px', color: tokens.textMuted, marginTop: '2px' }}>
@@ -981,21 +1004,21 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', borderTop: `1px solid ${tokens.surfaceBorder}`, paddingTop: '20px' }}>
+              <div className="responsive-split-2" style={{ borderTop: `1px solid ${tokens.surfaceBorder}`, paddingTop: '18px', gap: '16px' }}>
                 <div>
-                  <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#00A581' }}>
+                  <div style={{ fontSize: 'clamp(18px, 2.5vw, 22px)', fontWeight: 'bold', color: '#00A581' }}>
                     -{estimatedDsoDrop} Days
                   </div>
                   <div style={{ fontSize: '11.5px', color: tokens.textMuted, marginTop: '2px' }}>
-                    DSO (Days Sales Outstanding) Reduction
+                    DSO Reduction
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#00A581' }}>
+                  <div style={{ fontSize: 'clamp(18px, 2.5vw, 22px)', fontWeight: 'bold', color: '#00A581' }}>
                     {estimatedHoursSaved} Hours
                   </div>
                   <div style={{ fontSize: '11.5px', color: tokens.textMuted, marginTop: '2px' }}>
-                    Manual collection tracking saved / mo
+                    Manual tracking saved / mo
                   </div>
                 </div>
               </div>
@@ -1024,12 +1047,12 @@ export default function HomePage() {
       {/* ========================================================================= */}
       {/* 6. AFRICAN TRADER PERSONAS & DOSSIERS                                     */}
       {/* ========================================================================= */}
-      <section style={{ maxWidth: '1140px', margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 1 }}>
-        <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+      <section style={{ maxWidth: '1140px', margin: '0 auto', padding: '0 clamp(12px, 3vw, 24px)', position: 'relative', zIndex: 1 }}>
+        <div style={{ textAlign: 'center', marginBottom: '44px' }}>
           <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
             Built for Real African Trade
           </span>
-          <h2 style={{ fontSize: '36px', fontWeight: '900', color: tokens.textPrimary, marginTop: '8px', letterSpacing: '-1px' }}>
+          <h2 style={{ fontSize: 'clamp(26px, 4vw, 36px)', fontWeight: '900', color: tokens.textPrimary, marginTop: '8px', letterSpacing: '-1px' }}>
             Powering Everyday African Commerce
           </h2>
           <p style={{ color: tokens.textSecondary, fontSize: '15px', maxWidth: '640px', margin: '12px auto 0' }}>
@@ -1037,7 +1060,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+        <div className="responsive-grid-3">
           {/* Persona 1: Alhaji Musa */}
           <div style={{
             backgroundColor: tokens.surface,
@@ -1053,7 +1076,7 @@ export default function HomePage() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: tokens.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-                  🌾
+                  ðŸŒ¾
                 </div>
                 <div>
                   <h4 style={{ fontSize: '17px', fontWeight: 'bold', color: tokens.textPrimary }}>Alhaji Musa</h4>
@@ -1085,7 +1108,7 @@ export default function HomePage() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: isLight ? '#EFF6FF' : 'rgba(59, 130, 246, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-                  👗
+                  ðŸ‘—
                 </div>
                 <div>
                   <h4 style={{ fontSize: '17px', fontWeight: 'bold', color: tokens.textPrimary }}>Grace Wanjiku</h4>
@@ -1117,7 +1140,7 @@ export default function HomePage() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: isLight ? '#FEF3C7' : 'rgba(245, 158, 11, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-                  📦
+                  ðŸ“¦
                 </div>
                 <div>
                   <h4 style={{ fontSize: '17px', fontWeight: 'bold', color: tokens.textPrimary }}>Kwame Mensah</h4>
@@ -1125,7 +1148,7 @@ export default function HomePage() {
                 </div>
               </div>
               <p style={{ color: tokens.textSecondary, fontSize: '13.5px', lineHeight: '1.6' }}>
-                "Supplying 120 provisioning shops was chaos on paper notebooks. With Netify’s collections priority queue, my drivers know exactly which stores have overdue accounts before making today’s delivery."
+                "Supplying 120 provisioning shops was chaos on paper notebooks. With Netify's collections priority queue, my drivers know exactly which stores have overdue accounts before making today's delivery."
               </p>
             </div>
             <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: `1px solid ${tokens.surfaceBorder}`, display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: tokens.textMuted }}>
@@ -1139,12 +1162,12 @@ export default function HomePage() {
       {/* ========================================================================= */}
       {/* 7. HIGH-CONVERTING BOTTOM HERO CTA                                        */}
       {/* ========================================================================= */}
-      <section style={{ maxWidth: '1140px', margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 1 }}>
+      <section style={{ maxWidth: '1140px', margin: '0 auto', padding: '0 clamp(12px, 3vw, 24px)', position: 'relative', zIndex: 1 }}>
         <div style={{
           backgroundColor: isLight ? '#F1F5F9' : '#00253E',
           borderRadius: '28px',
           border: '2px solid #00A581',
-          padding: '60px 40px',
+          padding: 'clamp(32px, 6vw, 60px) clamp(20px, 5vw, 40px)',
           textAlign: 'center',
           boxShadow: isLight ? tokens.shadowCard : '0 20px 60px rgba(0, 165, 129, 0.25)',
           position: 'relative',
@@ -1241,3 +1264,4 @@ export default function HomePage() {
     </div>
   );
 }
+

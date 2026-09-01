@@ -116,7 +116,7 @@ function VerifyEmailForm() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '24px',
+      padding: 'clamp(16px, 4vw, 24px)',
       backgroundColor: tokens.background,
       position: 'relative',
       transition: 'all 0.2s ease',
@@ -137,9 +137,9 @@ function VerifyEmailForm() {
         width: '100%',
         maxWidth: '460px',
         backgroundColor: tokens.surface,
-        borderRadius: '24px',
+        borderRadius: 'clamp(16px, 3vw, 24px)',
         border: `1px solid ${tokens.surfaceBorder}`,
-        padding: '40px 32px',
+        padding: 'clamp(24px, 5vw, 40px) clamp(18px, 5vw, 32px)',
         boxShadow: isLight ? tokens.shadowCard : '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
         position: 'relative',
         zIndex: 1,
@@ -291,7 +291,7 @@ function VerifyEmailForm() {
             )}
 
             {/* 6 Digit Input Group */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 'clamp(4px, 1.5vw, 8px)' }}>
               {code.map((digit, idx) => (
                 <input
                   key={idx}
@@ -302,10 +302,10 @@ function VerifyEmailForm() {
                   onChange={(e) => handleCodeChange(idx, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(idx, e)}
                   style={{
-                    width: '46px',
-                    height: '52px',
+                    width: 'clamp(38px, 10vw, 50px)',
+                    height: 'clamp(44px, 11vw, 56px)',
                     textAlign: 'center',
-                    fontSize: '20px',
+                    fontSize: 'clamp(16px, 4vw, 22px)',
                     fontWeight: 'bold',
                     backgroundColor: isLight ? '#FFFFFF' : '#001D31',
                     border: `1px solid ${tokens.surfaceBorder}`,

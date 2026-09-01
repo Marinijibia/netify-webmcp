@@ -87,10 +87,10 @@ document.modelContext.registerTool({
     <div style={{
       maxWidth: '1240px',
       margin: '0 auto',
-      padding: '80px 24px 100px',
+      padding: 'clamp(40px, 8vw, 80px) clamp(16px, 3vw, 24px) clamp(48px, 10vw, 100px)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '80px',
+      gap: 'clamp(40px, 6vw, 80px)',
       position: 'relative',
     }}>
       {/* Ambient Glow */}
@@ -151,29 +151,24 @@ document.modelContext.registerTool({
         backgroundColor: tokens.surface,
         borderRadius: '24px',
         border: `1px solid ${tokens.surfaceBorder}`,
-        padding: '40px 32px',
+        padding: 'clamp(24px, 4vw, 40px) clamp(16px, 3.5vw, 32px)',
         boxShadow: isLight ? tokens.shadowCard : '0 10px 40px rgba(0, 0, 0, 0.3)',
         position: 'relative',
         zIndex: 1,
         transition: 'all 0.2s ease',
       }}>
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase', letterSpacing: '1px' }}>
             System Architecture
           </span>
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>
+          <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 24px)', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>
             How WebMCP Operates Without API Key Sharing
           </h2>
         </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '16px',
-          alignItems: 'center',
-        }}>
+        <div className="responsive-grid-4" style={{ alignItems: 'stretch' }}>
           {/* Step 1 */}
-          <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#00192B', padding: '24px', borderRadius: '16px', border: `1px solid ${tokens.surfaceBorder}`, textAlign: 'center' }}>
+          <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#00192B', padding: 'clamp(16px, 3vw, 24px)', borderRadius: '16px', border: `1px solid ${tokens.surfaceBorder}`, textAlign: 'center' }}>
             <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: isLight ? '#EFF6FF' : 'rgba(59, 130, 246, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB', margin: '0 auto 12px' }}>
               <Cpu size={20} />
             </div>
@@ -184,7 +179,7 @@ document.modelContext.registerTool({
           </div>
 
           {/* Step 2 */}
-          <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#00192B', padding: '24px', borderRadius: '16px', border: '1px solid #00A581', textAlign: 'center', boxShadow: isLight ? tokens.shadowCard : '0 0 20px rgba(0, 165, 129, 0.15)' }}>
+          <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#00192B', padding: 'clamp(16px, 3vw, 24px)', borderRadius: '16px', border: '1px solid #00A581', textAlign: 'center', boxShadow: isLight ? tokens.shadowCard : '0 0 20px rgba(0, 165, 129, 0.15)' }}>
             <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: tokens.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00A581', margin: '0 auto 12px' }}>
               <Terminal size={20} />
             </div>
@@ -195,7 +190,7 @@ document.modelContext.registerTool({
           </div>
 
           {/* Step 3 */}
-          <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#00192B', padding: '24px', borderRadius: '16px', border: `1px solid ${tokens.surfaceBorder}`, textAlign: 'center' }}>
+          <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#00192B', padding: 'clamp(16px, 3vw, 24px)', borderRadius: '16px', border: `1px solid ${tokens.surfaceBorder}`, textAlign: 'center' }}>
             <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: isLight ? '#FEF3C7' : 'rgba(245, 158, 11, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D97706', margin: '0 auto 12px' }}>
               <ShieldCheck size={20} />
             </div>
@@ -206,7 +201,7 @@ document.modelContext.registerTool({
           </div>
 
           {/* Step 4 */}
-          <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#00192B', padding: '24px', borderRadius: '16px', border: `1px solid ${tokens.surfaceBorder}`, textAlign: 'center' }}>
+          <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#00192B', padding: 'clamp(16px, 3vw, 24px)', borderRadius: '16px', border: `1px solid ${tokens.surfaceBorder}`, textAlign: 'center' }}>
             <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: tokens.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00A581', margin: '0 auto 12px' }}>
               <Layers size={20} />
             </div>
@@ -243,7 +238,7 @@ document.modelContext.registerTool({
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+        <div className="responsive-grid-3">
           <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#00192B', padding: '20px', borderRadius: '14px', border: `1px solid ${tokens.surfaceBorder}` }}>
             <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase' }}>PATHWAY 1 (INSTANT)</span>
             <h4 style={{ fontSize: '15px', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '4px' }}>On-Screen WebMCP Drawer</h4>
@@ -275,7 +270,7 @@ document.modelContext.registerTool({
         backgroundColor: isLight ? '#F0FDF4' : 'rgba(0, 37, 27, 0.9)',
         borderRadius: '20px',
         border: '1px solid rgba(0, 165, 129, 0.5)',
-        padding: '28px 32px',
+        padding: 'clamp(20px, 4vw, 32px)',
         boxShadow: isLight ? '0 4px 20px rgba(0, 165, 129, 0.1)' : '0 8px 30px rgba(0, 0, 0, 0.4)',
         position: 'relative',
         zIndex: 1,
@@ -364,6 +359,7 @@ document.modelContext.registerTool({
           fontFamily: 'monospace',
           color: tokens.textSecondary,
           lineHeight: '1.5',
+          overflowX: 'auto',
         }}>
           "Browse to <strong style={{ color: '#00A581' }}>https://app.netify.ng/api/webmcp/execute?tool=get_collection_priority&limit=3</strong>. Using the live execution results from the get_collection_priority WebMCP tool, report my top 3 overdue debtor accounts, their outstanding balances, and why each customer is flagged for follow-up."
         </div>
@@ -375,7 +371,7 @@ document.modelContext.registerTool({
           <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase', letterSpacing: '1px' }}>
             Interactive Sandbox
           </span>
-          <h2 style={{ fontSize: '32px', fontWeight: '900', color: tokens.textPrimary, marginTop: '4px', letterSpacing: '-0.5px' }}>
+          <h2 style={{ fontSize: 'clamp(24px, 4vw, 32px)', fontWeight: '900', color: tokens.textPrimary, marginTop: '4px', letterSpacing: '-0.5px' }}>
             The 8 Registered WebMCP Tools
           </h2>
           <p style={{ color: tokens.textSecondary, fontSize: '15px', marginTop: '6px' }}>
@@ -383,18 +379,13 @@ document.modelContext.registerTool({
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '24px' }}>
+        <div className="responsive-webmcp-layout">
           {/* Tool Selector List */}
-          <div style={{
+          <div className="responsive-horizontal-chips no-scrollbar" style={{
             backgroundColor: tokens.surface,
             borderRadius: '16px',
             border: `1px solid ${tokens.surfaceBorder}`,
             padding: '12px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '6px',
-            maxHeight: '620px',
-            overflowY: 'auto',
             boxShadow: isLight ? tokens.shadowCard : 'none',
           }}>
             {webMCPTools.map((tool) => {
@@ -405,17 +396,19 @@ document.modelContext.registerTool({
                   onClick={() => handleSelectTool(tool)}
                   style={{
                     textAlign: 'left',
-                    padding: '14px 16px',
+                    padding: '12px 14px',
                     borderRadius: '10px',
                     backgroundColor: isSelected ? '#00A581' : (isLight ? '#F8FAFC' : 'transparent'),
                     color: isSelected ? '#FFFFFF' : tokens.textPrimary,
                     border: isSelected ? 'none' : `1px solid ${tokens.surfaceBorder}`,
                     cursor: 'pointer',
+                    minWidth: '180px',
+                    flexShrink: 0,
                     transition: 'all 0.15s ease',
                   }}
                 >
-                  <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{tool.name}</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', opacity: 0.85, fontSize: '11px', color: isSelected ? '#FFFFFF' : tokens.textMuted }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '13px' }}>{tool.name}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', opacity: 0.85, fontSize: '10.5px', color: isSelected ? '#FFFFFF' : tokens.textMuted }}>
                     <span>{tool.category}</span>
                     <span>{tool.category === 'READ_ONLY' ? 'Safe Query' : 'Action Proposal'}</span>
                   </div>
@@ -430,17 +423,20 @@ document.modelContext.registerTool({
             borderRadius: '16px',
             border: `1px solid ${tokens.surfaceBorder}`,
             boxShadow: isLight ? tokens.shadowCard : 'none',
-            padding: '32px',
+            padding: 'clamp(18px, 3.5vw, 32px)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '24px',
+            gap: '20px',
             transition: 'all 0.2s ease',
+            minWidth: 0,
           }}>
             {/* Tool Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <h3 style={{ fontSize: '22px', fontWeight: 'bold', color: tokens.textPrimary }}>{selectedTool.name}</h3>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <h3 style={{ fontSize: 'clamp(18px, 3vw, 22px)', fontWeight: 'bold', color: tokens.textPrimary, wordBreak: 'break-word' }}>
+                    {selectedTool.name}
+                  </h3>
                   <span style={{
                     backgroundColor: selectedTool.category === 'READ_ONLY' ? tokens.accentSoft : selectedTool.category === 'PROPOSAL' ? (isLight ? '#FEF3C7' : 'rgba(245, 158, 11, 0.2)') : (isLight ? '#EFF6FF' : 'rgba(59, 130, 246, 0.2)'),
                     color: selectedTool.category === 'READ_ONLY' ? '#00A581' : selectedTool.category === 'PROPOSAL' ? '#D97706' : '#2563EB',
@@ -452,7 +448,7 @@ document.modelContext.registerTool({
                     {selectedTool.category}
                   </span>
                 </div>
-                <p style={{ color: tokens.textSecondary, fontSize: '14px', marginTop: '8px', lineHeight: '1.6' }}>
+                <p style={{ color: tokens.textSecondary, fontSize: '13.5px', marginTop: '8px', lineHeight: '1.6' }}>
                   {selectedTool.description}
                 </p>
               </div>
@@ -468,9 +464,10 @@ document.modelContext.registerTool({
                   color: tokens.textSecondary,
                   padding: '8px 14px',
                   borderRadius: '8px',
-                  fontSize: '12.5px',
+                  fontSize: '12px',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
+                  flexShrink: 0,
                 }}
               >
                 {copiedCode ? <Check size={14} color="#00A581" /> : <Copy size={14} />}
@@ -483,9 +480,9 @@ document.modelContext.registerTool({
               <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase', marginBottom: '8px' }}>
                 JSON Input Schema:
               </label>
-              <pre style={{
+              <pre className="responsive-pre-wrap" style={{
                 backgroundColor: '#00192B',
-                padding: '14px 18px',
+                padding: '14px 16px',
                 borderRadius: '10px',
                 border: '1px solid #0F5470',
                 fontSize: '12px',
@@ -500,16 +497,18 @@ document.modelContext.registerTool({
 
             {/* Input Payload Sandbox */}
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
                 <label style={{ fontSize: '11.5px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase' }}>
                   Input Payload (Editable JSON):
                 </label>
                 <button
                   onClick={handleExecute}
                   disabled={isExecuting}
+                  className="mobile-full-width"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: '6px',
                     backgroundColor: '#00A581',
                     color: '#FFFFFF',
@@ -540,6 +539,7 @@ document.modelContext.registerTool({
                   fontSize: '12.5px',
                   fontFamily: 'monospace',
                   outline: 'none',
+                  boxSizing: 'border-box',
                 }}
               />
             </div>
@@ -550,9 +550,9 @@ document.modelContext.registerTool({
                 <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase', marginBottom: '8px' }}>
                   Live API Execution Result:
                 </label>
-                <pre style={{
+                <pre className="responsive-pre-wrap" style={{
                   backgroundColor: '#00192B',
-                  padding: '16px',
+                  padding: '14px 16px',
                   borderRadius: '10px',
                   border: `1px solid ${testResult.success ? '#00A581' : '#EF4444'}`,
                   color: testResult.success ? '#FFFFFF' : '#FCA5A5',

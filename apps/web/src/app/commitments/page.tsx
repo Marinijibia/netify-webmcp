@@ -76,11 +76,11 @@ export default function CommitmentsPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Clock size={24} color="#00A581" />
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>{t('commitments.title')}</h2>
+            <h2 style={{ fontSize: 'clamp(18px, 3vw, 24px)', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>{t('commitments.title')}</h2>
           </div>
           <p style={{ color: tokens.textSecondary, fontSize: '13px', marginTop: '4px' }}>
             Track promised payment dates negotiated via WhatsApp, phone calls, and customer agreements.
@@ -139,18 +139,19 @@ export default function CommitmentsPage() {
       </div>
 
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+      <div className="responsive-grid-3">
         <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
           padding: '18px 20px',
           borderRadius: '12px',
           border: `1px solid ${tokens.surfaceBorder}`,
           boxShadow: isLight ? tokens.shadowCard : 'none',
+          minWidth: 0,
         }}>
           <span style={{ fontSize: '11px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase' }}>
             {t('commitments.promisedAmount')}
           </span>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 24px)', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>
             {formatCurrency(totalAmount, currency)}
           </div>
         </div>
@@ -164,11 +165,12 @@ export default function CommitmentsPage() {
             ? '#FEF2F2' 
             : 'linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, rgba(0, 48, 81, 1) 100%)',
           boxShadow: isLight ? tokens.shadowCard : 'none',
+          minWidth: 0,
         }}>
           <span style={{ fontSize: '11px', fontWeight: 'bold', color: isLight ? '#DC2626' : '#FCA5A5', textTransform: 'uppercase' }}>
             {t('commitments.brokenTitle')}
           </span>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#EF4444', marginTop: '6px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 24px)', fontWeight: 'bold', color: '#EF4444', marginTop: '6px' }}>
             {missedCount} Broken Promises
           </div>
         </div>
@@ -179,18 +181,19 @@ export default function CommitmentsPage() {
           borderRadius: '12px',
           border: `1px solid ${tokens.surfaceBorder}`,
           boxShadow: isLight ? tokens.shadowCard : 'none',
+          minWidth: 0,
         }}>
           <span style={{ fontSize: '11px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase' }}>
             Active Commitments In View
           </span>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 24px)', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>
             {commitments.length} Records
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+      <div className="no-scrollbar" style={{ display: 'flex', gap: '8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' as any }}>
         {(['ALL', 'TODAY', 'MISSED', 'UPCOMING', 'FULFILLED'] as const).map((tab) => {
           const tabLabel =
             tab === 'ALL'
@@ -217,6 +220,8 @@ export default function CommitmentsPage() {
                 color: activeTab === tab ? '#FFFFFF' : tokens.textSecondary,
                 border: `1px solid ${activeTab === tab ? '#00A581' : tokens.surfaceBorder}`,
                 cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
                 boxShadow: isLight && activeTab !== tab ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
               }}
             >
@@ -240,7 +245,7 @@ export default function CommitmentsPage() {
         </div>
       )}
 
-      {/* Commitments List */}
+      {/* Commitments List — outer card clips border-radius, inner div scrolls */}
       <div style={{
         backgroundColor: tokens.surface,
         borderRadius: '12px',
@@ -249,7 +254,7 @@ export default function CommitmentsPage() {
         boxShadow: isLight ? tokens.shadowCard : 'none',
       }}>
         {isLoading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: 'clamp(40px, 8vw, 60px)' }}>
             <Loader2 size={32} className="animate-spin text-teal-500" />
           </div>
         ) : commitments.length === 0 ? (
@@ -261,94 +266,69 @@ export default function CommitmentsPage() {
             </p>
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
-            <thead>
-              <tr style={{ backgroundColor: isLight ? '#F8FAFC' : '#001D31', borderBottom: `1px solid ${tokens.surfaceBorder}`, color: tokens.textMuted, fontSize: '12px' }}>
-                <th style={{ padding: '14px 20px' }}>CUSTOMER</th>
-                <th style={{ padding: '14px 20px' }}>PROMISED DATE</th>
-                <th style={{ padding: '14px 20px' }}>STATUS</th>
-                <th style={{ padding: '14px 20px' }}>NOTES</th>
-                <th style={{ padding: '14px 20px', textAlign: 'right' }}>PROMISED AMOUNT</th>
-                <th style={{ padding: '14px 20px', textAlign: 'right' }}>ACTION</th>
-              </tr>
-            </thead>
-            <tbody>
-              {commitments.map((com) => {
-                const isMissed = com.status === 'MISSED';
-
-                return (
-                  <tr key={com.id} style={{ borderBottom: `1px solid ${tokens.surfaceBorder}` }}>
-                    <td style={{ padding: '16px 20px' }}>
-                      {com.customer ? (
-                        <Link href={`/customers/${com.customer.id}`} style={{ fontWeight: '600', color: tokens.textPrimary, textDecoration: 'none' }}>
-                          {com.customer.name}
-                        </Link>
-                      ) : (
-                        <span style={{ color: tokens.textPrimary, fontWeight: '600' }}>Customer #{com.customerId.slice(0, 8)}</span>
-                      )}
-                      {com.receivable?.reference && (
-                        <p style={{ fontSize: '11px', color: tokens.textMuted, marginTop: '2px' }}>
-                          Ref: {com.receivable.reference}
-                        </p>
-                      )}
-                    </td>
-
-                    <td style={{ padding: '16px 20px', color: tokens.textSecondary }}>
-                      <div>{formatDate(com.promisedFor)}</div>
-                      {isMissed && (
-                        <span style={{ color: '#EF4444', fontSize: '11px', fontWeight: 'bold' }}>
-                          Deadline elapsed
+          <div className="responsive-table-wrapper">
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
+              <thead>
+                <tr style={{ backgroundColor: isLight ? '#F8FAFC' : '#001D31', borderBottom: `1px solid ${tokens.surfaceBorder}`, color: tokens.textMuted, fontSize: '12px' }}>
+                  <th style={{ padding: '14px 20px', whiteSpace: 'nowrap' }}>CUSTOMER</th>
+                  <th style={{ padding: '14px 20px', whiteSpace: 'nowrap' }}>PROMISED DATE</th>
+                  <th style={{ padding: '14px 20px', whiteSpace: 'nowrap' }}>STATUS</th>
+                  <th style={{ padding: '14px 20px', whiteSpace: 'nowrap' }}>NOTES</th>
+                  <th style={{ padding: '14px 20px', textAlign: 'right', whiteSpace: 'nowrap' }}>PROMISED AMOUNT</th>
+                  <th style={{ padding: '14px 20px', textAlign: 'right', whiteSpace: 'nowrap' }}>ACTION</th>
+                </tr>
+              </thead>
+              <tbody>
+                {commitments.map((com) => {
+                  const isMissed = com.status === 'MISSED';
+                  return (
+                    <tr key={com.id} style={{ borderBottom: `1px solid ${tokens.surfaceBorder}` }}>
+                      <td style={{ padding: '16px 20px', minWidth: '140px' }}>
+                        {com.customer ? (
+                          <Link href={`/customers/${com.customer.id}`} style={{ fontWeight: '600', color: tokens.textPrimary, textDecoration: 'none' }}>
+                            {com.customer.name}
+                          </Link>
+                        ) : (
+                          <span style={{ color: tokens.textPrimary, fontWeight: '600' }}>Customer #{com.customerId.slice(0, 8)}</span>
+                        )}
+                        {com.receivable?.reference && (
+                          <p style={{ fontSize: '11px', color: tokens.textMuted, marginTop: '2px' }}>Ref: {com.receivable.reference}</p>
+                        )}
+                      </td>
+                      <td style={{ padding: '16px 20px', color: tokens.textSecondary, whiteSpace: 'nowrap' }}>
+                        <div>{formatDate(com.promisedFor)}</div>
+                        {isMissed && <span style={{ color: '#EF4444', fontSize: '11px', fontWeight: 'bold' }}>Deadline elapsed</span>}
+                      </td>
+                      <td style={{ padding: '16px 20px' }}>
+                        <span style={{
+                          backgroundColor: isMissed ? (isLight ? '#FEE2E2' : 'rgba(239,68,68,0.15)') : com.status === 'FULFILLED' ? tokens.accentSoft : (isLight ? '#FEF3C7' : 'rgba(245,158,11,0.15)'),
+                          color: isMissed ? (isLight ? '#B91C1C' : '#FCA5A5') : com.status === 'FULFILLED' ? '#00A581' : (isLight ? '#B45309' : '#FCD34D'),
+                          padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap', display: 'inline-block',
+                        }}>
+                          {com.status}
                         </span>
-                      )}
-                    </td>
-
-                    <td style={{ padding: '16px 20px' }}>
-                      <span style={{
-                        backgroundColor: isMissed ? (isLight ? '#FEE2E2' : 'rgba(239, 68, 68, 0.15)') : com.status === 'FULFILLED' ? tokens.accentSoft : (isLight ? '#FEF3C7' : 'rgba(245, 158, 11, 0.15)'),
-                        color: isMissed ? (isLight ? '#B91C1C' : '#FCA5A5') : com.status === 'FULFILLED' ? '#00A581' : (isLight ? '#B45309' : '#FCD34D'),
-                        padding: '3px 8px',
-                        borderRadius: '4px',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                      }}>
-                        {com.status}
-                      </span>
-                    </td>
-
-                    <td style={{ padding: '16px 20px', color: tokens.textSecondary, fontSize: '12px', maxWidth: '240px' }}>
-                      {com.notes || '—'}
-                    </td>
-
-                    <td style={{ padding: '16px 20px', textAlign: 'right', fontWeight: 'bold', color: isMissed ? '#EF4444' : '#00A581', fontSize: '14px' }}>
-                      {formatCurrency(com.amount, com.currency || currency)}
-                    </td>
-
-                    <td style={{ padding: '16px 20px', textAlign: 'right' }}>
-                      <Link
-                        href={`/messages/draft?customerId=${com.customerId}`}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          backgroundColor: tokens.accentSoft,
-                          border: `1px solid ${tokens.accentBorder}`,
-                          color: '#00A581',
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: '700',
-                          textDecoration: 'none',
-                        }}
-                      >
-                        <MessageSquareQuote size={13} />
-                        <span>Follow Up</span>
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                      <td style={{ padding: '16px 20px', color: tokens.textSecondary, fontSize: '12px', maxWidth: '220px' }}>
+                        {com.notes || '—'}
+                      </td>
+                      <td style={{ padding: '16px 20px', textAlign: 'right', fontWeight: 'bold', color: isMissed ? '#EF4444' : '#00A581', fontSize: '14px', whiteSpace: 'nowrap' }}>
+                        {formatCurrency(com.amount, com.currency || currency)}
+                      </td>
+                      <td style={{ padding: '16px 20px', textAlign: 'right' }}>
+                        <Link
+                          href={`/messages/draft?customerId=${com.customerId}`}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: tokens.accentSoft, border: `1px solid ${tokens.accentBorder}`, color: '#00A581', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }}
+                        >
+                          <MessageSquareQuote size={13} />
+                          <span>Follow Up</span>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

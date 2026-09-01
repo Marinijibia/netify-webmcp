@@ -14,10 +14,10 @@ export default function AboutPage() {
     <div style={{
       maxWidth: '1100px',
       margin: '0 auto',
-      padding: '80px 24px 100px',
+      padding: 'clamp(48px, 6vw, 80px) 16px 100px',
       display: 'flex',
       flexDirection: 'column',
-      gap: '72px',
+      gap: 'clamp(40px, 5vw, 72px)',
       position: 'relative',
     }}>
       {/* Ambient Glow */}
@@ -53,7 +53,7 @@ export default function AboutPage() {
         </div>
 
         <h1 style={{
-          fontSize: 'clamp(36px, 5vw, 54px)',
+          fontSize: 'clamp(32px, 5vw, 54px)',
           fontWeight: '900',
           color: tokens.textPrimary,
           letterSpacing: '-1.5px',
@@ -68,7 +68,7 @@ export default function AboutPage() {
             Relational Business Memory
           </span>
         </h1>
-        <p style={{ color: tokens.textSecondary, fontSize: '17px', lineHeight: '1.6', marginTop: '16px' }}>
+        <p style={{ color: tokens.textSecondary, fontSize: '16px', lineHeight: '1.6', marginTop: '16px' }}>
           We believe debt collection in emerging markets shouldn’t be aggressive, adversarial, or chaotic. It should be respectful, grounded in verified data, and clear.
         </p>
       </div>
@@ -78,7 +78,7 @@ export default function AboutPage() {
         backgroundColor: tokens.surface,
         borderRadius: '24px',
         border: `1px solid ${tokens.surfaceBorder}`,
-        padding: '48px 40px',
+        padding: 'clamp(24px, 4vw, 48px)',
         display: 'flex',
         flexDirection: 'column',
         gap: '24px',
@@ -90,7 +90,7 @@ export default function AboutPage() {
         zIndex: 1,
         transition: 'all 0.2s ease',
       }}>
-        <h2 style={{ fontSize: '26px', fontWeight: 'bold', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
+        <h2 style={{ fontSize: 'clamp(20px, 3.5vw, 26px)', fontWeight: 'bold', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
           The $330 Billion Trade Credit Paradox
         </h2>
         <p>
@@ -108,14 +108,11 @@ export default function AboutPage() {
       </div>
 
       {/* The 3 Guiding Principles */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-        gap: '24px',
+      <div className="responsive-grid-3" style={{
         position: 'relative',
         zIndex: 1,
       }}>
-        <div style={{ backgroundColor: tokens.surface, borderRadius: '20px', border: `1px solid ${tokens.surfaceBorder}`, padding: '32px', boxShadow: isLight ? tokens.shadowCard : 'none', transition: 'all 0.2s ease' }}>
+        <div style={{ backgroundColor: tokens.surface, borderRadius: '20px', border: `1px solid ${tokens.surfaceBorder}`, padding: 'clamp(20px, 3.5vw, 32px)', boxShadow: isLight ? tokens.shadowCard : 'none', transition: 'all 0.2s ease' }}>
           <div style={{ fontSize: '32px', marginBottom: '14px' }}>🤝</div>
           <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: tokens.textPrimary, marginBottom: '10px' }}>
             Respect is Non-Negotiable
@@ -125,7 +122,7 @@ export default function AboutPage() {
           </p>
         </div>
 
-        <div style={{ backgroundColor: tokens.surface, borderRadius: '20px', border: `1px solid ${tokens.surfaceBorder}`, padding: '32px', boxShadow: isLight ? tokens.shadowCard : 'none', transition: 'all 0.2s ease' }}>
+        <div style={{ backgroundColor: tokens.surface, borderRadius: '20px', border: `1px solid ${tokens.surfaceBorder}`, padding: 'clamp(20px, 3.5vw, 32px)', boxShadow: isLight ? tokens.shadowCard : 'none', transition: 'all 0.2s ease' }}>
           <div style={{ fontSize: '32px', marginBottom: '14px' }}>🛡️</div>
           <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: tokens.textPrimary, marginBottom: '10px' }}>
             Human Controls Every Action
@@ -135,7 +132,7 @@ export default function AboutPage() {
           </p>
         </div>
 
-        <div style={{ backgroundColor: tokens.surface, borderRadius: '20px', border: `1px solid ${tokens.surfaceBorder}`, padding: '32px', boxShadow: isLight ? tokens.shadowCard : 'none', transition: 'all 0.2s ease' }}>
+        <div style={{ backgroundColor: tokens.surface, borderRadius: '20px', border: `1px solid ${tokens.surfaceBorder}`, padding: 'clamp(20px, 3.5vw, 32px)', boxShadow: isLight ? tokens.shadowCard : 'none', transition: 'all 0.2s ease' }}>
           <div style={{ fontSize: '32px', marginBottom: '14px' }}>🌐</div>
           <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: tokens.textPrimary, marginBottom: '10px' }}>
             Browser-Native Open Standards
@@ -151,7 +148,7 @@ export default function AboutPage() {
         backgroundColor: isLight ? '#F1F5F9' : '#00253E',
         borderRadius: '24px',
         border: '2px solid #00A581',
-        padding: '48px 36px',
+        padding: 'clamp(28px, 6vw, 48px) clamp(20px, 5vw, 36px)',
         textAlign: 'center',
         boxShadow: isLight ? tokens.shadowCard : '0 10px 40px rgba(0, 165, 129, 0.2)',
         position: 'relative',

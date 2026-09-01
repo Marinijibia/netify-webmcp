@@ -13,17 +13,14 @@ export function PublicFooter() {
       backgroundColor: isLight ? '#FFFFFF' : '#001422',
       borderTop: `1px solid ${tokens.surfaceBorder}`,
       color: tokens.textMuted,
-      padding: '60px 24px 32px',
+      padding: 'clamp(28px, 5vw, 48px) clamp(12px, 3vw, 24px) 32px',
       fontSize: '13px',
       transition: 'background-color 0.2s ease, border-color 0.2s ease',
     }}>
-      <div style={{
+      <div className="responsive-grid-4" style={{
         maxWidth: '1200px',
         margin: '0 auto',
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-        gap: '40px',
-        marginBottom: '48px',
+        marginBottom: '40px',
       }}>
         {/* Brand Column */}
         <div>

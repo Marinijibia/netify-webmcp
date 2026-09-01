@@ -19,7 +19,6 @@ import {
   Sparkles,
   Terminal,
   Code,
-  Cpu,
   LucideIcon
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
@@ -32,7 +31,12 @@ interface NavItem {
   badge?: string;
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  isMobileOpen?: boolean;
+  onCloseMobile?: () => void;
+}
+
+export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps = {}) {
   const pathname = usePathname();
   const { user, organization, isAuthenticated, logout } = useAuth();
   const { currentLanguageInfo, openLanguageModal, t } = useLanguage();
@@ -68,7 +72,7 @@ export function Sidebar() {
       items: [
         { name: t('notifications.title'), href: '/notifications', icon: Bell },
         { name: t('nav.settings'), href: '/settings', icon: Settings },
-        { name: 'Business Onboarding', href: '/onboarding', icon: Sparkles },
+        ...(!user?.onboardingCompleted ? [{ name: 'Business Onboarding', href: '/onboarding', icon: Sparkles, badge: 'Setup' }] : []),
       ],
     },
   ];
@@ -78,59 +82,77 @@ export function Sidebar() {
     return null;
   }
 
-  return (
-    <aside style={{
-      width: '272px',
-      backgroundColor: isLight ? '#FFFFFF' : '#001424',
-      borderRight: `1px solid ${tokens.surfaceBorder}`,
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100vh',
-      position: 'sticky',
-      top: 0,
-      flexShrink: 0,
-      userSelect: 'none',
-      zIndex: 20,
-      transition: 'background-color 0.2s ease, border-color 0.2s ease',
-    }}>
+  const renderContent = (isDrawer = false) => (
+    <>
       {/* Brand Header */}
-      <Link href="/workspace" style={{
+      <div style={{
         padding: '20px 20px 18px',
         display: 'flex',
         alignItems: 'center',
-        gap: '12px',
-        textDecoration: 'none',
+        justifyContent: 'space-between',
         borderBottom: `1px solid ${tokens.surfaceBorder}`,
       }}>
-        <img
-          src="/logo-icon.png"
-          alt="Netify Logo"
+        <Link
+          href="/workspace"
+          onClick={isDrawer ? onCloseMobile : undefined}
           style={{
-            width: '38px',
-            height: '38px',
-            borderRadius: '11px',
-            objectFit: 'contain',
-            boxShadow: '0 0 16px rgba(0, 165, 129, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            textDecoration: 'none',
           }}
-        />
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '18px', fontWeight: '800', color: tokens.textPrimary, letterSpacing: '-0.4px' }}>Netify</span>
-            <span style={{
-              fontSize: '9.5px',
-              fontWeight: 'bold',
-              color: '#00A581',
-              backgroundColor: tokens.accentSoft,
-              padding: '1px 6px',
-              borderRadius: '12px',
-              border: `1px solid ${tokens.accentBorder}`,
-            }}>
-              2.0
-            </span>
+        >
+          <img
+            src="/logo-icon.png"
+            alt="Netify Logo"
+            style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '11px',
+              objectFit: 'contain',
+              boxShadow: '0 0 16px rgba(0, 165, 129, 0.4)',
+            }}
+          />
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '18px', fontWeight: '800', color: tokens.textPrimary, letterSpacing: '-0.4px' }}>Netify</span>
+              <span style={{
+                fontSize: '9.5px',
+                fontWeight: 'bold',
+                color: '#00A581',
+                backgroundColor: tokens.accentSoft,
+                padding: '1px 6px',
+                borderRadius: '12px',
+                border: `1px solid ${tokens.accentBorder}`,
+              }}>
+                2.0
+              </span>
+            </div>
+            <p style={{ fontSize: '11px', color: tokens.textMuted, margin: '2px 0 0' }}>AI Collections & Memory</p>
           </div>
-          <p style={{ fontSize: '11px', color: tokens.textMuted, margin: '2px 0 0' }}>AI Collections & Memory</p>
-        </div>
-      </Link>
+        </Link>
+
+        {isDrawer && (
+          <button
+            type="button"
+            onClick={onCloseMobile}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: tokens.textMuted,
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: '6px',
+              fontSize: '18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            ✕
+          </button>
+        )}
+      </div>
 
       {/* Navigation Sections */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -156,6 +178,7 @@ export function Sidebar() {
                   <Link
                     key={item.name}
                     href={item.href}
+                    onClick={isDrawer ? onCloseMobile : undefined}
                     className="tap-press"
                     style={{
                       display: 'flex',
@@ -322,6 +345,67 @@ export function Sidebar() {
           </button>
         )}
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop Persistent Sidebar */}
+      <aside
+        className="app-sidebar"
+        style={{
+          width: '272px',
+          backgroundColor: isLight ? '#FFFFFF' : '#001424',
+          borderRight: `1px solid ${tokens.surfaceBorder}`,
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100vh',
+          position: 'sticky',
+          top: 0,
+          flexShrink: 0,
+          userSelect: 'none',
+          zIndex: 20,
+          transition: 'background-color 0.2s ease, border-color 0.2s ease',
+        }}
+      >
+        {renderContent(false)}
+      </aside>
+
+      {/* Mobile Drawer */}
+      {isMobileOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 99999 }}>
+          {/* Backdrop */}
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0, 16, 28, 0.75)',
+              backdropFilter: 'blur(4px)',
+            }}
+            onClick={onCloseMobile}
+          />
+          {/* Slide-in drawer */}
+          <aside
+            style={{
+              position: 'fixed',
+              top: 0,
+              bottom: 0,
+              left: 0,
+              width: 'min(280px, 85vw)',
+              backgroundColor: isLight ? '#FFFFFF' : '#001424',
+              borderRight: `1px solid ${tokens.surfaceBorder}`,
+              display: 'flex',
+              flexDirection: 'column',
+              zIndex: 100000,
+              boxShadow: '10px 0 35px rgba(0,0,0,0.5)',
+              overflowY: 'auto',
+            }}
+            className="animate-spring-slide"
+          >
+            {renderContent(true)}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

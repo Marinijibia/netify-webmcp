@@ -80,22 +80,22 @@ export default function WorkspacePage() {
   const overduePercent = totalOut > 0 ? Math.min(100, Math.round((totalOver / totalOut) * 100)) : 0;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(16px, 2.5vw, 28px)', maxWidth: '1400px', margin: '0 auto' }}>
       
       {/* 1. Executive Status Bar & Live Control Header */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         flexWrap: 'wrap',
         gap: '16px',
         paddingBottom: '20px',
         borderBottom: `1px solid ${tokens.surfaceBorder}`,
       }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <h1 style={{
-              fontSize: '26px',
+              fontSize: 'clamp(20px, 3.5vw, 26px)',
               fontWeight: '900',
               color: tokens.textPrimary,
               letterSpacing: '-0.6px',
@@ -249,11 +249,7 @@ export default function WorkspacePage() {
       )}
 
       {/* 2. Financial Exposure Bento Grid (4 Core Executive KPIs) */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-        gap: '16px',
-      }}>
+      <div className="responsive-grid-4">
         {/* Card 1: Total Outstanding Exposure */}
         <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
@@ -267,6 +263,7 @@ export default function WorkspacePage() {
           flexDirection: 'column',
           justifyContent: 'space-between',
           minHeight: '148px',
+          minWidth: 0,
           transition: 'all 0.2s ease',
         }}>
           <div style={{
@@ -470,7 +467,7 @@ export default function WorkspacePage() {
           backgroundColor: tokens.surface,
           borderRadius: '16px',
           border: `1px solid ${isLight ? '#A7F3D0' : 'rgba(0, 165, 129, 0.45)'}`,
-          padding: '26px 28px',
+          padding: 'clamp(18px, 3vw, 26px) clamp(16px, 3.5vw, 28px)',
           boxShadow: isLight ? tokens.shadowCard : '0 8px 30px rgba(0, 0, 0, 0.3)',
           position: 'relative',
           overflow: 'hidden',
@@ -559,7 +556,7 @@ export default function WorkspacePage() {
                 Recommended Action Focus Today:
               </span>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
                 {attention.inferences.map((inf, idx) => (
                   <div
                     key={idx}
@@ -687,7 +684,7 @@ export default function WorkspacePage() {
       </div>
 
       {/* 4. Primary Split Section: Priority Queue & Operations Sidebar */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+      <div className="responsive-split-asymmetric">
         
         {/* Left Column: Highest Priority Debtor Accounts */}
         <div style={{
@@ -695,15 +692,15 @@ export default function WorkspacePage() {
           borderRadius: '16px',
           border: `1px solid ${tokens.surfaceBorder}`,
           boxShadow: isLight ? tokens.shadowCard : 'none',
-          padding: '24px',
+          padding: 'clamp(16px, 3vw, 24px)',
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
           transition: 'all 0.2s ease',
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ fontSize: '17px', fontWeight: '800', color: tokens.textPrimary, margin: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ minWidth: 0 }}>
+              <h3 style={{ fontSize: 'clamp(15px, 2.5vw, 17px)', fontWeight: '800', color: tokens.textPrimary, margin: 0 }}>
                 Collections Priority Queue
               </h3>
               <p style={{ fontSize: '12px', color: tokens.textMuted, margin: '3px 0 0' }}>
@@ -764,17 +761,19 @@ export default function WorkspacePage() {
                     className="hover-lift"
                     style={{
                       display: 'flex',
-                      alignItems: 'center',
+                      alignItems: 'flex-start',
                       justifyContent: 'space-between',
-                      padding: '16px 18px',
+                      padding: '14px 16px',
                       backgroundColor: isLight ? '#F8FAFC' : 'rgba(0, 20, 36, 0.75)',
                       borderRadius: '12px',
                       border: `1px solid ${tokens.surfaceBorder}`,
                       boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.04)' : 'none',
                       transition: 'all 0.15s ease',
+                      flexWrap: 'wrap',
+                      gap: '10px',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0, flex: 1 }}>
                       {/* Customer Initials Avatar */}
                       <div style={{
                         width: '40px',
@@ -793,8 +792,8 @@ export default function WorkspacePage() {
                         {initials}
                       </div>
 
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                           <Link
                             href={`/customers/${item.customerId}`}
                             style={{
@@ -819,7 +818,7 @@ export default function WorkspacePage() {
                           </span>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11.5px', color: tokens.textMuted, marginTop: '3px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px', color: tokens.textMuted, marginTop: '3px', flexWrap: 'wrap' }}>
                           <span>Overdue: <strong style={{ color: item.oldestOverdueDays > 30 ? '#DC2626' : tokens.textPrimary }}>{item.oldestOverdueDays} days</strong></span>
                           <span>•</span>
                           {item.missedCommitmentsCount > 0 ? (
@@ -833,7 +832,7 @@ export default function WorkspacePage() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontWeight: '800', fontSize: '15.5px', color: tokens.textPrimary }}>
                           {formatCurrency(item.totalOutstanding, currency)}
@@ -882,7 +881,7 @@ export default function WorkspacePage() {
             borderRadius: '16px',
             border: `1px solid ${isLight ? '#A7F3D0' : 'rgba(0, 165, 129, 0.4)'}`,
             boxShadow: isLight ? tokens.shadowCard : 'none',
-            padding: '22px',
+            padding: 'clamp(16px, 3vw, 22px)',
             display: 'flex',
             flexDirection: 'column',
             gap: '14px',
@@ -970,7 +969,7 @@ export default function WorkspacePage() {
             borderRadius: '16px',
             border: `1px solid ${tokens.surfaceBorder}`,
             boxShadow: isLight ? tokens.shadowCard : 'none',
-            padding: '22px',
+            padding: 'clamp(16px, 3vw, 22px)',
             display: 'flex',
             flexDirection: 'column',
             gap: '10px',

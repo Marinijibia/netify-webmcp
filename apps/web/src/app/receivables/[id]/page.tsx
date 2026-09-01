@@ -149,7 +149,7 @@ export default function ReceivableDetailPage() {
         backgroundColor: tokens.surface,
         borderRadius: '12px',
         border: `1px solid ${tokens.surfaceBorder}`,
-        padding: '28px',
+        padding: 'clamp(18px, 3vw, 28px)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
@@ -157,9 +157,9 @@ export default function ReceivableDetailPage() {
         gap: '20px',
         boxShadow: isLight ? tokens.shadowCard : 'none',
       }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <h2 style={{ fontSize: 'clamp(18px, 3vw, 22px)', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
               {receivable.reference || `REC-${receivable.id.slice(0, 8)}`}
             </h2>
             <span style={{
@@ -205,7 +205,7 @@ export default function ReceivableDetailPage() {
           )}
         </div>
 
-        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'flex-end' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'flex-start' }}>
           <div>
             <span style={{ fontSize: '11px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase' }}>
               {t('commandCenter.totalOutstanding')}
@@ -218,7 +218,7 @@ export default function ReceivableDetailPage() {
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {receivable.status !== 'PAID' && (
               <button
                 onClick={() => setShowPaymentModal(true)}
@@ -269,7 +269,7 @@ export default function ReceivableDetailPage() {
       </div>
 
       {/* Grid: Payments & Commitments */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
         {/* Payments History */}
         <div style={{
           backgroundColor: tokens.surface,
@@ -277,6 +277,7 @@ export default function ReceivableDetailPage() {
           border: `1px solid ${tokens.surfaceBorder}`,
           padding: '20px',
           boxShadow: isLight ? tokens.shadowCard : 'none',
+          minWidth: 0,
         }}>
           <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: tokens.textPrimary, marginBottom: '14px' }}>
             Payment History ({payments.length})
@@ -297,6 +298,8 @@ export default function ReceivableDetailPage() {
                   backgroundColor: isLight ? '#F8FAFC' : '#001D31',
                   borderRadius: '6px',
                   border: `1px solid ${tokens.surfaceBorder}`,
+                  flexWrap: 'wrap',
+                  gap: '6px',
                 }}>
                   <div>
                     <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#00A581' }}>
@@ -322,6 +325,7 @@ export default function ReceivableDetailPage() {
           border: `1px solid ${tokens.surfaceBorder}`,
           padding: '20px',
           boxShadow: isLight ? tokens.shadowCard : 'none',
+          minWidth: 0,
         }}>
           <h3 style={{ fontSize: '15px', fontWeight: 'bold', color: tokens.textPrimary, marginBottom: '14px' }}>
             Payment Commitments ({commitments.length})
@@ -342,6 +346,8 @@ export default function ReceivableDetailPage() {
                   backgroundColor: isLight ? '#F8FAFC' : '#001D31',
                   borderRadius: '6px',
                   border: `1px solid ${tokens.surfaceBorder}`,
+                  flexWrap: 'wrap',
+                  gap: '6px',
                 }}>
                   <div>
                     <span style={{ fontSize: '13px', fontWeight: 'bold', color: tokens.textPrimary }}>
@@ -379,15 +385,17 @@ export default function ReceivableDetailPage() {
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
-          padding: '20px',
+          padding: 'clamp(12px, 3vw, 20px)',
         }}>
           <div style={{
             backgroundColor: tokens.surface,
-            borderRadius: '12px',
+            borderRadius: 'clamp(12px, 2vw, 16px)',
             border: `1px solid ${tokens.surfaceBorder}`,
-            padding: '28px',
+            padding: 'clamp(20px, 4vw, 28px)',
             width: '100%',
-            maxWidth: '440px',
+            maxWidth: 'min(440px, calc(100vw - 24px))',
+            maxHeight: '92svh',
+            overflowY: 'auto',
             boxShadow: isLight ? '0 20px 40px rgba(0,0,0,0.15)' : '0 20px 40px rgba(0,0,0,0.5)',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>

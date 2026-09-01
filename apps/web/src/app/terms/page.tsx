@@ -11,7 +11,7 @@ export default function TermsPage() {
     <div style={{
       maxWidth: '900px',
       margin: '0 auto',
-      padding: '80px 24px 100px',
+      padding: 'clamp(48px, 6vw, 80px) 16px 100px',
       color: tokens.textSecondary,
       lineHeight: '1.8',
       fontSize: '14.5px',
@@ -29,19 +29,19 @@ export default function TermsPage() {
         pointerEvents: 'none',
       }} />
 
-      <div style={{ textAlign: 'center', marginBottom: '40px', position: 'relative', zIndex: 1 }}>
-        <h1 style={{ fontSize: '38px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-1px' }}>Terms of Service</h1>
+      <div style={{ textAlign: 'center', marginBottom: '36px', position: 'relative', zIndex: 1 }}>
+        <h1 style={{ fontSize: 'clamp(28px, 4vw, 38px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-1px' }}>Terms of Service</h1>
         <p style={{ color: tokens.textMuted, fontSize: '13.5px', marginTop: '6px' }}>Last updated: August 2026 • Netify Platform</p>
       </div>
 
       <div style={{
         backgroundColor: tokens.surface,
-        padding: '48px 40px',
+        padding: 'clamp(24px, 4vw, 48px)',
         borderRadius: '24px',
         border: `1px solid ${tokens.surfaceBorder}`,
         display: 'flex',
         flexDirection: 'column',
-        gap: '28px',
+        gap: '24px',
         boxShadow: isLight ? tokens.shadowCard : '0 10px 40px rgba(0, 0, 0, 0.25)',
         position: 'relative',
         zIndex: 1,

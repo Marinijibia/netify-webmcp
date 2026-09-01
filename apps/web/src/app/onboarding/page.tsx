@@ -114,6 +114,13 @@ export default function OnboardingPage() {
   const [showBiometricModal, setShowBiometricModal] = useState(false);
   const [biometricConfigured, setBiometricConfigured] = useState(false);
 
+  // If user has already completed onboarding, redirect to workspace
+  useEffect(() => {
+    if (user && user.onboardingCompleted) {
+      router.replace('/workspace');
+    }
+  }, [user, router]);
+
   // Initialize from user / org profile
   useEffect(() => {
     if (organization?.name) {
@@ -189,7 +196,7 @@ export default function OnboardingPage() {
     <div style={{
       minHeight: 'calc(100vh - 70px)',
       backgroundColor: tokens.background,
-      padding: '40px 24px 80px',
+      padding: 'clamp(20px, 4vw, 40px) clamp(12px, 3vw, 24px) 80px',
       position: 'relative',
       transition: 'background-color 0.2s ease',
     }}>
@@ -211,7 +218,8 @@ export default function OnboardingPage() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: '36px',
+          marginBottom: '32px',
+          gap: '4px',
         }}>
           {[
             { step: 1, title: 'Business Profile', icon: Building2 },
@@ -224,11 +232,12 @@ export default function OnboardingPage() {
 
             return (
               <React.Fragment key={item.step}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                   <div style={{
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '12px',
+                    width: '36px',
+                    height: '36px',
+                    minWidth: '36px',
+                    borderRadius: '10px',
                     backgroundColor: isDone || isActive ? '#00A581' : (isLight ? '#F1F5F9' : '#00253F'),
                     color: isDone || isActive ? '#FFFFFF' : tokens.textMuted,
                     border: `1px solid ${isDone || isActive ? '#00A581' : tokens.surfaceBorder}`,
@@ -239,12 +248,13 @@ export default function OnboardingPage() {
                     fontSize: '14px',
                     transition: 'all 0.2s ease',
                     boxShadow: isActive ? '0 0 15px rgba(0, 165, 129, 0.4)' : 'none',
+                    flexShrink: 0,
                   }}>
-                    {isDone ? <Check size={18} strokeWidth={3} /> : <Icon size={18} />}
+                    {isDone ? <Check size={17} strokeWidth={3} /> : <Icon size={17} />}
                   </div>
-                  <div>
+                  <div className="hide-on-mobile">
                     <span style={{
-                      fontSize: '11px',
+                      fontSize: '10.5px',
                       fontWeight: 'bold',
                       color: isActive ? '#00A581' : tokens.textMuted,
                       textTransform: 'uppercase',
@@ -254,9 +264,10 @@ export default function OnboardingPage() {
                     </span>
                     <h4 style={{
                       margin: 0,
-                      fontSize: '13.5px',
+                      fontSize: '13px',
                       fontWeight: isActive ? 'bold' : '600',
                       color: isActive ? tokens.textPrimary : tokens.textSecondary,
+                      whiteSpace: 'nowrap',
                     }}>
                       {item.title}
                     </h4>
@@ -268,7 +279,8 @@ export default function OnboardingPage() {
                     flex: 1,
                     height: '2px',
                     backgroundColor: currentStep > idx + 1 ? '#00A581' : tokens.surfaceBorder,
-                    margin: '0 16px',
+                    margin: '0 8px',
+                    minWidth: '16px',
                     transition: 'all 0.2s ease',
                   }} />
                 )}
@@ -299,8 +311,8 @@ export default function OnboardingPage() {
           <div style={{
             backgroundColor: tokens.surface,
             border: `1px solid ${tokens.surfaceBorder}`,
-            borderRadius: '24px',
-            padding: '36px 32px',
+            borderRadius: 'clamp(16px, 3vw, 24px)',
+            padding: 'clamp(20px, 4vw, 36px) clamp(16px, 4vw, 32px)',
             boxShadow: isLight ? tokens.shadowCard : '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
             transition: 'all 0.2s ease',
           }}>
@@ -354,7 +366,7 @@ export default function OnboardingPage() {
               </label>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
                 gap: '10px',
               }}>
                 {COUNTRIES.map((c) => {
@@ -396,7 +408,7 @@ export default function OnboardingPage() {
               </label>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
                 gap: '12px',
               }}>
                 {BUSINESS_TYPES.map((type) => {
@@ -477,8 +489,8 @@ export default function OnboardingPage() {
           <div style={{
             backgroundColor: tokens.surface,
             border: `1px solid ${tokens.surfaceBorder}`,
-            borderRadius: '24px',
-            padding: '36px 32px',
+            borderRadius: 'clamp(16px, 3vw, 24px)',
+            padding: 'clamp(20px, 4vw, 36px) clamp(16px, 4vw, 32px)',
             boxShadow: isLight ? tokens.shadowCard : '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
             transition: 'all 0.2s ease',
           }}>
@@ -667,7 +679,7 @@ export default function OnboardingPage() {
               </label>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
                 gap: '10px',
               }}>
                 {PAYMENT_METHODS.map((method) => {
@@ -766,8 +778,8 @@ export default function OnboardingPage() {
           <div style={{
             backgroundColor: tokens.surface,
             border: `1px solid ${tokens.surfaceBorder}`,
-            borderRadius: '24px',
-            padding: '40px 32px',
+            borderRadius: 'clamp(16px, 3vw, 24px)',
+            padding: 'clamp(24px, 5vw, 40px) clamp(16px, 4vw, 32px)',
             boxShadow: isLight ? tokens.shadowCard : '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
             textAlign: 'center',
             transition: 'all 0.2s ease',

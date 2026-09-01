@@ -73,15 +73,15 @@ export default function CollectionsPage() {
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         flexWrap: 'wrap',
         gap: '16px',
         paddingBottom: '20px',
         borderBottom: `1px solid ${tokens.surfaceBorder}`,
       }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h1 style={{ fontSize: '26px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.6px', margin: 0 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <h1 style={{ fontSize: 'clamp(20px, 3.5vw, 26px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.6px', margin: 0 }}>
               {t('commandCenter.todaysQueue')}
             </h1>
             <span style={{
@@ -169,11 +169,7 @@ export default function CollectionsPage() {
       </div>
 
       {/* 2. Executive KPI Bento Summary Cards */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-        gap: '16px',
-      }}>
+      <div className="responsive-grid-3">
         {/* Total Overdue in Queue */}
         <div className="hover-lift" style={{
           backgroundColor: tokens.surface,
@@ -185,11 +181,12 @@ export default function CollectionsPage() {
           display: 'flex',
           flexDirection: 'column',
           gap: '6px',
+          minWidth: 0,
         }}>
           <span style={{ fontSize: '11.5px', fontWeight: '700', color: isLight ? '#DC2626' : '#FCA5A5', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Total Delinquent Overdue
           </span>
-          <div style={{ fontSize: '26px', fontWeight: '900', color: '#EF4444', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: '#EF4444', letterSpacing: '-0.5px' }}>
             {isLoading ? '...' : formatCurrency(totalOverdueSum, currency)}
           </div>
           <span style={{ fontSize: '11.5px', color: isLight ? '#B91C1C' : '#FCA5A5' }}>
@@ -207,11 +204,12 @@ export default function CollectionsPage() {
           display: 'flex',
           flexDirection: 'column',
           gap: '6px',
+          minWidth: 0,
         }}>
           <span style={{ fontSize: '11.5px', fontWeight: '700', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             High Urgency Debtors
           </span>
-          <div style={{ fontSize: '26px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
             {isLoading ? '...' : highUrgencyCount}
           </div>
           <span style={{ fontSize: '11.5px', color: '#00A581', fontWeight: '600' }}>
@@ -230,11 +228,12 @@ export default function CollectionsPage() {
           display: 'flex',
           flexDirection: 'column',
           gap: '6px',
+          minWidth: 0,
         }}>
           <span style={{ fontSize: '11.5px', fontWeight: '700', color: isLight ? '#D97706' : '#FCD34D', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Defaulted Promises
           </span>
-          <div style={{ fontSize: '26px', fontWeight: '900', color: isLight ? '#D97706' : '#F59E0B', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: isLight ? '#D97706' : '#F59E0B', letterSpacing: '-0.5px' }}>
             {isLoading ? '...' : missedCommitmentsCount}
           </div>
           <span style={{ fontSize: '11.5px', color: isLight ? '#92400E' : '#FCD34D' }}>
@@ -262,7 +261,7 @@ export default function CollectionsPage() {
       )}
 
       {/* 3. Filter Tabs */}
-      <div style={{
+      <div className="no-scrollbar" style={{
         display: 'flex',
         alignItems: 'center',
         gap: '6px',
@@ -270,8 +269,9 @@ export default function CollectionsPage() {
         padding: '4px',
         borderRadius: '10px',
         border: `1px solid ${tokens.surfaceBorder}`,
-        width: 'fit-content',
-        flexWrap: 'wrap',
+        overflowX: 'auto',
+        maxWidth: '100%',
+        WebkitOverflowScrolling: 'touch' as any,
       }}>
         {[
           { key: 'ALL', label: `${t('common.all')} (${queue.length})` },
@@ -292,6 +292,8 @@ export default function CollectionsPage() {
               backgroundColor: filter === tab.key ? '#00A581' : 'transparent',
               border: filter === tab.key ? '1px solid #00A581' : '1px solid transparent',
               cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
               transition: 'all 0.15s ease',
             }}
           >
@@ -302,7 +304,7 @@ export default function CollectionsPage() {
 
       {/* 4. Priority Queue Cards List */}
       {isLoading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px', gap: '10px', color: tokens.textMuted }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'clamp(40px, 8vw, 80px)', gap: '10px', color: tokens.textMuted }}>
           <Loader2 size={36} className="animate-spin text-teal-500" />
           <span style={{ fontSize: '13px' }}>Evaluating collection priorities & ledger exposures...</span>
         </div>

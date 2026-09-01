@@ -132,13 +132,13 @@ export default function CreateReceivablePage() {
         backgroundColor: tokens.surface,
         borderRadius: '12px',
         border: `1px solid ${tokens.surfaceBorder}`,
-        padding: '32px',
+        padding: 'clamp(20px, 4vw, 32px)',
         boxShadow: isLight ? tokens.shadowCard : 'none',
       }}>
         <div style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <FileText size={22} color="#00A581" />
-            <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
+            <h2 style={{ fontSize: 'clamp(18px, 3vw, 20px)', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
               {t('receivables.issueInvoiceTitle')}
             </h2>
           </div>
@@ -165,32 +165,26 @@ export default function CreateReceivablePage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          {/* Customer Picker */}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Customer Selector */}
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
-              {t('receivables.selectCustomer')} *
+              Select Debtor / Customer Account *
             </label>
             {loadingCustomers ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tokens.textMuted, fontSize: '13px' }}>
-                <Loader2 size={16} className="animate-spin text-teal-500" />
-                <span>Loading customer accounts...</span>
-              </div>
+              <div style={{ padding: '10px', color: tokens.textMuted, fontSize: '13px' }}>Loading customers...</div>
             ) : customers.length === 0 ? (
-              <div style={{ color: '#EF4444', fontSize: '13px' }}>
-                No active customers found.{' '}
-                <Link href="/customers/create" style={{ color: '#00A581', fontWeight: 'bold', textDecoration: 'none' }}>
-                  Create Customer First
-                </Link>
+              <div style={{ padding: '12px', backgroundColor: isLight ? '#FEF3C7' : 'rgba(245, 158, 11, 0.15)', borderRadius: '8px', fontSize: '12.5px', color: isLight ? '#92400E' : '#FCD34D' }}>
+                No customers found. <Link href="/customers/create" style={{ color: '#00A581', fontWeight: 'bold', textDecoration: 'none' }}>Create customer first</Link>
               </div>
             ) : (
               <select
-                required
                 value={selectedCustomerId}
                 onChange={(e) => setSelectedCustomerId(e.target.value)}
+                required
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: '11px 14px',
                   backgroundColor: isLight ? '#FFFFFF' : '#001D31',
                   border: `1px solid ${tokens.surfaceBorder}`,
                   borderRadius: '8px',
@@ -218,12 +212,13 @@ export default function CreateReceivablePage() {
               type="number"
               step="0.01"
               required
+              min="0.01"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder="e.g. 250000"
+              placeholder="0.00"
               style={{
                 width: '100%',
-                padding: '12px',
+                padding: '12px 14px',
                 backgroundColor: isLight ? '#FFFFFF' : '#001D31',
                 border: `1px solid ${tokens.surfaceBorder}`,
                 borderRadius: '8px',
@@ -241,7 +236,7 @@ export default function CreateReceivablePage() {
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '8px', textTransform: 'uppercase' }}>
               Payment Terms (Due in {termDays} days — {calculateDueDate()})
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(70px, 1fr))', gap: '8px' }}>
               {TERM_OPTIONS.map((days) => (
                 <button
                   key={days}
@@ -266,7 +261,7 @@ export default function CreateReceivablePage() {
           </div>
 
           {/* Reference & Source */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+          <div className="responsive-split-2">
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
                 Invoice Reference

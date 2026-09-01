@@ -580,7 +580,8 @@ You can ask me questions about specific accounts, identify broken promises, or a
       style={{
         maxWidth: '1100px',
         margin: '0 auto',
-        height: 'calc(100vh - 120px)',
+        height: 'calc(100dvh - 130px)',
+        minHeight: '500px',
         display: 'flex',
         flexDirection: 'column',
         gap: '14px',
@@ -595,7 +596,7 @@ You can ask me questions about specific accounts, identify broken promises, or a
           flexWrap: 'wrap',
           gap: '12px',
           backgroundColor: tokens.surface,
-          padding: '14px 20px',
+          padding: 'clamp(10px, 2vw, 14px) clamp(12px, 2.5vw, 20px)',
           borderRadius: '16px',
           border: `1px solid ${tokens.surfaceBorder}`,
           boxShadow: isLight ? tokens.shadowCard : 'none',
@@ -780,11 +781,13 @@ You can ask me questions about specific accounts, identify broken promises, or a
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '8px',
             fontSize: '12.5px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Building size={14} color="#00A581" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0 }}>
+            <Building size={14} color="#00A581" style={{ flexShrink: 0 }} />
             <span style={{ color: tokens.textPrimary, fontWeight: '700' }}>
               Active Context: {currentSelectedCustomer.name}
             </span>
@@ -809,6 +812,9 @@ You can ask me questions about specific accounts, identify broken promises, or a
               cursor: 'pointer',
               fontWeight: 'bold',
               textDecoration: 'underline',
+              background: 'none',
+              border: 'none',
+              padding: 0,
             }}
           >
             Clear Filter
@@ -823,7 +829,7 @@ You can ask me questions about specific accounts, identify broken promises, or a
           backgroundColor: tokens.surface,
           borderRadius: '16px',
           border: `1px solid ${tokens.surfaceBorder}`,
-          padding: '24px',
+          padding: 'clamp(12px, 2.5vw, 24px)',
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
@@ -842,17 +848,17 @@ You can ask me questions about specific accounts, identify broken promises, or a
               key={m.id}
               style={{
                 display: 'flex',
-                gap: '12px',
+                gap: '10px',
                 alignSelf: isUser ? 'flex-end' : 'flex-start',
-                maxWidth: isUser ? '75%' : '88%',
+                maxWidth: isUser ? 'min(85%, 680px)' : '100%',
                 width: isUser ? 'auto' : '100%',
               }}
             >
               {isCopilot && (
                 <div
                   style={{
-                    width: '36px',
-                    height: '36px',
+                    width: '34px',
+                    height: '34px',
                     borderRadius: '10px',
                     backgroundColor: '#00A581',
                     display: 'flex',
@@ -864,7 +870,7 @@ You can ask me questions about specific accounts, identify broken promises, or a
                     marginTop: '2px',
                   }}
                 >
-                  <Bot size={20} />
+                  <Bot size={18} />
                 </div>
               )}
 
@@ -873,10 +879,11 @@ You can ask me questions about specific accounts, identify broken promises, or a
                   backgroundColor: isUser ? '#00A581' : (isLight ? '#F8FAFC' : '#001D31'),
                   border: `1px solid ${isUser ? '#008B6E' : tokens.surfaceBorder}`,
                   borderRadius: '16px',
-                  padding: '18px 22px',
+                  padding: 'clamp(12px, 2vw, 18px) clamp(12px, 2.5vw, 22px)',
                   color: isUser ? '#FFFFFF' : tokens.textPrimary,
                   boxShadow: isLight && !isUser ? '0 2px 8px rgba(0, 0, 0, 0.04)' : 'none',
                   flex: 1,
+                  minWidth: 0,
                 }}
               >
                 {/* Bubble Header: Sender, Timestamp, Dual View Toggle & TTS */}
@@ -885,6 +892,8 @@ You can ask me questions about specific accounts, identify broken promises, or a
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '6px',
                     marginBottom: '12px',
                     fontSize: '12px',
                     color: isUser ? '#D3F8ED' : tokens.textMuted,

@@ -144,7 +144,7 @@ export default function CustomerDetailPage() {
         backgroundColor: tokens.surface,
         borderRadius: '12px',
         border: `1px solid ${tokens.surfaceBorder}`,
-        padding: '24px 28px',
+        padding: 'clamp(16px, 3vw, 24px) clamp(16px, 3vw, 28px)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
@@ -152,7 +152,7 @@ export default function CustomerDetailPage() {
         gap: '20px',
         boxShadow: isLight ? tokens.shadowCard : 'none',
       }}>
-        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{
             width: '56px',
             height: '56px',
@@ -165,13 +165,14 @@ export default function CustomerDetailPage() {
             color: '#00A581',
             fontWeight: 'bold',
             fontSize: '22px',
+            flexShrink: 0,
           }}>
             {customer.name[0]}
           </div>
 
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>{customer.name}</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <h2 style={{ fontSize: 'clamp(18px, 3vw, 22px)', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>{customer.name}</h2>
               <span style={{
                 backgroundColor: customer.status === 'ACTIVE' ? tokens.accentSoft : (isLight ? '#F1F5F9' : 'rgba(107, 114, 128, 0.15)'),
                 color: customer.status === 'ACTIVE' ? '#00A581' : tokens.textMuted,
@@ -236,6 +237,7 @@ export default function CustomerDetailPage() {
               fontSize: '13px',
               fontWeight: '600',
               textDecoration: 'none',
+              whiteSpace: 'nowrap',
               boxShadow: '0 4px 14px rgba(0, 165, 129, 0.35)',
             }}
           >
@@ -248,42 +250,23 @@ export default function CustomerDetailPage() {
       {/* AI Customer Evidence Explanation */}
       {aiExplanation && (
         <div style={{
-          backgroundColor: tokens.surface,
-          borderRadius: '12px',
+          backgroundColor: isLight ? '#F8FAFC' : 'rgba(0, 32, 53, 0.6)',
           border: `1px solid ${tokens.surfaceBorder}`,
-          padding: '20px 24px',
-          display: 'flex',
-          gap: '16px',
-          boxShadow: isLight ? tokens.shadowCard : 'none',
+          borderRadius: '12px',
+          padding: '16px 20px',
         }}>
-          <div style={{
-            backgroundColor: tokens.accentSoft,
-            border: `1px solid ${tokens.accentBorder}`,
-            padding: '10px',
-            borderRadius: '10px',
-            color: '#00A581',
-            alignSelf: 'flex-start',
-          }}>
-            <Sparkles size={20} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <Sparkles size={16} color="#00A581" />
+            <span style={{ fontSize: '13px', fontWeight: 'bold', color: tokens.textPrimary }}>AI Behavioral Explanation</span>
           </div>
-          <div>
-            <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: tokens.textPrimary, margin: '0 0 4px' }}>
-              AI Evidence Breakdown & Recommended Strategy
-            </h4>
-            <p style={{ color: tokens.textSecondary, fontSize: '13px', lineHeight: '1.5', margin: 0 }}>
-              {aiExplanation.summary}
-            </p>
-            {aiExplanation.recommendation && (
-              <p style={{ color: '#00A581', fontSize: '12.5px', marginTop: '6px', fontWeight: '600', marginBottom: 0 }}>
-                Recommendation: {aiExplanation.recommendation}
-              </p>
-            )}
-          </div>
+          <p style={{ fontSize: '13px', color: tokens.textSecondary, margin: 0, lineHeight: '1.5' }}>
+            {aiExplanation.summary}
+          </p>
         </div>
       )}
 
       {/* Tabs Navigation */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: `1px solid ${tokens.surfaceBorder}`, paddingBottom: '8px', flexWrap: 'wrap' }}>
+      <div className="no-scrollbar" style={{ display: 'flex', gap: '8px', borderBottom: `1px solid ${tokens.surfaceBorder}`, paddingBottom: '8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' as any }}>
         {[
           { key: 'RECEIVABLES', label: `${t('nav.receivables')} (${receivables.length})` },
           { key: 'PAYMENTS', label: `Payment History (${payments.length})` },
@@ -302,6 +285,8 @@ export default function CustomerDetailPage() {
               color: activeTab === tab.key ? '#FFFFFF' : tokens.textSecondary,
               border: `1px solid ${activeTab === tab.key ? '#00A581' : tokens.surfaceBorder}`,
               cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
               boxShadow: isLight && activeTab !== tab.key ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
             }}
           >
@@ -319,7 +304,7 @@ export default function CustomerDetailPage() {
         boxShadow: isLight ? tokens.shadowCard : 'none',
       }}>
         {activeTab === 'RECEIVABLES' && (
-          <div>
+          <div className="responsive-table-wrapper">
             {receivables.length === 0 ? (
               <p style={{ color: tokens.textMuted, fontSize: '13px', textAlign: 'center', padding: '30px' }}>
                 No open or past receivables logged for this customer.
@@ -379,7 +364,7 @@ export default function CustomerDetailPage() {
         )}
 
         {activeTab === 'PAYMENTS' && (
-          <div>
+          <div className="responsive-table-wrapper">
             {payments.length === 0 ? (
               <p style={{ color: tokens.textMuted, fontSize: '13px', textAlign: 'center', padding: '30px' }}>
                 No payments recorded for this customer yet.

@@ -38,28 +38,29 @@ export function PublicHeader() {
       <div style={{
         maxWidth: '1200px',
         margin: '0 auto',
-        padding: '0 24px',
+        padding: '0 clamp(12px, 3vw, 24px)',
         height: '70px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        gap: '8px',
       }}>
         {/* Brand Logo */}
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', minWidth: 0, flexShrink: 0 }}>
           <img
             src="/logo-icon.png"
             alt="Netify Logo"
             style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '10px',
+              width: '34px',
+              height: '34px',
+              borderRadius: '9px',
               objectFit: 'contain',
               boxShadow: '0 0 15px rgba(0, 165, 129, 0.4)',
             }}
           />
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '18px', fontWeight: '900', letterSpacing: '-0.5px', color: tokens.textPrimary }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '17px', fontWeight: '900', letterSpacing: '-0.5px', color: tokens.textPrimary }}>
                 NETIFY
               </span>
               <span style={{
@@ -68,20 +69,20 @@ export function PublicHeader() {
                 border: `1px solid ${tokens.accentBorder}`,
                 fontSize: '10px',
                 fontWeight: 'bold',
-                padding: '1px 6px',
+                padding: '1px 5px',
                 borderRadius: '4px',
               }}>
                 WebMCP
               </span>
             </div>
-            <p style={{ fontSize: '10px', color: tokens.textMuted, margin: 0 }}>
+            <p className="hide-on-mobile" style={{ fontSize: '10px', color: tokens.textMuted, margin: 0 }}>
               Agent-Ready Collections Workspace
             </p>
           </div>
         </Link>
 
         {/* Desktop Navigation Links */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '28px' }} className="hidden md:flex">
+        <nav className="desktop-nav" style={{ alignItems: 'center', gap: '28px' }}>
           {navLinks.map((link) => {
             const isActive = pathname === link.href;
             return (
@@ -119,7 +120,7 @@ export function PublicHeader() {
         </nav>
 
         {/* Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {/* Language Selector Button with Flag */}
           <button
             type="button"
@@ -170,6 +171,7 @@ export function PublicHeader() {
           {!isAuthenticated && (
             <Link
               href="/login"
+              className="desktop-nav"
               style={{
                 padding: '8px 14px',
                 color: tokens.textPrimary,
@@ -186,58 +188,63 @@ export function PublicHeader() {
             <Link
               href="/workspace"
               style={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
                 backgroundColor: '#00A581',
                 color: '#FFFFFF',
-                padding: '9px 18px',
+                padding: '8px 14px',
                 borderRadius: '8px',
-                fontSize: '13px',
+                fontSize: '12.5px',
                 fontWeight: 'bold',
                 textDecoration: 'none',
                 boxShadow: '0 4px 14px rgba(0, 165, 129, 0.3)',
                 transition: 'transform 0.1s ease',
+                whiteSpace: 'nowrap',
               }}
             >
-              <span>Open Workspace</span>
-              <ArrowRight size={14} />
+              <span>Workspace</span>
+              <ArrowRight size={13} />
             </Link>
           ) : (
             <Link
               href="/register"
+              className="desktop-nav"
               style={{
-                display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
                 backgroundColor: '#00A581',
                 color: '#FFFFFF',
-                padding: '9px 18px',
+                padding: '8px 16px',
                 borderRadius: '8px',
-                fontSize: '13px',
+                fontSize: '12.5px',
                 fontWeight: 'bold',
                 textDecoration: 'none',
                 boxShadow: '0 4px 14px rgba(0, 165, 129, 0.3)',
                 transition: 'transform 0.1s ease',
+                whiteSpace: 'nowrap',
               }}
             >
               <span>Register</span>
-              <ArrowRight size={14} />
+              <ArrowRight size={13} />
             </Link>
           )}
 
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="mobile-menu-btn"
             style={{
               backgroundColor: isLight ? '#F1F5F9' : '#003051',
               border: `1px solid ${tokens.surfaceBorder}`,
               color: tokens.textPrimary,
-              padding: '6px',
-              borderRadius: '6px',
-              display: 'none',
+              padding: '7px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
-            className="md:hidden"
+            aria-label="Toggle Navigation Menu"
           >
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>

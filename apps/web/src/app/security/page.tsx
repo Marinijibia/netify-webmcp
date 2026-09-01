@@ -39,10 +39,10 @@ export default function SecurityPage() {
     <div style={{
       maxWidth: '1100px',
       margin: '0 auto',
-      padding: '80px 24px 100px',
+      padding: 'clamp(48px, 6vw, 80px) 16px 100px',
       display: 'flex',
       flexDirection: 'column',
-      gap: '72px',
+      gap: 'clamp(40px, 5vw, 72px)',
       position: 'relative',
     }}>
       {/* Ambient Glow */}
@@ -78,7 +78,7 @@ export default function SecurityPage() {
         </div>
 
         <h1 style={{
-          fontSize: 'clamp(36px, 5vw, 54px)',
+          fontSize: 'clamp(32px, 5vw, 54px)',
           fontWeight: '900',
           color: tokens.textPrimary,
           letterSpacing: '-1.5px',
@@ -93,16 +93,13 @@ export default function SecurityPage() {
             Debtor Relationships
           </span>
         </h1>
-        <p style={{ color: tokens.textSecondary, fontSize: '17px', lineHeight: '1.6', marginTop: '16px' }}>
+        <p style={{ color: tokens.textSecondary, fontSize: '16px', lineHeight: '1.6', marginTop: '16px' }}>
           How Netify safeguards your financial ledgers, customer records, and AI agent interactions with bank-grade controls.
         </p>
       </div>
 
       {/* Security Pillars (4 Cards) */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-        gap: '24px',
+      <div className="responsive-grid-4" style={{
         position: 'relative',
         zIndex: 1,
       }}>
@@ -116,7 +113,7 @@ export default function SecurityPage() {
                 borderRadius: '20px',
                 border: `1px solid ${tokens.surfaceBorder}`,
                 boxShadow: isLight ? tokens.shadowCard : 'none',
-                padding: '36px 32px',
+                padding: 'clamp(20px, 3.5vw, 32px)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '14px',
@@ -135,10 +132,10 @@ export default function SecurityPage() {
               }}>
                 <Icon size={22} />
               </div>
-              <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: tokens.textPrimary }}>
+              <h3 style={{ fontSize: '17px', fontWeight: 'bold', color: tokens.textPrimary }}>
                 {p.title}
               </h3>
-              <p style={{ color: tokens.textSecondary, fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
+              <p style={{ color: tokens.textSecondary, fontSize: '13.5px', lineHeight: '1.6', margin: 0 }}>
                 {p.description}
               </p>
             </div>
@@ -152,7 +149,7 @@ export default function SecurityPage() {
         borderRadius: '24px',
         border: `1px solid ${tokens.surfaceBorder}`,
         boxShadow: isLight ? tokens.shadowCard : 'none',
-        padding: '48px 40px',
+        padding: 'clamp(24px, 4vw, 48px)',
         display: 'flex',
         flexDirection: 'column',
         gap: '18px',
@@ -182,7 +179,7 @@ export default function SecurityPage() {
         backgroundColor: isLight ? '#F1F5F9' : '#00253E',
         borderRadius: '24px',
         border: '2px solid #00A581',
-        padding: '48px 36px',
+        padding: 'clamp(28px, 6vw, 48px) clamp(20px, 5vw, 36px)',
         textAlign: 'center',
         boxShadow: isLight ? tokens.shadowCard : '0 10px 40px rgba(0, 165, 129, 0.2)',
         position: 'relative',

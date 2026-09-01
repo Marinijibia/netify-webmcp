@@ -34,7 +34,7 @@ interface AuthContextValue {
   loginWithBiometrics: (fallbackEmail?: string) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
+  refreshProfile: () => Promise<UserProfile | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const refreshProfile = useCallback(async () => {
+  const refreshProfile = useCallback(async (): Promise<UserProfile | null> => {
     try {
       const token = WebStorageService.getAccessToken();
       if (!token) {
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setOrganization(null);
         setIsLoading(false);
-        return;
+        return null;
       }
 
       const res = await authApi.getMe();
@@ -83,7 +83,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const storedOrg = WebStorageService.getActiveOrg<ActiveOrganization>();
           if (storedOrg) setOrganization(storedOrg);
         }
+        return profile;
       }
+      return null;
     } catch (error) {
       console.warn('Failed to refresh profile:', error);
       // If token expired, clear state
@@ -93,6 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setOrganization(null);
       }
+      return null;
     } finally {
       setIsLoading(false);
     }
@@ -142,8 +145,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setOrganization(org);
         WebStorageService.setActiveOrg(org);
       }
-      await refreshProfile();
-      router.push('/workspace');
+      const profile = await refreshProfile();
+      if (profile && !profile.onboardingCompleted) {
+        router.push('/onboarding');
+      } else {
+        router.push('/workspace');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -160,8 +167,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (vault.refreshToken) {
           WebStorageService.setRefreshToken(vault.refreshToken);
         }
-        await refreshProfile();
-        router.push('/workspace');
+        const profile = await refreshProfile();
+        if (profile && !profile.onboardingCompleted) {
+          router.push('/onboarding');
+        } else {
+          router.push('/workspace');
+        }
         return;
       }
 

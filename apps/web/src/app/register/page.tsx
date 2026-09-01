@@ -65,18 +65,16 @@ export default function RegisterPage() {
   };
 
   return (
-    <div style={{
+    <div className="responsive-auth-grid" style={{
       minHeight: '100vh',
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
       backgroundColor: tokens.background,
       position: 'relative',
     }}>
       {/* Left Brand & Social Proof Panel */}
-      <div style={{
+      <div className="auth-showcase-panel" style={{
         backgroundColor: isLight ? '#F8FAFC' : '#001D31',
         borderRight: `1px solid ${tokens.surfaceBorder}`,
-        padding: '60px 48px',
+        padding: 'clamp(40px, 5vw, 60px) clamp(24px, 4vw, 48px)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
@@ -193,7 +191,7 @@ export default function RegisterPage() {
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: '48px 24px',
+        padding: 'clamp(56px, 8vw, 80px) clamp(16px, 4vw, 36px)',
         position: 'relative',
         backgroundColor: tokens.background,
         transition: 'all 0.2s ease',
@@ -203,8 +201,8 @@ export default function RegisterPage() {
           href="/"
           style={{
             position: 'absolute',
-            top: '32px',
-            right: '32px',
+            top: '20px',
+            right: '20px',
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
@@ -275,7 +273,7 @@ export default function RegisterPage() {
           {/* Form */}
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* First Name & Last Name in 2 columns */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="responsive-split-2">
               <div>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: tokens.textPrimary, marginBottom: '6px', textTransform: 'uppercase' }}>
                   First Name *
@@ -427,7 +425,7 @@ export default function RegisterPage() {
             </div>
 
             {/* Currency & Country in 2 columns */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="responsive-split-2">
               <div>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: tokens.textPrimary, marginBottom: '6px', textTransform: 'uppercase' }}>
                   Primary Currency *

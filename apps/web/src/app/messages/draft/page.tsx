@@ -437,11 +437,11 @@ function DraftContent() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <MessageSquareQuote size={24} color="#00A581" />
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>AI Follow-up Draft & Action Review</h2>
+            <h2 style={{ fontSize: 'clamp(18px, 3vw, 24px)', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>AI Follow-up Draft & Action Review</h2>
           </div>
           <p style={{ color: tokens.textSecondary, fontSize: '13px', marginTop: '4px' }}>
             Grounded in actual overdue balances and past WhatsApp commitments. Requires explicit human confirmation.
@@ -524,9 +524,9 @@ function DraftContent() {
       )}
 
       {/* Main 2-Column Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '24px' }}>
+      <div className="responsive-webmcp-layout">
         {/* Left Column: Customer & Tone Selectors */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
           {/* Target Customer Card */}
           <div style={{
             backgroundColor: tokens.surface,
@@ -601,7 +601,7 @@ function DraftContent() {
                 ₦0.00 Carrier Direct
               </span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px' }}>
               {[
                 { id: 'WHATSAPP', name: 'WhatsApp', icon: MessageSquare, activeBg: '#25D366', activeColor: '#FFFFFF' },
                 { id: 'SMS', name: 'Direct SMS', icon: Send, activeBg: '#2563EB', activeColor: '#FFFFFF' },
@@ -698,7 +698,7 @@ function DraftContent() {
                 {LANGUAGE_REGISTRY[draftLanguage]?.name}
               </span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '6px' }}>
               {SUPPORTED_LANGUAGES.map((l) => {
                 const isSelected = draftLanguage === l.code;
                 return (
@@ -746,7 +746,7 @@ function DraftContent() {
           boxShadow: isLight ? tokens.shadowCard : 'none',
         }}>
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Sparkles size={18} color="#00A581" />
                 <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
@@ -754,7 +754,7 @@ function DraftContent() {
                 </h3>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   onClick={handleCopy}
@@ -1212,7 +1212,7 @@ function DraftContent() {
                     </div>
                   )}
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="responsive-split-2">
                     <div>
                       <label style={{ fontSize: '11px', color: tokens.textSecondary, display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
                         Promised Amount (₦)

@@ -119,10 +119,10 @@ export default function FeaturesPage() {
     <div style={{
       maxWidth: '1240px',
       margin: '0 auto',
-      padding: '80px 24px 100px',
+      padding: 'clamp(48px, 6vw, 80px) 16px 100px',
       display: 'flex',
       flexDirection: 'column',
-      gap: '96px',
+      gap: 'clamp(48px, 6vw, 80px)',
       position: 'relative',
     }}>
       {/* Ambient Glow */}
@@ -158,7 +158,7 @@ export default function FeaturesPage() {
         </div>
 
         <h1 style={{
-          fontSize: 'clamp(36px, 5vw, 54px)',
+          fontSize: 'clamp(32px, 5vw, 54px)',
           fontWeight: '900',
           color: tokens.textPrimary,
           letterSpacing: '-1.5px',
@@ -173,16 +173,13 @@ export default function FeaturesPage() {
             Protect Trade Trust.
           </span>
         </h1>
-        <p style={{ color: tokens.textSecondary, fontSize: '17px', lineHeight: '1.6', marginTop: '16px' }}>
+        <p style={{ color: tokens.textSecondary, fontSize: '16px', lineHeight: '1.6', marginTop: '16px' }}>
           Designed specifically for wholesale distributors, FMCG traders, and emerging market merchants managing informal credit across Africa.
         </p>
       </div>
 
       {/* Feature Deep-Dive Grid (6 Cards) */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-        gap: '28px',
+      <div className="responsive-grid-3" style={{
         position: 'relative',
         zIndex: 1,
       }}>
@@ -195,7 +192,7 @@ export default function FeaturesPage() {
                 backgroundColor: tokens.surface,
                 borderRadius: '20px',
                 border: `1px solid ${tokens.surfaceBorder}`,
-                padding: '36px 32px',
+                padding: 'clamp(24px, 4vw, 36px)',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
@@ -277,7 +274,7 @@ export default function FeaturesPage() {
         backgroundColor: tokens.surface,
         borderRadius: '24px',
         border: `1px solid ${tokens.surfaceBorder}`,
-        padding: '56px 40px',
+        padding: 'clamp(28px, 6vw, 56px) clamp(20px, 4vw, 40px)',
         position: 'relative',
         zIndex: 1,
         boxShadow: isLight ? tokens.shadowCard : 'none',
@@ -287,7 +284,7 @@ export default function FeaturesPage() {
           <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase', letterSpacing: '1.5px' }}>
             Lifecycle Architecture
           </span>
-          <h2 style={{ fontSize: '32px', fontWeight: '900', color: tokens.textPrimary, marginTop: '8px', letterSpacing: '-0.5px' }}>
+          <h2 style={{ fontSize: 'clamp(20px, 4vw, 32px)', fontWeight: '900', color: tokens.textPrimary, marginTop: '8px', letterSpacing: '-0.5px' }}>
             How Netify Streamlines Informal Trade Credit
           </h2>
           <p style={{ color: tokens.textSecondary, fontSize: '15px', maxWidth: '640px', margin: '10px auto 0' }}>
@@ -335,14 +332,14 @@ export default function FeaturesPage() {
         backgroundColor: isLight ? '#F1F5F9' : '#00253E',
         borderRadius: '24px',
         border: '2px solid #00A581',
-        padding: '56px 36px',
+        padding: 'clamp(28px, 6vw, 56px) clamp(20px, 5vw, 36px)',
         textAlign: 'center',
         boxShadow: isLight ? tokens.shadowCard : '0 15px 50px rgba(0, 165, 129, 0.2)',
         position: 'relative',
         zIndex: 1,
         transition: 'all 0.2s ease',
       }}>
-        <h2 style={{ fontSize: '32px', fontWeight: '900', color: tokens.textPrimary, marginBottom: '12px' }}>
+        <h2 style={{ fontSize: 'clamp(20px, 4vw, 32px)', fontWeight: '900', color: tokens.textPrimary, marginBottom: '12px' }}>
           Experience the Modern Collections Stack
         </h2>
         <p style={{ color: tokens.textSecondary, fontSize: '15px', maxWidth: '580px', margin: '0 auto 32px' }}>

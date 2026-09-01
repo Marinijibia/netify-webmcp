@@ -194,7 +194,7 @@ export function WebMCPInspector() {
           {/* Drawer Body */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
             {activeTab === 'TOOLS' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '16px', height: '400px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', minHeight: '400px' }}>
                 {/* Tools List */}
                 <div style={{
                   backgroundColor: isLight ? '#F8FAFC' : '#003051',

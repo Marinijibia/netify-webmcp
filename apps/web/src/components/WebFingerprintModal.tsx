@@ -78,7 +78,7 @@ export default function WebFingerprintModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '20px',
+        padding: 'clamp(12px, 3vw, 20px)',
       }}
       onClick={onClose}
     >
@@ -86,9 +86,11 @@ export default function WebFingerprintModal({
         style={{
           backgroundColor: tokens.surface,
           border: `1px solid ${tokens.surfaceBorder}`,
-          borderRadius: '20px',
+          borderRadius: 'clamp(14px, 3vw, 20px)',
           width: '100%',
-          maxWidth: '440px',
+          maxWidth: 'min(440px, calc(100vw - 24px))',
+          maxHeight: '92svh',
+          overflowY: 'auto',
           boxShadow: isLight ? tokens.shadowCard : '0 25px 50px -12px rgba(0, 0, 0, 0.8)',
           overflow: 'hidden',
           display: 'flex',

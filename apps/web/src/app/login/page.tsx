@@ -104,18 +104,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{
+    <div className="responsive-auth-grid" style={{
       minHeight: '100vh',
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
       backgroundColor: tokens.background,
       position: 'relative',
     }}>
       {/* Left Brand & Social Proof Showcase Panel */}
-      <div style={{
+      <div className="auth-showcase-panel" style={{
         backgroundColor: isLight ? '#F8FAFC' : '#001D31',
         borderRight: `1px solid ${tokens.surfaceBorder}`,
-        padding: '60px 48px',
+        padding: 'clamp(40px, 5vw, 60px) clamp(24px, 4vw, 48px)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
@@ -216,7 +214,7 @@ export default function LoginPage() {
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: '48px 24px',
+        padding: 'clamp(56px, 8vw, 80px) clamp(16px, 4vw, 36px)',
         position: 'relative',
         backgroundColor: tokens.background,
         transition: 'all 0.2s ease',
@@ -226,8 +224,8 @@ export default function LoginPage() {
           href="/"
           style={{
             position: 'absolute',
-            top: '32px',
-            right: '32px',
+            top: '20px',
+            right: '20px',
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
@@ -374,7 +372,7 @@ export default function LoginPage() {
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
               {/* Fingerprint / Touch ID Button */}
               <button
                 type="button"

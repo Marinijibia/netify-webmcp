@@ -199,17 +199,17 @@ export default function CallAssistantModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px',
+        padding: 'clamp(12px, 3vw, 16px)',
       }}
     >
       <div
         style={{
           backgroundColor: tokens.surface,
           border: `1px solid ${tokens.surfaceBorder}`,
-          borderRadius: '16px',
-          maxWidth: '680px',
+          borderRadius: 'clamp(12px, 2vw, 16px)',
+          maxWidth: 'min(680px, calc(100vw - 24px))',
           width: '100%',
-          maxHeight: '90vh',
+          maxHeight: '92svh',
           overflowY: 'auto',
           boxShadow: isLight ? '0 20px 40px rgba(0, 0, 0, 0.15)' : '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
           display: 'flex',
@@ -289,7 +289,7 @@ export default function CallAssistantModal({
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
               gap: '12px',
               backgroundColor: isLight ? '#F8FAFC' : '#001D31',
               padding: '14px',
@@ -519,7 +519,7 @@ export default function CallAssistantModal({
                 <span style={{ fontSize: '12.5px', fontWeight: 'bold', color: '#00A581' }}>
                   Log Payment Commitment (Auto-Monitored by Netify):
                 </span>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div className="responsive-split-2">
                   <div>
                     <label style={{ fontSize: '11px', color: tokens.textSecondary, display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
                       Promised Amount (₦)

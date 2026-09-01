@@ -313,17 +313,19 @@ export default function LiveVoiceAssistantModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '20px',
+        padding: 'clamp(12px, 3vw, 20px)',
       }}
       onClick={onClose}
     >
       <div
         style={{
           width: '100%',
-          maxWidth: '680px',
+          maxWidth: 'min(680px, calc(100vw - 24px))',
+          maxHeight: '92svh',
+          overflowY: 'auto',
           backgroundColor: isLight ? '#FFFFFF' : '#001D31',
           border: `1px solid ${isLight ? '#E2E8F0' : 'rgba(0, 165, 129, 0.4)'}`,
-          borderRadius: '28px',
+          borderRadius: 'clamp(16px, 3vw, 28px)',
           boxShadow: isLight
             ? '0 25px 50px -12px rgba(0, 48, 81, 0.25)'
             : '0 25px 60px -12px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 165, 129, 0.15)',
@@ -460,7 +462,7 @@ export default function LiveVoiceAssistantModal({
         {/* Center: Glowing Visualizer Orb & Frequency Waves */}
         <div
           style={{
-            padding: '48px 32px 36px',
+            padding: 'clamp(24px, 5vw, 48px) clamp(20px, 4vw, 32px) clamp(20px, 4vw, 36px)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',

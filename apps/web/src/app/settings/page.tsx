@@ -375,7 +375,7 @@ export default function SettingsPage() {
           </h3>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <div className="responsive-split-2">
           <div>
             <label style={{ fontSize: '12px', color: tokens.textMuted, fontWeight: 'bold', textTransform: 'uppercase' }}>
               Organization Name
@@ -438,7 +438,7 @@ export default function SettingsPage() {
           </h3>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <div className="responsive-split-2">
           <div>
             <label style={{ fontSize: '12px', color: tokens.textMuted, fontWeight: 'bold', textTransform: 'uppercase' }}>
               Full Name
@@ -600,7 +600,7 @@ export default function SettingsPage() {
         )}
 
         {/* Hardware Capabilities Diagnostic Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div className="responsive-split-2">
           <div style={{
             backgroundColor: isLight ? '#F8FAFC' : '#001D31',
             borderRadius: '10px',

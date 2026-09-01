@@ -84,13 +84,13 @@ export default function CreateCustomerPage() {
         backgroundColor: tokens.surface,
         borderRadius: '12px',
         border: `1px solid ${tokens.surfaceBorder}`,
-        padding: '32px',
+        padding: 'clamp(20px, 4vw, 32px)',
         boxShadow: isLight ? tokens.shadowCard : 'none',
       }}>
         <div style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Users size={22} color="#00A581" />
-            <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
+            <h2 style={{ fontSize: 'clamp(18px, 3vw, 20px)', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
               {t('customers.addCustomerModalTitle')}
             </h2>
           </div>
@@ -142,7 +142,7 @@ export default function CreateCustomerPage() {
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div className="responsive-split-2">
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
                 Primary Phone Number

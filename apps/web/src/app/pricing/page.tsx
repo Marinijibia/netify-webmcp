@@ -61,10 +61,10 @@ export default function PricingPage() {
     <div style={{
       maxWidth: '1240px',
       margin: '0 auto',
-      padding: '80px 24px 100px',
+      padding: 'clamp(48px, 6vw, 80px) 16px 100px',
       display: 'flex',
       flexDirection: 'column',
-      gap: '88px',
+      gap: 'clamp(48px, 6vw, 88px)',
       position: 'relative',
     }}>
       {/* Ambient Glow */}
@@ -100,38 +100,41 @@ export default function PricingPage() {
         </div>
 
         <h1 style={{
-          fontSize: 'clamp(36px, 5vw, 56px)',
+          fontSize: 'clamp(32px, 5vw, 56px)',
           fontWeight: '900',
           color: tokens.textPrimary,
           letterSpacing: '-1.5px',
           lineHeight: '1.12',
         }}>
-          Simple, Fair Plans for{' '}
+          Simple, Transparent Pricing with{' '}
           <span style={{
             background: 'linear-gradient(135deg, #00A581 0%, #3AD0A9 50%, #00A581 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
           }}>
-            Growing Merchants
+            Zero Hidden Fees.
           </span>
         </h1>
-        <p style={{ color: tokens.textSecondary, fontSize: '17px', lineHeight: '1.6', marginTop: '16px' }}>
-          Start free with your primary customers, then scale as your trade receivables and distribution network expand.
+        <p style={{ color: tokens.textSecondary, fontSize: '16px', lineHeight: '1.6', marginTop: '16px' }}>
+          Select your local currency. Upgrade or downgrade anytime as your credit sales volume grows.
         </p>
 
         {/* Currency Switcher Bar */}
         <div style={{
           display: 'inline-flex',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
           alignItems: 'center',
-          gap: '8px',
+          gap: '6px',
           backgroundColor: tokens.surface,
           border: `1px solid ${tokens.surfaceBorder}`,
           padding: '6px',
           borderRadius: '12px',
-          marginTop: '32px',
+          marginTop: '28px',
+          maxWidth: '100%',
           boxShadow: isLight ? tokens.shadowCard : 'none',
         }}>
-          <span style={{ fontSize: '12.5px', color: tokens.textMuted, marginLeft: '10px', marginRight: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <span style={{ fontSize: '12px', color: tokens.textMuted, marginLeft: '8px', marginRight: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
             <Globe size={14} color="#00A581" />
             <span>Currency:</span>
           </span>
@@ -140,9 +143,9 @@ export default function PricingPage() {
               key={c}
               onClick={() => setCurrency(c)}
               style={{
-                padding: '8px 16px',
+                padding: '6px 12px',
                 borderRadius: '8px',
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: 'bold',
                 backgroundColor: currency === c ? '#00A581' : 'transparent',
                 color: currency === c ? '#FFFFFF' : tokens.textSecondary,
@@ -158,10 +161,7 @@ export default function PricingPage() {
       </div>
 
       {/* Pricing Cards Grid (3 Columns) */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-        gap: '28px',
+      <div className="responsive-grid-3" style={{
         alignItems: 'stretch',
         position: 'relative',
         zIndex: 1,
@@ -172,38 +172,39 @@ export default function PricingPage() {
           borderRadius: '24px',
           border: `1px solid ${tokens.surfaceBorder}`,
           boxShadow: isLight ? tokens.shadowCard : 'none',
-          padding: '40px 32px',
+          padding: 'clamp(24px, 4vw, 40px)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
           transition: 'all 0.2s ease',
+          minWidth: 0,
         }}>
           <div>
             <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: tokens.textPrimary }}>Starter Free</h3>
             <p style={{ color: tokens.textMuted, fontSize: '13.5px', marginTop: '6px' }}>For single retail shops and new merchants.</p>
             
-            <div style={{ margin: '28px 0', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-              <span style={{ fontSize: '42px', fontWeight: '900', color: tokens.textPrimary }}>
+            <div style={{ margin: '24px 0', display: 'flex', alignItems: 'baseline', gap: '4px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 'clamp(32px, 5vw, 42px)', fontWeight: '900', color: tokens.textPrimary }}>
                 {currentPrices.symbol}{currentPrices.starter}
               </span>
-              <span style={{ color: tokens.textMuted, fontSize: '14px' }}>/ forever free</span>
+              <span style={{ color: tokens.textMuted, fontSize: '13.5px' }}>/ forever free</span>
             </div>
 
-            <ul style={{ listStyle: 'none', padding: 0, margin: '28px 0', display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13.5px', color: tokens.textPrimary }}>
+            <ul style={{ listStyle: 'none', padding: 0, margin: '24px 0', display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13.5px', color: tokens.textPrimary }}>
               <li style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Check size={16} color="#00A581" />
+                <Check size={16} color="#00A581" style={{ flexShrink: 0 }} />
                 <span>Up to 25 customer accounts</span>
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Check size={16} color="#00A581" />
+                <Check size={16} color="#00A581" style={{ flexShrink: 0 }} />
                 <span>Basic invoice & credit sale tracking</span>
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Check size={16} color="#00A581" />
+                <Check size={16} color="#00A581" style={{ flexShrink: 0 }} />
                 <span>WhatsApp promise schedule logs</span>
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Check size={16} color="#00A581" />
+                <Check size={16} color="#00A581" style={{ flexShrink: 0 }} />
                 <span>Standard WebMCP read-only tools</span>
               </li>
             </ul>
@@ -211,7 +212,7 @@ export default function PricingPage() {
 
           <Link
             href="/register"
-            className="hover-lift tap-press"
+            className="hover-lift tap-press mobile-full-width"
             style={{
               textAlign: 'center',
               padding: '14px',
@@ -223,6 +224,7 @@ export default function PricingPage() {
               fontWeight: 'bold',
               textDecoration: 'none',
               transition: 'all 0.15s ease',
+              display: 'block',
             }}
           >
             Get Started Free
@@ -234,18 +236,19 @@ export default function PricingPage() {
           backgroundColor: tokens.surface,
           borderRadius: '24px',
           border: '2px solid #00A581',
-          padding: '40px 32px',
+          padding: 'clamp(24px, 4vw, 40px)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
           position: 'relative',
           boxShadow: isLight ? tokens.shadowCard : '0 20px 50px rgba(0, 165, 129, 0.25)',
           transition: 'all 0.2s ease',
+          minWidth: 0,
         }}>
           <div style={{
             position: 'absolute',
             top: '-14px',
-            right: '28px',
+            right: '24px',
             backgroundColor: '#00A581',
             color: '#FFFFFF',
             fontSize: '11px',
@@ -262,32 +265,32 @@ export default function PricingPage() {
             <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: tokens.textPrimary }}>Growth Pro</h3>
             <p style={{ color: tokens.textMuted, fontSize: '13.5px', marginTop: '6px' }}>For active wholesalers and regional distributors.</p>
             
-            <div style={{ margin: '28px 0', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-              <span style={{ fontSize: '42px', fontWeight: '900', color: '#00A581' }}>
+            <div style={{ margin: '24px 0', display: 'flex', alignItems: 'baseline', gap: '4px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 'clamp(32px, 5vw, 42px)', fontWeight: '900', color: '#00A581' }}>
                 {currentPrices.symbol}{currentPrices.pro}
               </span>
-              <span style={{ color: tokens.textMuted, fontSize: '14px' }}>/ month</span>
+              <span style={{ color: tokens.textMuted, fontSize: '13.5px' }}>/ month</span>
             </div>
 
-            <ul style={{ listStyle: 'none', padding: 0, margin: '28px 0', display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13.5px', color: tokens.textPrimary }}>
+            <ul style={{ listStyle: 'none', padding: 0, margin: '24px 0', display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13.5px', color: tokens.textPrimary }}>
               <li style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Check size={16} color="#00A581" />
+                <Check size={16} color="#00A581" style={{ flexShrink: 0 }} />
                 <span><strong>Unlimited</strong> customer debtor accounts</span>
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Check size={16} color="#00A581" />
+                <Check size={16} color="#00A581" style={{ flexShrink: 0 }} />
                 <span>Deterministic priority collections queue</span>
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Check size={16} color="#00A581" />
+                <Check size={16} color="#00A581" style={{ flexShrink: 0 }} />
                 <span>Culturally grounded AI message drafting</span>
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Check size={16} color="#00A581" />
+                <Check size={16} color="#00A581" style={{ flexShrink: 0 }} />
                 <span>pgvector semantic business memory</span>
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Check size={16} color="#00A581" />
+                <Check size={16} color="#00A581" style={{ flexShrink: 0 }} />
                 <span>All 8 WebMCP agent tools active</span>
               </li>
             </ul>
@@ -295,7 +298,7 @@ export default function PricingPage() {
 
           <Link
             href={isAuthenticated ? "/workspace" : "/register"}
-            className="hover-lift tap-press"
+            className="hover-lift tap-press mobile-full-width"
             style={{
               textAlign: 'center',
               padding: '14px',
@@ -306,6 +309,7 @@ export default function PricingPage() {
               fontWeight: 'bold',
               textDecoration: 'none',
               boxShadow: '0 8px 25px rgba(0, 165, 129, 0.4)',
+              display: 'block',
             }}
           >
             {isAuthenticated ? 'Launch Pro Workspace' : 'Register for Pro'}
@@ -318,38 +322,39 @@ export default function PricingPage() {
           borderRadius: '24px',
           border: `1px solid ${tokens.surfaceBorder}`,
           boxShadow: isLight ? tokens.shadowCard : 'none',
-          padding: '40px 32px',
+          padding: 'clamp(24px, 4vw, 40px)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
           transition: 'all 0.2s ease',
+          minWidth: 0,
         }}>
           <div>
             <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: tokens.textPrimary }}>Enterprise Scale</h3>
             <p style={{ color: tokens.textMuted, fontSize: '13.5px', marginTop: '6px' }}>For multi-branch & regional supply chains.</p>
             
-            <div style={{ margin: '28px 0', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-              <span style={{ fontSize: '42px', fontWeight: '900', color: tokens.textPrimary }}>
+            <div style={{ margin: '24px 0', display: 'flex', alignItems: 'baseline', gap: '4px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 'clamp(32px, 5vw, 42px)', fontWeight: '900', color: tokens.textPrimary }}>
                 {currentPrices.symbol}{currentPrices.enterprise}
               </span>
-              <span style={{ color: tokens.textMuted, fontSize: '14px' }}>/ month</span>
+              <span style={{ color: tokens.textMuted, fontSize: '13.5px' }}>/ month</span>
             </div>
 
-            <ul style={{ listStyle: 'none', padding: 0, margin: '28px 0', display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13.5px', color: tokens.textPrimary }}>
+            <ul style={{ listStyle: 'none', padding: 0, margin: '24px 0', display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13.5px', color: tokens.textPrimary }}>
               <li style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Check size={16} color="#00A581" />
+                <Check size={16} color="#00A581" style={{ flexShrink: 0 }} />
                 <span>Multi-branch & store organizations</span>
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Check size={16} color="#00A581" />
+                <Check size={16} color="#00A581" style={{ flexShrink: 0 }} />
                 <span>ERP & external banking API sync</span>
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Check size={16} color="#00A581" />
+                <Check size={16} color="#00A581" style={{ flexShrink: 0 }} />
                 <span>Custom WebMCP tool extensions</span>
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Check size={16} color="#00A581" />
+                <Check size={16} color="#00A581" style={{ flexShrink: 0 }} />
                 <span>Dedicated account manager & 99.9% SLA</span>
               </li>
             </ul>
@@ -357,6 +362,7 @@ export default function PricingPage() {
 
           <Link
             href="/about"
+            className="hover-lift tap-press mobile-full-width"
             style={{
               textAlign: 'center',
               padding: '14px',
@@ -368,6 +374,7 @@ export default function PricingPage() {
               fontWeight: 'bold',
               textDecoration: 'none',
               transition: 'all 0.15s ease',
+              display: 'block',
             }}
           >
             Contact Enterprise Team
@@ -381,7 +388,7 @@ export default function PricingPage() {
           <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase', letterSpacing: '1px' }}>
             Got Questions?
           </span>
-          <h2 style={{ fontSize: '32px', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>
+          <h2 style={{ fontSize: 'clamp(20px, 4vw, 32px)', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>
             Frequently Asked Questions
           </h2>
         </div>

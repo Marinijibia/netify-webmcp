@@ -91,18 +91,18 @@ export default function NotificationsPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '840px', margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Bell size={24} color="#00A581" />
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>{t('notifications.title')}</h2>
+            <h2 style={{ fontSize: 'clamp(18px, 3vw, 24px)', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>{t('notifications.title')}</h2>
           </div>
           <p style={{ color: tokens.textSecondary, fontSize: '13px', margin: '4px 0 0' }}>
             Real-time collection signals, broken promise alerts, and debtor risk escalations.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={handleScanSignals}

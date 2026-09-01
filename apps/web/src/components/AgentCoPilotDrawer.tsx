@@ -370,22 +370,34 @@ export function AgentCoPilotDrawer({
   if (!isOpen) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      right: 0,
-      bottom: 0,
-      width: '460px',
-      maxWidth: '90vw',
-      backgroundColor: tokens.surface,
-      borderLeft: `1px solid ${tokens.surfaceBorder}`,
-      boxShadow: isLight ? '-10px 0 25px rgba(0,0,0,0.08)' : '-10px 0 35px rgba(0,0,0,0.6)',
-      zIndex: 1000,
-      display: 'flex',
-      flexDirection: 'column',
-    }}
-    className="animate-spring-slide"
-    >
+    <>
+      {/* Drawer Backdrop on mobile / tablet */}
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 16, 28, 0.5)',
+          backdropFilter: 'blur(2px)',
+          zIndex: 999,
+        }}
+        onClick={onClose}
+      />
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        right: 0,
+        bottom: 0,
+        width: 'min(460px, 100vw)',
+        maxWidth: '100vw',
+        backgroundColor: tokens.surface,
+        borderLeft: `1px solid ${tokens.surfaceBorder}`,
+        boxShadow: isLight ? '-10px 0 25px rgba(0,0,0,0.08)' : '-10px 0 35px rgba(0,0,0,0.6)',
+        zIndex: 1000,
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+      className="animate-spring-slide"
+      >
       {/* Drawer Header */}
       <div style={{
         padding: '16px 20px',
@@ -859,5 +871,6 @@ export function AgentCoPilotDrawer({
         </button>
       </form>
     </div>
+    </>
   );
 }
