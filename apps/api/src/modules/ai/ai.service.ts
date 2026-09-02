@@ -178,7 +178,28 @@ export class AIService {
       timeWindowDays: detected.extractedParameters?.timeWindowDays || 30,
     });
 
-    // 5. Resolve AI Provider for the target language
+    // 5. Fetch Recent Conversation History for Context Continuity
+    const recentMessages = await prisma.aIMessage.findMany({
+      where: { conversationId: targetConversationId },
+      orderBy: { createdAt: 'desc' },
+      take: 6,
+    });
+    const formattedHistory = recentMessages
+      .reverse()
+      .map((m) => `${m.sender === 'USER' ? 'User' : 'Copilot'}: ${m.content}`)
+      .join('\n');
+    const isSubsequentTurn = recentMessages.length > 2;
+
+    // 6. Detect if query is Casual/Conversational vs Financial Inquiry
+    const isConversationalQuery =
+      (detected.intentType === 'GENERAL_QA' || detected.intentType === 'BUSINESS_EXPLANATION') &&
+      !detected.extractedParameters?.customerId &&
+      !detected.extractedParameters?.targetDueDate &&
+      /^(hi|hello|hey|good\s*(morning|afternoon|evening|day)|how\s*are\s*you|talk|let'?s\s*talk|i\s*need\s*us\s*to\s*talk|what'?s\s*up|howdy|sup)\b/i.test(
+        input.content.trim()
+      );
+
+    // 7. Resolve AI Provider for the target language
     const routingDecision = this.providerFactory.resolveProvider({
       language: targetLanguage,
       taskType: 'chat',
@@ -186,31 +207,50 @@ export class AIService {
 
     const provider = routingDecision.selectedProvider;
 
-    // 6. Build Multilingual Prompt with strict factual separation
+    // 8. Build Intelligent Multilingual Prompt
     const prompt = `User Query: "${input.content}"
 Detected Intent: ${detected.intentType}
 Detected Language: ${targetLanguage} (Code-switched: ${detected.isCodeSwitched})
+Is Conversational Opening / Greeting: ${isConversationalQuery}
+Is Ongoing Multi-Turn Conversation: ${isSubsequentTurn}
+
+--- RECENT CONVERSATION HISTORY ---
+${formattedHistory || 'New conversation'}
 
 --- AUTHORITATIVE BUSINESS DATA (FACTS) ---
 ${JSON.stringify(qaResult.data, null, 2)}
 Context Summary: ${qaResult.contextSummary}
 
---- INSTRUCTIONS ---
-You are Netify AI Copilot, the intelligent financial assistant for African businesses.
+--- INSTRUCTIONS & RESPONSE DIRECTIVES ---
 Respond in the language requested: "${targetLanguage}" (English: "en", Hausa: "ha", Yoruba: "yo", Igbo: "ig", Nigerian Pidgin: "pcm").
-If Pidgin ("pcm") is requested or code-switched, use natural, professional Nigerian business Pidgin (e.g. "Who dey owe pass", "Abeg check", "Nawa for debt").
+If Pidgin ("pcm") is requested or code-switched, use natural, professional Nigerian business Pidgin.
 
-CRITICAL RULES:
-1. NEVER invent or fabricate financial numbers, balances, or transactions. Rely ONLY on the Authoritative Business Data above.
-2. Clearly separate FACTS from INFERENCES / RECOMMENDATIONS.
-3. If an action is appropriate (e.g. drafting a collection message, setting a follow-up date), propose it in "suggestedActions".
-4. If there are zero debts or no records found, explain gently that more business records are needed.
+${
+  isConversationalQuery
+    ? `🎯 CASUAL & CONVERSATIONAL MODE:
+- The user is greeting you, opening a dialogue, or saying "let's talk first".
+- Respond warmly, conversationally, and helpfully in 1-2 natural sentences.
+- DO NOT list unprompted debtor balances or recite overdue accounts.
+- Set "facts": [], "inferences": [], and "suggestedActions": [] to empty arrays [].
+- Propose 2-3 helpful conversational suggestions in "suggestedFollowUps" (e.g. "Who owes me the most?", "Show overdue accounts", "Draft a WhatsApp reminder").`
+    : `🎯 FINANCIAL & DEBT RECOVERY ANALYSIS MODE:
+- The user is asking about debtor balances, overdue accounts, collection priorities, or message drafting.
+- Ground your response in the Authoritative Business Data.
+- Populate "facts", "inferences", and "suggestedActions" with exact verified numbers.`
+}
+
+${
+  isSubsequentTurn
+    ? `⚠️ MULTI-TURN CONTINUITY:
+- This is an ongoing conversation. DO NOT introduce yourself as "Hello! I am Netify Copilot...". Continue the conversation naturally from the previous messages.`
+    : ''
+}
 
 Respond strictly in JSON format matching this schema:
 {
-  "content": "Conversational reply to the business owner in the requested language (2-4 sentences)",
+  "content": "Conversational reply in ${targetLanguage} (1-3 sentences)",
   "facts": [
-    { "title": "Fact title", "detail": "Specific factual detail with real numbers", "metric": "₦450,000" }
+    { "title": "Fact title", "detail": "Specific detail with real numbers", "metric": "₦450,000" }
   ],
   "inferences": [
     { "title": "Inference title", "reason": "Behavioral deduction or warning", "urgency": "HIGH" | "MEDIUM" | "LOW" }
@@ -224,7 +264,7 @@ Respond strictly in JSON format matching this schema:
       "isConsequential": true
     }
   ],
-  "suggestedFollowUps": ["Question 1", "Question 2"]
+  "suggestedFollowUps": ["Suggested question 1", "Suggested question 2"]
 }`;
 
     let parsedResult: any;
@@ -856,6 +896,38 @@ Return valid JSON matching BusinessQAOutputSchema.`;
   ): any {
     const data = qaResult.data;
     const intent = qaResult.intent;
+
+    // Check if query is a natural greeting or conversational opener
+    const isGreeting = /^(hi|hello|hey|good\s*(morning|afternoon|evening|day)|how\s*are\s*you|talk|let'?s\s*talk|i\s*need\s*us\s*to\s*talk|what'?s\s*up)\b/i.test(
+      (query || '').trim()
+    );
+
+    if (isGreeting) {
+      let content = '';
+      if (language === 'pcm') {
+        content = 'Hello! I dey ready to help you manage your business records and check customer debts. Wetin you go like make we talk about?';
+      } else if (language === 'ha') {
+        content = 'Sannu! Ina nan a shirye don taimaka muku duba bayanan bashi da harkokin kasuwancinku. Me kuke so mu tattauna?';
+      } else if (language === 'yo') {
+        content = 'Ẹ n lẹ o! Mo wa ni imurasilẹ lati ran ọ lọwọ lati ṣayẹwo awọn gbese ati iwe-owo rẹ. Kini o fẹ ki a sọrọ nipa rẹ?';
+      } else if (language === 'ig') {
+        content = 'Ndewo! Anọ m ebe a iji nyere gị aka nyochaa ndekọ ụgwọ na azụmahịa gị. Kedu ihe ị chọrọ ka anyị kpaa maka ya?';
+      } else {
+        content = 'Hello! I am ready to assist you with your business accounts, customer balances, and follow-up reminders. What would you like to discuss today?';
+      }
+
+      return {
+        content,
+        facts: [],
+        inferences: [],
+        suggestedActions: [],
+        suggestedFollowUps: [
+          'Who owes me the most right now?',
+          'Show overdue receivables aging',
+          'Draft a follow-up reminder',
+        ],
+      };
+    }
 
     let content = '';
     const facts: Array<{ title: string; detail: string; metric?: string | number }> = [];
