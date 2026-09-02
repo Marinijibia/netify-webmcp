@@ -278,7 +278,110 @@ Respond strictly in JSON format matching this schema:
       parsedResult = this.synthesizeDeterministicResponse(input.content, targetLanguage, qaResult);
     }
 
+    // Auto-enrich suggestedActions with Universal App Navigation & Deep Links
+    if (!Array.isArray(parsedResult.suggestedActions)) {
+      parsedResult.suggestedActions = [];
+    }
 
+    const queryLower = (input.content || '').toLowerCase();
+    
+    // 1. Collections & Debtor queue navigation
+    if (queryLower.includes('collection') || queryLower.includes('debtor') || queryLower.includes('who owe') || queryLower.includes('overdue') || queryLower.includes('aging') || queryLower.includes('priority')) {
+      if (!parsedResult.suggestedActions.some((a: any) => a.payload?.url === '/collections')) {
+        parsedResult.suggestedActions.unshift({
+          actionType: 'NAVIGATE',
+          title: '🚀 Open Collections Queue',
+          description: 'View prioritized debtor aging list and broken promises',
+          payload: { url: '/collections' },
+          isConsequential: false,
+        });
+      }
+    }
+
+    // 2. Draft Follow-up / WhatsApp navigation
+    if (queryLower.includes('draft') || queryLower.includes('whatsapp') || queryLower.includes('sms') || queryLower.includes('remind') || queryLower.includes('message') || queryLower.includes('follow up')) {
+      const targetCustId = (qaResult.citations && qaResult.citations[0]) || (qaResult.data && (qaResult.data as any).customerId);
+      const draftUrl = targetCustId ? `/messages/draft?customerId=${targetCustId}` : '/messages/draft';
+      if (!parsedResult.suggestedActions.some((a: any) => a.payload?.url?.startsWith('/messages/draft'))) {
+        parsedResult.suggestedActions.push({
+          actionType: 'DRAFT_MESSAGE',
+          title: '💬 Draft Follow-up Reminder',
+          description: 'Open omnichannel studio with pre-loaded debtor context',
+          payload: { url: draftUrl, customerId: targetCustId },
+          isConsequential: false,
+        });
+      }
+    }
+
+    // 3. Customers ledger & create customer navigation
+    if (queryLower.includes('add customer') || queryLower.includes('new customer') || queryLower.includes('create customer')) {
+      parsedResult.suggestedActions.push({
+        actionType: 'CREATE_CUSTOMER',
+        title: '➕ Add New Customer Ledger',
+        description: 'Register a new customer account and credit limit',
+        payload: { url: '/customers/create' },
+        isConsequential: false,
+      });
+    } else if (queryLower.includes('customer') || queryLower.includes('client') || queryLower.includes('ledger')) {
+      const targetCustId = (qaResult.citations && qaResult.citations[0]) || (qaResult.data && (qaResult.data as any).customerId);
+      const custUrl = targetCustId ? `/customers/${targetCustId}` : '/customers';
+      if (!parsedResult.suggestedActions.some((a: any) => a.payload?.url?.startsWith('/customers'))) {
+        parsedResult.suggestedActions.push({
+          actionType: 'VIEW_CUSTOMER',
+          title: targetCustId ? '👁️ Open Customer Ledger' : '👥 View All Customers',
+          description: 'Inspect debtor transaction history and business memory',
+          payload: { url: custUrl, customerId: targetCustId },
+          isConsequential: false,
+        });
+      }
+    }
+
+    // 4. Receivables & Invoices navigation
+    if (queryLower.includes('new invoice') || queryLower.includes('create invoice') || queryLower.includes('add receivable') || queryLower.includes('log invoice')) {
+      parsedResult.suggestedActions.push({
+        actionType: 'CREATE_RECEIVABLE',
+        title: '➕ Log New Receivable',
+        description: 'Create an invoice with due date and balance',
+        payload: { url: '/receivables/create' },
+        isConsequential: false,
+      });
+    } else if (queryLower.includes('invoice') || queryLower.includes('receivable') || queryLower.includes('unpaid') || queryLower.includes('bill')) {
+      if (!parsedResult.suggestedActions.some((a: any) => a.payload?.url === '/receivables')) {
+        parsedResult.suggestedActions.push({
+          actionType: 'NAVIGATE',
+          title: '📄 View Receivables & Invoices',
+          description: 'Track open, overdue, and partially paid balances',
+          payload: { url: '/receivables' },
+          isConsequential: false,
+        });
+      }
+    }
+
+    // 5. Commitments & Promises navigation
+    if (queryLower.includes('promise') || queryLower.includes('commitment') || queryLower.includes('agreed date')) {
+      if (!parsedResult.suggestedActions.some((a: any) => a.payload?.url === '/commitments')) {
+        parsedResult.suggestedActions.push({
+          actionType: 'NAVIGATE',
+          title: '🤝 View Payment Promises',
+          description: 'Review pending, fulfilled, and missed debtor commitments',
+          payload: { url: '/commitments' },
+          isConsequential: false,
+        });
+      }
+    }
+
+    // 6. Settings & Notifications navigation
+    if (queryLower.includes('setting') || queryLower.includes('notification') || queryLower.includes('quiet hour') || queryLower.includes('web push') || queryLower.includes('sound') || queryLower.includes('profile')) {
+      if (!parsedResult.suggestedActions.some((a: any) => a.payload?.url === '/settings' || a.payload?.url === '/notifications')) {
+        parsedResult.suggestedActions.push({
+          actionType: 'NAVIGATE',
+          title: '⚙️ Open Notification & System Settings',
+          description: 'Manage push channels, quiet hours, and business preferences',
+          payload: { url: '/settings' },
+          isConsequential: false,
+        });
+      }
+    }
 
     const latencyMs = Date.now() - startTime;
 

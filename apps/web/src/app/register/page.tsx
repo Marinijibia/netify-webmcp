@@ -394,6 +394,33 @@ export default function RegisterPage() {
                   {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
+
+              {/* Password Strength Indicator */}
+              {formData.password && (
+                <div style={{ marginTop: '6px' }}>
+                  <div style={{ display: 'flex', gap: '4px', height: '3px', borderRadius: '2px', overflow: 'hidden' }}>
+                    {[1, 2, 3, 4].map((step) => {
+                      const hasLen = formData.password.length >= 8;
+                      const hasNum = /\d/.test(formData.password);
+                      const hasSpec = /[^A-Za-z0-9]/.test(formData.password);
+                      const hasUp = /[A-Z]/.test(formData.password);
+                      const score = [hasLen, hasNum, hasSpec, hasUp].filter(Boolean).length;
+                      return (
+                        <div
+                          key={step}
+                          style={{
+                            flex: 1,
+                            backgroundColor: step <= score
+                              ? (score >= 3 ? '#00A581' : score === 2 ? '#F59E0B' : '#EF4444')
+                              : (isLight ? '#E2E8F0' : '#001424'),
+                            borderRadius: '2px',
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Organization Name */}

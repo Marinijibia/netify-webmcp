@@ -70,6 +70,11 @@ export const receivablesApi = {
     return res.data?.data || (res.data as unknown as ReceivableItem);
   },
 
+  update: async (id: string, data: Partial<CreateReceivablePayload>): Promise<ReceivableItem> => {
+    const res = await apiClient.patch<ApiResponse<ReceivableItem>>(`/receivables/${id}`, data);
+    return res.data?.data || (res.data as unknown as ReceivableItem);
+  },
+
   cancel: async (id: string): Promise<ReceivableItem> => {
     const res = await apiClient.patch<ApiResponse<ReceivableItem>>(`/receivables/${id}/cancel`, {});
     return res.data?.data || (res.data as unknown as ReceivableItem);

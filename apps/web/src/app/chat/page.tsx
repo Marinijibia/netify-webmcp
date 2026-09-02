@@ -66,7 +66,7 @@ export interface ChatMessage {
   suggestedFollowUps?: string[];
 }
 
-export type VoiceLanguage = 'en' | 'pcm' | 'ha' | 'yo' | 'ig';
+export type VoiceLanguage = 'en' | 'pcm' | 'ha' | 'yo' | 'ig' | 'sw' | 'fr';
 
 // Helper to extract conversational text and structured data from JSON or markdown
 function parseCopilotPayload(
@@ -431,6 +431,8 @@ You can ask me questions about specific accounts, identify broken promises, or a
         ha: 'ha-NG',
         yo: 'yo-NG',
         ig: 'ig-NG',
+        sw: 'sw-KE',
+        fr: 'fr-FR',
       };
       recognition.lang = langMap[selectedLanguage] || 'en-US';
 
@@ -707,16 +709,22 @@ You can ask me questions about specific accounts, identify broken promises, or a
                 English
               </option>
               <option value="pcm" style={{ backgroundColor: isLight ? '#FFFFFF' : '#001D31' }}>
-                Pidgin
+                🇳🇬 Pidgin
               </option>
               <option value="ha" style={{ backgroundColor: isLight ? '#FFFFFF' : '#001D31' }}>
-                Hausa
+                🇳🇬 Hausa
               </option>
               <option value="yo" style={{ backgroundColor: isLight ? '#FFFFFF' : '#001D31' }}>
-                Yorùbá
+                🇳🇬 Yorùbá
               </option>
               <option value="ig" style={{ backgroundColor: isLight ? '#FFFFFF' : '#001D31' }}>
-                Igbo
+                🇳🇬 Igbo
+              </option>
+              <option value="sw" style={{ backgroundColor: isLight ? '#FFFFFF' : '#001D31' }}>
+                🇰🇪 Swahili
+              </option>
+              <option value="fr" style={{ backgroundColor: isLight ? '#FFFFFF' : '#001D31' }}>
+                🇫🇷 Français
               </option>
             </select>
           </div>
@@ -1219,6 +1227,26 @@ You can ask me questions about specific accounts, identify broken promises, or a
                       </div>
                     )}
 
+                    {/* Verified Ledger Grounding Pill */}
+                    <div
+                      style={{
+                        marginTop: '12px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        backgroundColor: isLight ? '#F0FDF4' : 'rgba(0, 165, 129, 0.1)',
+                        border: `1px solid ${isLight ? '#BBF7D0' : 'rgba(0, 165, 129, 0.3)'}`,
+                        borderRadius: '20px',
+                        padding: '4px 10px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        color: '#00A581',
+                      }}
+                    >
+                      <ShieldCheck size={13} />
+                      <span>Grounded in live ledger records & immutable business memory</span>
+                    </div>
+
                     {/* Suggested Grounded Action Proposals */}
                     {m.suggestedActions && m.suggestedActions.length > 0 && (
                       <div style={{ marginTop: '16px' }}>
@@ -1242,9 +1270,14 @@ You can ask me questions about specific accounts, identify broken promises, or a
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                           {m.suggestedActions.map((act, idx) => {
                             const isDraft = act.actionType === 'DRAFT_MESSAGE' || act.title.toLowerCase().includes('draft') || act.title.toLowerCase().includes('message');
-                            const targetHref = isDraft
-                              ? (act.payload?.customerId ? `/messages/draft?customerId=${act.payload.customerId}` : '/messages/draft')
-                              : (act.payload?.customerId ? `/customers/${act.payload.customerId}` : '/receivables');
+                            const targetHref = act.payload?.url || (
+                              isDraft
+                                ? (act.payload?.customerId ? `/messages/draft?customerId=${act.payload.customerId}` : '/messages/draft')
+                                : (act.actionType === 'NAVIGATE' || act.title.toLowerCase().includes('collection')
+                                  ? '/collections'
+                                  : (act.payload?.customerId ? `/customers/${act.payload.customerId}` : '/receivables')
+                                )
+                            );
 
                             return (
                               <Link
@@ -1255,20 +1288,20 @@ You can ask me questions about specific accounts, identify broken promises, or a
                                   alignItems: 'center',
                                   gap: '8px',
                                   backgroundColor: isLight ? '#FFFFFF' : '#00253E',
-                                  border: '1px solid #00A581',
+                                  border: '1.5px solid #00A581',
                                   color: '#00A581',
-                                  padding: '8px 14px',
+                                  padding: '8px 16px',
                                   borderRadius: '10px',
-                                  fontSize: '12.5px',
+                                  fontSize: '13px',
                                   fontWeight: '700',
                                   textDecoration: 'none',
-                                  boxShadow: isLight ? '0 1px 3px rgba(0, 165, 129, 0.12)' : 'none',
+                                  boxShadow: isLight ? '0 2px 6px rgba(0, 165, 129, 0.15)' : '0 4px 12px rgba(0, 0, 0, 0.3)',
                                   transition: 'all 0.15s ease',
                                 }}
                               >
-                                {isDraft ? <MessageSquareQuote size={14} /> : <Layers size={14} />}
+                                {isDraft ? <MessageSquareQuote size={15} /> : <Layers size={15} />}
                                 <span>{act.title}</span>
-                                <ArrowRight size={13} />
+                                <ArrowRight size={14} />
                               </Link>
                             );
                           })}
@@ -1403,6 +1436,51 @@ You can ask me questions about specific accounts, identify broken promises, or a
           <span>{error}</span>
         </div>
       )}
+
+      {/* Quick Navigation & Prompt Shortcuts Bar */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          overflowX: 'auto',
+          paddingBottom: '2px',
+          scrollbarWidth: 'none',
+        }}
+      >
+        {[
+          { label: '🚀 Open Collections Queue', prompt: 'Take me to collections queue and show prioritized debtors' },
+          { label: '💬 Draft Reminder for Top Debtor', prompt: 'Draft a firm WhatsApp follow-up for my highest overdue customer' },
+          { label: '🤝 Check Broken Promises', prompt: 'Show me all broken payment promises and missed commitments this week' },
+          { label: '📄 View Open Receivables', prompt: 'Show me all overdue invoices and open receivables' },
+          { label: '⚙️ Notification Settings', prompt: 'Where can I configure quiet hours and notification channels?' },
+          { label: '➕ Add Customer Ledger', prompt: 'I want to add a new customer' },
+        ].map((chip, idx) => (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => handleSend(chip.prompt)}
+            style={{
+              whiteSpace: 'nowrap',
+              padding: '6px 12px',
+              borderRadius: '20px',
+              backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+              border: `1px solid ${tokens.surfaceBorder}`,
+              color: tokens.textSecondary,
+              fontSize: '11.5px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              transition: 'all 0.15s ease',
+              flexShrink: 0,
+            }}
+          >
+            <span>{chip.label}</span>
+          </button>
+        ))}
+      </div>
 
       {/* Input Form Bar with Dictation & Send */}
       <form

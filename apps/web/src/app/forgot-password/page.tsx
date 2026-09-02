@@ -1,24 +1,58 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Mail, ArrowRight, ArrowLeft, CheckCircle2, Sparkles, Loader2 } from 'lucide-react';
+import { Mail, ArrowRight, ArrowLeft, CheckCircle2, Sparkles, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useTheme } from '@/lib/theme/theme-context';
+import { authApi } from '@/lib/api/auth';
 
 export default function ForgotPasswordPage() {
   const { tokens, isLight } = useTheme();
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email) {
+      setError('Please enter your email address.');
+      return;
+    }
+
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    setError(null);
+
+    try {
+      await authApi.forgotPassword(email.trim().toLowerCase());
       setIsSubmitted(true);
-    }, 800);
+      setCooldown(60);
+    } catch (err: any) {
+      setError(err?.message || 'Could not send password reset email. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (cooldown > 0 || !email) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      await authApi.forgotPassword(email.trim().toLowerCase());
+      setCooldown(60);
+    } catch (err: any) {
+      setError(err?.message || 'Could not resend email.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -88,90 +122,121 @@ export default function ForgotPasswordPage() {
           }}>
             <Mail size={20} />
           </div>
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary, letterSpacing: '-0.5px', margin: 0 }}>
             Reset Password
           </h1>
           <p style={{ color: tokens.textSecondary, fontSize: '13.5px', marginTop: '6px', lineHeight: '1.5' }}>
-            Enter your business email address and we'll send you instructions to reset your password.
+            Enter your business email address and we&apos;ll send you instructions to reset your password.
           </p>
         </div>
+
+        {/* Error Alert */}
+        {error && (
+          <div style={{
+            backgroundColor: isLight ? '#FEE2E2' : 'rgba(239, 68, 68, 0.15)',
+            border: '1px solid #EF4444',
+            borderRadius: '8px',
+            padding: '10px 14px',
+            color: isLight ? '#B91C1C' : '#FCA5A5',
+            fontSize: '12.5px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginBottom: '16px',
+          }}>
+            <AlertCircle size={15} />
+            <span>{error}</span>
+          </div>
+        )}
 
         {isSubmitted ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{
-              backgroundColor: tokens.accentSoft,
-              border: '1px solid #00A581',
+              backgroundColor: isLight ? '#F0FDF4' : 'rgba(0, 165, 129, 0.12)',
+              border: `1px solid ${tokens.accentBorder}`,
               borderRadius: '12px',
-              padding: '18px',
+              padding: '20px',
+              textAlign: 'center',
               display: 'flex',
-              alignItems: 'flex-start',
-              gap: '12px',
-              color: tokens.textSecondary,
-              fontSize: '13.5px',
-              lineHeight: '1.5',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '10px',
             }}>
-              <CheckCircle2 size={20} color="#00A581" style={{ flexShrink: 0, marginTop: '2px' }} />
-              <div>
-                <strong style={{ color: tokens.textPrimary, display: 'block', marginBottom: '4px' }}>Reset instructions dispatched</strong>
-                We've sent a secure reset link to <strong style={{ color: '#00A581' }}>{email}</strong>. Check your inbox and spam folder.
+              <CheckCircle2 size={36} color="#00A581" />
+              <div style={{ fontSize: '15px', fontWeight: 'bold', color: tokens.textPrimary }}>
+                Check Your Inbox
               </div>
+              <p style={{ fontSize: '12.5px', color: tokens.textSecondary, margin: 0, lineHeight: '1.5' }}>
+                If an account exists for <strong style={{ color: tokens.textPrimary }}>{email}</strong>, we&apos;ve sent password reset instructions.
+              </p>
             </div>
 
-            <div style={{
-              backgroundColor: isLight ? '#F1F5F9' : '#00192B',
-              padding: '14px 16px',
-              borderRadius: '10px',
-              border: `1px dashed ${tokens.surfaceBorder}`,
-              fontSize: '12.5px',
-              color: tokens.textSecondary,
-              textAlign: 'center',
-            }}>
-              <span>Demo simulation link: </span>
-              <Link href="/reset-password" style={{ color: '#00A581', fontWeight: 'bold' }}>
-                Open Reset Password Screen →
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={cooldown > 0 || isLoading}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '10px',
+                  backgroundColor: cooldown > 0 ? (isLight ? '#F1F5F9' : '#001424') : tokens.accentSoft,
+                  color: cooldown > 0 ? tokens.textMuted : '#00A581',
+                  border: `1px solid ${cooldown > 0 ? tokens.surfaceBorder : tokens.accentBorder}`,
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: cooldown > 0 ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                }}
+              >
+                <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
+                <span>{cooldown > 0 ? `Resend Code in ${cooldown}s` : 'Resend Reset Email'}</span>
+              </button>
+
+              <Link
+                href="/login"
+                style={{
+                  textAlign: 'center',
+                  padding: '12px',
+                  borderRadius: '10px',
+                  backgroundColor: '#00A581',
+                  color: '#FFFFFF',
+                  fontSize: '13.5px',
+                  fontWeight: 'bold',
+                  textDecoration: 'none',
+                }}
+              >
+                Return to Sign In
               </Link>
             </div>
-
-            <button
-              onClick={() => setIsSubmitted(false)}
-              style={{
-                padding: '12px',
-                backgroundColor: 'transparent',
-                border: `1px solid ${tokens.surfaceBorder}`,
-                borderRadius: '8px',
-                color: tokens.textSecondary,
-                fontSize: '13px',
-                cursor: 'pointer',
-              }}
-            >
-              Try another email address
-            </button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 'bold', color: tokens.textPrimary, marginBottom: '8px', textTransform: 'uppercase' }}>
-                Email Address
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: tokens.textSecondary, marginBottom: '6px' }}>
+                Business Email Address
               </label>
               <div style={{ position: 'relative' }}>
-                <Mail size={16} color={tokens.textMuted} style={{ position: 'absolute', left: '14px', top: '14px' }} />
+                <Mail size={16} color={tokens.textMuted} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="musa@kanograins.com"
+                  placeholder="name@company.com"
+                  required
                   style={{
                     width: '100%',
-                    padding: '12px 14px 12px 42px',
+                    padding: '12px 14px 12px 40px',
                     backgroundColor: isLight ? '#FFFFFF' : '#001D31',
                     border: `1px solid ${tokens.surfaceBorder}`,
                     borderRadius: '10px',
                     color: tokens.textPrimary,
-                    fontSize: '14px',
+                    fontSize: '13.5px',
                     outline: 'none',
-                    boxShadow: isLight ? '0 1px 2px rgba(0, 0, 0, 0.05)' : 'none',
                   }}
-                  required
                 />
               </div>
             </div>
@@ -186,18 +251,17 @@ export default function ForgotPasswordPage() {
                 gap: '8px',
                 backgroundColor: '#00A581',
                 color: '#FFFFFF',
-                padding: '13px',
+                padding: '14px',
                 borderRadius: '10px',
                 border: 'none',
                 fontSize: '14px',
                 fontWeight: 'bold',
                 cursor: isLoading ? 'not-allowed' : 'pointer',
-                boxShadow: '0 8px 20px rgba(0, 165, 129, 0.35)',
-                opacity: isLoading ? 0.7 : 1,
+                marginTop: '6px',
               }}
             >
               {isLoading ? <Loader2 size={16} className="animate-spin" /> : null}
-              <span>{isLoading ? 'Dispatching Link...' : 'Send Reset Instructions'}</span>
+              <span>{isLoading ? 'Sending Instructions...' : 'Send Reset Link'}</span>
               {!isLoading && <ArrowRight size={16} />}
             </button>
           </form>

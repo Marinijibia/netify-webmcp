@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { customersApi } from '@/lib/api';
+import { customersApi, organizationApi, TeamMemberItem } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 import { 
   Users, 
   ArrowLeft, 
@@ -13,13 +14,17 @@ import {
   MapPin, 
   CheckCircle2, 
   AlertCircle, 
-  Loader2 
+  Loader2,
+  CreditCard,
+  UserCheck,
+  Building
 } from 'lucide-react';
 import { useTheme } from '@/lib/theme/theme-context';
 import { useLanguage } from '@/lib/i18n';
 
 export default function CreateCustomerPage() {
   const router = useRouter();
+  const { organization } = useAuth();
   const { tokens, isLight } = useTheme();
   const { t } = useLanguage();
 
@@ -27,10 +32,28 @@ export default function CreateCustomerPage() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
+  const [creditLimit, setCreditLimit] = useState<string>('');
+  const [assignedStaffId, setAssignedStaffId] = useState<string>('');
   const [notes, setNotes] = useState('');
+  const [staffMembers, setStaffMembers] = useState<TeamMemberItem[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const currency = organization?.currency || 'NGN';
+
+  useEffect(() => {
+    async function loadStaff() {
+      if (!organization?.id) return;
+      try {
+        const mems = await organizationApi.getMembers(organization.id);
+        setStaffMembers(mems);
+      } catch (e) {
+        console.warn('Could not fetch staff members:', e);
+      }
+    }
+    loadStaff();
+  }, [organization?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,13 +66,24 @@ export default function CreateCustomerPage() {
     setError(null);
 
     try {
+      const combinedNotes = [
+        notes.trim(),
+        creditLimit ? `Credit Limit: ${currency} ${creditLimit}` : null,
+      ].filter(Boolean).join('\n');
+
       const created = await customersApi.create({
         name: name.trim(),
         phone: phone.trim() || undefined,
         email: email.trim() || undefined,
         address: address.trim() || undefined,
-        notes: notes.trim() || undefined,
+        notes: combinedNotes || undefined,
       });
+
+      if (assignedStaffId && created.id) {
+        try {
+          await customersApi.assignStaff(created.id, assignedStaffId);
+        } catch {}
+      }
 
       router.push(`/customers/${created.id}`);
     } catch (err: any) {
@@ -61,7 +95,7 @@ export default function CreateCustomerPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '640px', margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '680px', margin: '0 auto' }}>
       {/* Back Link */}
       <Link
         href="/customers"
@@ -82,7 +116,7 @@ export default function CreateCustomerPage() {
       {/* Form Card */}
       <div style={{
         backgroundColor: tokens.surface,
-        borderRadius: '12px',
+        borderRadius: '16px',
         border: `1px solid ${tokens.surfaceBorder}`,
         padding: 'clamp(20px, 4vw, 32px)',
         boxShadow: isLight ? tokens.shadowCard : 'none',
@@ -90,12 +124,12 @@ export default function CreateCustomerPage() {
         <div style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Users size={22} color="#00A581" />
-            <h2 style={{ fontSize: 'clamp(18px, 3vw, 20px)', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
+            <h2 style={{ fontSize: 'clamp(18px, 3vw, 22px)', fontWeight: '900', color: tokens.textPrimary, margin: 0 }}>
               {t('customers.addCustomerModalTitle')}
             </h2>
           </div>
           <p style={{ color: tokens.textSecondary, fontSize: '13px', marginTop: '4px' }}>
-            Register a debtor or buyer account for credit tracking and business memory intelligence.
+            Register a debtor or buyer account for credit tracking, automated reminders, and business memory.
           </p>
         </div>
 
@@ -118,8 +152,9 @@ export default function CreateCustomerPage() {
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Name */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
+            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
               Customer / Business Name *
             </label>
             <input
@@ -127,28 +162,28 @@ export default function CreateCustomerPage() {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Alhaji Musa Provisions"
+              placeholder="e.g. Alhaji Musa Provisions Ltd"
               style={{
                 width: '100%',
-                padding: '11px 14px',
+                padding: '10px 14px',
                 backgroundColor: isLight ? '#FFFFFF' : '#001D31',
                 border: `1px solid ${tokens.surfaceBorder}`,
                 borderRadius: '8px',
                 color: tokens.textPrimary,
-                fontSize: '14px',
+                fontSize: '13.5px',
                 outline: 'none',
-                boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
               }}
             />
           </div>
 
+          {/* Phone & Email */}
           <div className="responsive-split-2">
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
+              <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                 Primary Phone Number
               </label>
               <div style={{ position: 'relative' }}>
-                <Phone size={15} color={tokens.textMuted} style={{ position: 'absolute', left: '12px', top: '13px' }} />
+                <Phone size={14} color={tokens.textMuted} style={{ position: 'absolute', left: '12px', top: '12px' }} />
                 <input
                   type="text"
                   value={phone}
@@ -156,81 +191,139 @@ export default function CreateCustomerPage() {
                   placeholder="+234 803 123 4567"
                   style={{
                     width: '100%',
-                    padding: '10px 12px 10px 36px',
+                    padding: '9px 12px 9px 34px',
                     backgroundColor: isLight ? '#FFFFFF' : '#001D31',
                     border: `1px solid ${tokens.surfaceBorder}`,
                     borderRadius: '8px',
                     color: tokens.textPrimary,
                     fontSize: '13px',
                     outline: 'none',
-                    boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
                   }}
                 />
               </div>
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
+              <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                 Email Address
               </label>
               <div style={{ position: 'relative' }}>
-                <Mail size={15} color={tokens.textMuted} style={{ position: 'absolute', left: '12px', top: '13px' }} />
+                <Mail size={14} color={tokens.textMuted} style={{ position: 'absolute', left: '12px', top: '12px' }} />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="buyer@domain.com"
+                  placeholder="musa@example.com"
                   style={{
                     width: '100%',
-                    padding: '10px 12px 10px 36px',
+                    padding: '9px 12px 9px 34px',
                     backgroundColor: isLight ? '#FFFFFF' : '#001D31',
                     border: `1px solid ${tokens.surfaceBorder}`,
                     borderRadius: '8px',
                     color: tokens.textPrimary,
                     fontSize: '13px',
                     outline: 'none',
-                    boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
                   }}
                 />
               </div>
             </div>
           </div>
 
+          {/* Credit Limit & Assigned Staff */}
+          <div className="responsive-split-2">
+            <div>
+              <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                Credit Limit ({currency})
+              </label>
+              <div style={{ position: 'relative' }}>
+                <CreditCard size={14} color={tokens.textMuted} style={{ position: 'absolute', left: '12px', top: '12px' }} />
+                <input
+                  type="text"
+                  value={creditLimit}
+                  onChange={(e) => setCreditLimit(e.target.value)}
+                  placeholder="e.g. 500,000"
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px 9px 34px',
+                    backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                    border: `1px solid ${tokens.surfaceBorder}`,
+                    borderRadius: '8px',
+                    color: tokens.textPrimary,
+                    fontSize: '13px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                Assigned Credit Officer
+              </label>
+              <div style={{ position: 'relative' }}>
+                <UserCheck size={14} color={tokens.textMuted} style={{ position: 'absolute', left: '12px', top: '12px' }} />
+                <select
+                  value={assignedStaffId}
+                  onChange={(e) => setAssignedStaffId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px 9px 34px',
+                    backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                    border: `1px solid ${tokens.surfaceBorder}`,
+                    borderRadius: '8px',
+                    color: tokens.textPrimary,
+                    fontSize: '13px',
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="">Unassigned</option>
+                  {staffMembers.map((m) => (
+                    <option key={m.userId} value={m.userId}>
+                      {m.user?.firstName || m.user?.email || m.userId} ({m.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Physical Address */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
-              Physical Address / Market Location
+            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+              Physical Address / Store Location
             </label>
             <div style={{ position: 'relative' }}>
-              <MapPin size={15} color={tokens.textMuted} style={{ position: 'absolute', left: '12px', top: '13px' }} />
+              <MapPin size={14} color={tokens.textMuted} style={{ position: 'absolute', left: '12px', top: '12px' }} />
               <input
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="e.g. Shop 14, Alaba International Market, Lagos"
+                placeholder="Shop 14, Balogun Market, Lagos"
                 style={{
                   width: '100%',
-                  padding: '10px 12px 10px 36px',
+                  padding: '9px 12px 9px 34px',
                   backgroundColor: isLight ? '#FFFFFF' : '#001D31',
                   border: `1px solid ${tokens.surfaceBorder}`,
                   borderRadius: '8px',
                   color: tokens.textPrimary,
                   fontSize: '13px',
                   outline: 'none',
-                  boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
                 }}
               />
             </div>
           </div>
 
+          {/* Initial Notes */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
-              Customer Relationship Notes
+            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+              Internal Credit Notes & Commercial Terms
             </label>
             <textarea
-              rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Pays via bank transfer on alternate Mondays..."
+              placeholder="e.g. Standard 14-day net payment terms. Prefers WhatsApp reminders on Mondays."
+              rows={3}
               style={{
                 width: '100%',
                 padding: '10px 12px',
@@ -241,44 +334,52 @@ export default function CreateCustomerPage() {
                 fontSize: '13px',
                 outline: 'none',
                 resize: 'none',
-                boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
               }}
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting || !name.trim()}
-            style={{
-              marginTop: '10px',
-              padding: '12px',
-              backgroundColor: '#00A581',
-              color: '#FFFFFF',
-              borderRadius: '8px',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              cursor: 'pointer',
-              border: 'none',
-              boxShadow: '0 4px 14px rgba(0, 165, 129, 0.35)',
-              opacity: isSubmitting || !name.trim() ? 0.6 : 1,
-            }}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                <span>Creating Customer...</span>
-              </>
-            ) : (
-              <>
-                <CheckCircle2 size={16} />
-                <span>{t('customers.addCustomerSubmit')}</span>
-              </>
-            )}
-          </button>
+          {/* Submit Action */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+            <Link
+              href="/customers"
+              style={{
+                padding: '9px 16px',
+                borderRadius: '8px',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                backgroundColor: 'transparent',
+                color: tokens.textSecondary,
+                fontSize: '13px',
+                fontWeight: '600',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+              }}
+            >
+              Cancel
+            </Link>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 20px',
+                borderRadius: '8px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #00A581 0%, #007D62 100%)',
+                color: '#FFFFFF',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                boxShadow: '0 2px 8px rgba(0, 165, 129, 0.3)',
+              }}
+            >
+              {isSubmitting ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
+              <span>Create Debtor Account</span>
+            </button>
+          </div>
         </form>
       </div>
     </div>

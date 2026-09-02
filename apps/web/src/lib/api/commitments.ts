@@ -40,7 +40,7 @@ export interface PaymentCommitmentItem {
 }
 
 export interface CreateCommitmentPayload {
-  receivableId: string;
+  receivableId?: string;
   customerId?: string;
   amount: number | string;
   currency?: string;
@@ -80,6 +80,13 @@ export const commitmentsApi = {
   createCommitment: async (data: CreateCommitmentPayload): Promise<PaymentCommitmentItem> => {
     const url = data.receivableId ? `/receivables/${data.receivableId}/commitments` : '/commitments';
     const res = await apiClient.post<ApiResponse<PaymentCommitmentItem>>(url, data);
+    return res.data?.data || (res.data as unknown as PaymentCommitmentItem);
+  },
+
+  cancelCommitment: async (id: string, reason?: string): Promise<PaymentCommitmentItem> => {
+    const res = await apiClient.patch<ApiResponse<PaymentCommitmentItem>>(`/commitments/${id}/cancel`, {
+      reason: reason || 'Cancelled by merchant',
+    });
     return res.data?.data || (res.data as unknown as PaymentCommitmentItem);
   },
 };

@@ -119,3 +119,43 @@ export function getMailtoUrl(email: string | null | undefined, subject: string, 
   if (!email) return '';
   return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
+
+/**
+ * Calculates SMS segment count and character breakdown for GSM-7 vs Unicode encoding.
+ */
+export function calculateSmsSegments(text: string): {
+  charCount: number;
+  segments: number;
+  charsRemaining: number;
+  isUnicode: boolean;
+  maxPerSegment: number;
+} {
+  const charCount = text.length;
+  // Check for non-GSM 7-bit characters (e.g. emojis or extended unicode)
+  const gsmRegex = /^[\u000A\u000D\u0020-\u007E\u00A1\u00A3\u00A4\u00A5\u00A7\u00BF\u00C4\u00C5\u00C6\u00C7\u00C9\u00D1\u00D6\u00D8\u00DC\u00DF\u00E0\u00E4\u00E5\u00E6\u00E7\u00E8\u00E9\u00EC\u00F1\u00F2\u00F6\u00F8\u00F9\u00FC]*$/;
+  const isUnicode = !gsmRegex.test(text);
+
+  const singleLimit = isUnicode ? 70 : 160;
+  const multiLimit = isUnicode ? 67 : 153;
+
+  if (charCount <= singleLimit) {
+    return {
+      charCount,
+      segments: charCount === 0 ? 0 : 1,
+      charsRemaining: singleLimit - charCount,
+      isUnicode,
+      maxPerSegment: singleLimit,
+    };
+  }
+
+  const segments = Math.ceil(charCount / multiLimit);
+  const charsRemaining = segments * multiLimit - charCount;
+
+  return {
+    charCount,
+    segments,
+    charsRemaining,
+    isUnicode,
+    maxPerSegment: multiLimit,
+  };
+}

@@ -36,6 +36,10 @@ const SAMPLE_INPUTS: Record<string, any> = {
   list_receivables: { isOverdue: true },
   create_payment_commitment: { customerId: 'f14e802a-573d-46bb-8257-317bdc3cddb0', amount: 350000, promisedFor: '2026-09-05T10:00:00.000Z', notes: 'Agreed to settle balance over WhatsApp' },
   record_collection_activity: { customerId: 'f14e802a-573d-46bb-8257-317bdc3cddb0', type: 'PAYMENT_REMINDER', channel: 'WHATSAPP', outcome: 'PROMISED_PAYMENT', notes: 'Customer confirmed payment scheduled for Friday' },
+  query_business_memory: { customerId: 'f14e802a-573d-46bb-8257-317bdc3cddb0' },
+  get_daily_briefing: { currency: 'NGN' },
+  list_notifications: { unreadOnly: true, pageSize: 10 },
+  mark_notification_read: { notificationId: 'notif-uuid' },
 };
 
 export default function WebMCPPage() {

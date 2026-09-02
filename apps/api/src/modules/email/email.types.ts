@@ -32,3 +32,11 @@ export interface WelcomeEmailData {
   organizationName?: string;
   dashboardUrl?: string;
 }
+
+export interface TeamInviteEmailData {
+  to: string;
+  inviterName: string;
+  organizationName: string;
+  role: string;
+  inviteUrl: string;
+}

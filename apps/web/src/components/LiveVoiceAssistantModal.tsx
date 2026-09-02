@@ -58,6 +58,7 @@ export default function LiveVoiceAssistantModal({
   const [assistantState, setAssistantState] = useState<AssistantState>('IDLE');
   const [liveTranscript, setLiveTranscript] = useState<string>('');
   const [copilotSubtitle, setCopilotSubtitle] = useState<string>('');
+  const [suggestedActions, setSuggestedActions] = useState<any[]>([]);
   const [textPrompt, setTextPrompt] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -155,6 +156,12 @@ export default function LiveVoiceAssistantModal({
           conversationIdRef.current = res.conversationId;
         }
 
+        if (Array.isArray(res.suggestedActions) && res.suggestedActions.length > 0) {
+          setSuggestedActions(res.suggestedActions);
+        } else {
+          setSuggestedActions([]);
+        }
+
         const replyText = cleanTextForSpeech(res.content);
         setCopilotSubtitle(replyText);
         setHistory((prev) => [
@@ -177,7 +184,7 @@ export default function LiveVoiceAssistantModal({
             if (continuousMode && isOpen) {
               setTimeout(() => {
                 startListening();
-              }, 600);
+              }, 400);
             }
           },
           onError: () => {
@@ -234,6 +241,8 @@ export default function LiveVoiceAssistantModal({
         ha: 'ha-NG',
         yo: 'yo-NG',
         ig: 'ig-NG',
+        sw: 'sw-KE',
+        fr: 'fr-FR',
       };
       recognition.lang = langMap[selectedLanguage] || 'en-US';
 
@@ -258,11 +267,11 @@ export default function LiveVoiceAssistantModal({
           clearTimeout(silenceTimerRef.current);
         }
 
-        // Auto-submit after 1.8 seconds of silence when user stops talking
-        if (currentCombined.length > 3) {
+        // Auto-submit after 1.2 seconds of silence when user stops talking (ChatGPT-grade response speed)
+        if (currentCombined.length > 2) {
           silenceTimerRef.current = setTimeout(() => {
             submitVoiceQuery(currentCombined);
-          }, 1800);
+          }, 1200);
         }
       };
 
@@ -486,11 +495,15 @@ export default function LiveVoiceAssistantModal({
             }}
             onClick={() => {
               if (assistantState === 'LISTENING') {
-                if (liveTranscript) submitVoiceQuery(liveTranscript);
-                else cleanup();
+                if (liveTranscript) {
+                  submitVoiceQuery(liveTranscript);
+                } else {
+                  cleanup();
+                }
               } else if (assistantState === 'SPEAKING') {
+                // Instant barge-in: cancel speech and immediately start listening to user!
                 stopSpeech();
-                setAssistantState('IDLE');
+                startListening();
               } else {
                 startListening();
               }
@@ -673,6 +686,49 @@ export default function LiveVoiceAssistantModal({
                 : copilotSubtitle || 'Live voice captioning will display here.'}
             </p>
           </div>
+
+          {/* In-Voice Interactive Action Cards */}
+          {suggestedActions && suggestedActions.length > 0 && (
+            <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
+              {suggestedActions.map((act, idx) => {
+                const isDraft = act.actionType === 'DRAFT_MESSAGE' || act.title.toLowerCase().includes('draft');
+                const targetHref = act.payload?.url || (
+                  isDraft
+                    ? (act.payload?.customerId ? `/messages/draft?customerId=${act.payload.customerId}` : '/messages/draft')
+                    : (act.actionType === 'NAVIGATE' || act.title.toLowerCase().includes('collection')
+                      ? '/collections'
+                      : (act.payload?.customerId ? `/customers/${act.payload.customerId}` : '/receivables')
+                    )
+                );
+
+                return (
+                  <a
+                    key={idx}
+                    href={targetHref}
+                    onClick={onClose}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      backgroundColor: isLight ? '#FFFFFF' : '#00253E',
+                      border: '1.5px solid #00A581',
+                      color: '#00A581',
+                      padding: '8px 16px',
+                      borderRadius: '12px',
+                      fontSize: '12.5px',
+                      fontWeight: '700',
+                      textDecoration: 'none',
+                      boxShadow: isLight ? '0 2px 8px rgba(0, 165, 129, 0.15)' : '0 4px 14px rgba(0, 0, 0, 0.4)',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span>{act.title}</span>
+                    <ArrowRight size={13} />
+                  </a>
+                );
+              })}
+            </div>
+          )}
 
           {/* Target Customer indicator if scoped */}
           {targetCustomer && (

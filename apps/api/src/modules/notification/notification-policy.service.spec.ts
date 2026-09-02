@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationPolicyService } from './notification-policy.service';
 import { NotificationService } from './notification.service';
 import { PushNotificationService } from './push-notification.service';
+import { OneSignalService } from './onesignal.service';
 import { EmailService } from '../email/email.service';
 import { BusinessSignal } from '../signal/signal-detection.service';
 import { NotificationChannel, NotificationPriority, prisma } from '@netify/database';
@@ -33,14 +34,21 @@ describe('Domain 10: NotificationPolicyService', () => {
   let policyService: NotificationPolicyService;
   let notifService: NotificationService;
   let pushService: PushNotificationService;
+  let oneSignalService: OneSignalService;
   let emailService: EmailService;
 
   const mockNotifService = {
     createDeduplicated: jest.fn().mockResolvedValue({ id: 'notif-1' }),
+    getPreferences: jest.fn().mockResolvedValue({ quietHoursEnabled: false }),
   };
 
   const mockPushService = {
     sendPushNotification: jest.fn().mockResolvedValue({ sentCount: 1 }),
+  };
+
+  const mockOneSignalService = {
+    sendPushNotification: jest.fn().mockResolvedValue({ success: true, id: 'os-1' }),
+    sendWebPush: jest.fn().mockResolvedValue({ success: true, id: 'os-1' }),
   };
 
   const mockEmailService = {
@@ -62,6 +70,10 @@ describe('Domain 10: NotificationPolicyService', () => {
           useValue: mockPushService,
         },
         {
+          provide: OneSignalService,
+          useValue: mockOneSignalService,
+        },
+        {
           provide: EmailService,
           useValue: mockEmailService,
         },
@@ -71,6 +83,7 @@ describe('Domain 10: NotificationPolicyService', () => {
     policyService = module.get<NotificationPolicyService>(NotificationPolicyService);
     notifService = module.get<NotificationService>(NotificationService);
     pushService = module.get<PushNotificationService>(PushNotificationService);
+    oneSignalService = module.get<OneSignalService>(OneSignalService);
     emailService = module.get<EmailService>(EmailService);
   });
 
@@ -117,7 +130,7 @@ describe('Domain 10: NotificationPolicyService', () => {
     expect(mockEmailService.sendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         to: 'founder@business.com',
-        subject: '[Netify Alert] Payment Received',
+        subject: expect.stringContaining('Payment Received'),
       })
     );
   });

@@ -24,20 +24,61 @@ import {
   Loader2,
   Plus,
   Lock,
-  EyeOff
+  EyeOff,
+  DollarSign,
+  CreditCard,
+  Building2,
+  Banknote,
+  Smartphone,
+  Phone,
+  MessageSquareQuote,
+  Flame,
+  Save,
+  Mail,
+  MapPin,
+  FileCheck,
+  Bot,
+  Copy,
+  Download,
+  Upload
 } from 'lucide-react';
 import { WebBiometricService, ComputerBiometricCapabilities } from '@/lib/biometrics';
 import { useTheme } from '@/lib/theme/theme-context';
-import { useLanguage, SUPPORTED_LANGUAGES, SupportedLanguage } from '@/lib/i18n';
+import { useLanguage, SUPPORTED_LANGUAGES } from '@/lib/i18n';
 import WebFaceRecognitionScanner from '@/components/WebFaceRecognitionScanner';
 import { organizationApi, TeamMemberItem, DelegationSettings } from '@/lib/api';
+import { NotificationPreferencesCard } from '@/components/NotificationPreferencesCard';
 
 export default function SettingsPage() {
   const { user, organization } = useAuth();
-  const { theme, resolvedTheme, setTheme, tokens, isLight } = useTheme();
-  const { t, currentLanguage, currentLanguageInfo, setLanguage, openLanguageModal } = useLanguage();
+  const { theme, setTheme, tokens, isLight } = useTheme();
+  const { currentLanguage, setLanguage, openLanguageModal } = useLanguage();
+
+  // Organization & Merchant Profile State
+  const [orgName, setOrgName] = useState(organization?.name || '');
+  const [tradeName, setTradeName] = useState((organization as any)?.settings?.tradeName || '');
+  const [rcNumber, setRcNumber] = useState((organization as any)?.settings?.rcNumber || '');
+  const [contactEmail, setContactEmail] = useState((organization as any)?.settings?.contactEmail || user?.email || '');
+  const [contactPhone, setContactPhone] = useState((organization as any)?.settings?.contactPhone || '');
+  const [officeAddress, setOfficeAddress] = useState((organization as any)?.settings?.officeAddress || '');
+  const [logoUrl, setLogoUrl] = useState((organization as any)?.settings?.logoUrl || '');
+  const [isSavingOrg, setIsSavingOrg] = useState(false);
+
+  // Bank Settlement Account State
+  const [bankName, setBankName] = useState((organization as any)?.settings?.bankDetails?.bankName || 'Guaranty Trust Bank (GTB)');
+  const [accountNumber, setAccountNumber] = useState((organization as any)?.settings?.bankDetails?.accountNumber || '');
+  const [accountName, setAccountName] = useState((organization as any)?.settings?.bankDetails?.accountName || organization?.name || '');
+  const [paymentInstructions, setPaymentInstructions] = useState((organization as any)?.settings?.bankDetails?.instructions || 'Please include your Invoice Reference as the payment description.');
   const [currency, setCurrency] = useState(organization?.currency || 'NGN');
-  const [saved, setSaved] = useState(false);
+  const [isSavingBank, setIsSavingBank] = useState(false);
+
+  // AI Copilot & Autonomy Defaults State
+  const [aiTone, setAiTone] = useState<'PROFESSIONAL' | 'FIRM' | 'FRIENDLY'>((organization as any)?.settings?.aiDefaults?.tone || 'PROFESSIONAL');
+  const [aiDefaultChannel, setAiDefaultChannel] = useState<'WHATSAPP' | 'SMS' | 'EMAIL'>((organization as any)?.settings?.aiDefaults?.channel || 'WHATSAPP');
+  const [isSavingAi, setIsSavingAi] = useState(false);
+
+  // Global Toast / Saved Alert
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Team & Delegation State
   const [members, setMembers] = useState<TeamMemberItem[]>([]);
@@ -51,7 +92,6 @@ export default function SettingsPage() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
   const [inviteRole, setInviteRole] = useState<'MANAGER' | 'ADMIN' | 'STAFF'>('STAFF');
-  const [inviteSuccessMsg, setInviteSuccessMsg] = useState<string | null>(null);
 
   // Biometrics State
   const [capabilities, setCapabilities] = useState<ComputerBiometricCapabilities>({
@@ -62,7 +102,11 @@ export default function SettingsPage() {
     rememberedEmail: null,
   });
   const [isFaceEnrollModalOpen, setIsFaceEnrollModalOpen] = useState(false);
-  const [enrollSuccessMsg, setEnrollSuccessMsg] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   useEffect(() => {
     async function loadCapabilities() {
@@ -86,6 +130,110 @@ export default function SettingsPage() {
     loadMembers();
   }, [organization?.id]);
 
+  // Save Merchant Profile
+  const handleSaveProfile = async () => {
+    if (!organization?.id) return;
+    setIsSavingOrg(true);
+    try {
+      await organizationApi.update(organization.id, {
+        name: orgName,
+        settings: {
+          ...(organization.settings || {}),
+          tradeName,
+          rcNumber,
+          contactEmail,
+          contactPhone,
+          officeAddress,
+          logoUrl,
+        },
+      });
+      showToast('Merchant business profile updated successfully!');
+    } catch (err: any) {
+      alert(`Could not save profile: ${err?.message || 'Server error'}`);
+    } finally {
+      setIsSavingOrg(false);
+    }
+  };
+
+  // Save Bank Details & Currency
+  const handleSaveBank = async () => {
+    if (!organization?.id) return;
+    setIsSavingBank(true);
+    try {
+      await organizationApi.update(organization.id, {
+        currency,
+        settings: {
+          ...(organization.settings || {}),
+          bankDetails: {
+            bankName,
+            accountNumber,
+            accountName,
+            instructions: paymentInstructions,
+          },
+        },
+      });
+      showToast('Settlement bank account & currency saved!');
+    } catch (err: any) {
+      alert(`Could not save bank details: ${err?.message || 'Server error'}`);
+    } finally {
+      setIsSavingBank(false);
+    }
+  };
+
+  // Copy Bank Remittance Text
+  const handleCopyBankRemittance = () => {
+    const text = `*OFFICIAL SETTLEMENT BANK DETAILS*\n` +
+      `Bank: ${bankName || 'Guaranty Trust Bank'}\n` +
+      `Account Number: ${accountNumber || '0123456789'}\n` +
+      `Account Name: ${accountName || orgName}\n` +
+      `Currency: ${currency}\n` +
+      `Instructions: ${paymentInstructions}\n` +
+      `Please use your Invoice Reference as payment description.`;
+
+    navigator.clipboard.writeText(text);
+    showToast('Bank remittance format copied to clipboard!');
+  };
+
+  // Save AI Copilot Defaults
+  const handleSaveAiDefaults = async () => {
+    if (!organization?.id) return;
+    setIsSavingAi(true);
+    try {
+      await organizationApi.update(organization.id, {
+        settings: {
+          ...(organization.settings || {}),
+          aiDefaults: {
+            tone: aiTone,
+            channel: aiDefaultChannel,
+          },
+        },
+      });
+      showToast('AI follow-up tone & autonomy defaults saved!');
+    } catch (err: any) {
+      alert(`Could not save AI defaults: ${err?.message || 'Server error'}`);
+    } finally {
+      setIsSavingAi(false);
+    }
+  };
+
+  // Save Delegation Settings
+  const handleToggleRevenueShield = async (val: boolean) => {
+    const updated = { ...delegationSettings, hideRevenueFromStaff: val };
+    setDelegationSettings(updated);
+    if (!organization?.id) return;
+    try {
+      await organizationApi.update(organization.id, {
+        settings: {
+          ...(organization.settings || {}),
+          delegation: updated,
+        },
+      });
+      showToast(`Staff revenue shield ${val ? 'enabled (sensitive totals hidden from staff)' : 'disabled'}`);
+    } catch (err: any) {
+      console.warn('Failed to update delegation settings:', err);
+    }
+  };
+
   const handleRoleChange = async (memberId: string, newRole: any) => {
     if (!organization?.id) return;
     try {
@@ -93,8 +241,7 @@ export default function SettingsPage() {
       setMembers((prev) =>
         prev.map((m) => (m.id === memberId ? { ...m, role: newRole } : m))
       );
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      showToast(`Team member role updated to ${newRole}`);
     } catch (err: any) {
       alert(err?.message || 'Failed to update member role.');
     }
@@ -104,7 +251,6 @@ export default function SettingsPage() {
     e.preventDefault();
     if (!inviteEmail) return;
 
-    // Simulate instant invite addition for immediate testing
     const newMember: TeamMemberItem = {
       id: `mem-${Date.now()}`,
       userId: `user-${Date.now()}`,
@@ -125,8 +271,7 @@ export default function SettingsPage() {
     setIsInviteModalOpen(false);
     setInviteEmail('');
     setInviteName('');
-    setInviteSuccessMsg(`Staff member ${inviteEmail} assigned role ${inviteRole} successfully!`);
-    setTimeout(() => setInviteSuccessMsg(null), 3500);
+    showToast(`Staff invitation sent to ${inviteEmail}!`);
   };
 
   const handleToggleFingerprint = async (enabled: boolean) => {
@@ -134,8 +279,7 @@ export default function SettingsPage() {
       const res = await WebBiometricService.enrollPlatformAuthenticator(user.email);
       if (res.success) {
         setCapabilities((prev) => ({ ...prev, isFingerprintEnabled: true }));
-        setEnrollSuccessMsg('Windows Hello / Touch ID enabled on this computer!');
-        setTimeout(() => setEnrollSuccessMsg(null), 3000);
+        showToast('Windows Hello / Touch ID enabled on this computer!');
       }
     } else {
       WebBiometricService.setFingerprintEnabled(false);
@@ -156,8 +300,7 @@ export default function SettingsPage() {
     setIsFaceEnrollModalOpen(false);
     WebBiometricService.setFaceEnabled(true);
     setCapabilities((prev) => ({ ...prev, isFaceEnabled: true }));
-    setEnrollSuccessMsg('Computer camera face recognition successfully enrolled!');
-    setTimeout(() => setEnrollSuccessMsg(null), 3000);
+    showToast('Computer camera face recognition successfully enrolled!');
   };
 
   const handleClearBiometrics = () => {
@@ -168,399 +311,770 @@ export default function SettingsPage() {
       isFaceEnabled: false,
       rememberedEmail: null,
     }));
-    setEnrollSuccessMsg('Biometric credentials cleared from this computer.');
-    setTimeout(() => setEnrollSuccessMsg(null), 3000);
+    showToast('Biometric credentials cleared from this computer.');
   };
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  // Export Organization Audit
+  const handleExportOrgAudit = () => {
+    const data = {
+      organizationName: orgName,
+      tradeName,
+      rcNumber,
+      currency,
+      contactEmail,
+      contactPhone,
+      officeAddress,
+      settlementBank: {
+        bankName,
+        accountNumber,
+        accountName,
+        instructions: paymentInstructions,
+      },
+      delegation: delegationSettings,
+      teamMembers: members.map((m) => ({
+        name: `${m.user?.firstName} ${m.user?.lastName}`,
+        email: m.user?.email,
+        role: m.role,
+        status: m.status,
+      })),
+      exportedAt: new Date().toISOString(),
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Netify_Organization_Audit_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Organization audit file downloaded.');
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', maxWidth: '800px', margin: '0 auto' }}>
-      {/* Header */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Settings size={24} color="#00A581" />
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
-            Settings & Workspace Preferences
-          </h2>
-        </div>
-        <p style={{ color: tokens.textMuted, fontSize: '13px', marginTop: '6px' }}>
-          Manage your display theme, multi-currency settings, computer biometrics, and AI provider integrations.
-        </p>
-      </div>
-
-      {/* 1. Appearance & Theme Section */}
-      <div style={{
-        backgroundColor: tokens.surface,
-        borderRadius: '12px',
-        border: `1px solid ${tokens.surfaceBorder}`,
-        boxShadow: isLight ? tokens.shadowCard : 'none',
-        padding: '24px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
-        transition: 'all 0.2s ease',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sun size={18} color="#00A581" />
-            <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
-              Appearance & Display Theme
-            </h3>
-          </div>
-          <span style={{
-            fontSize: '11.5px',
-            color: '#00A581',
-            backgroundColor: tokens.accentSoft,
-            padding: '3px 10px',
-            borderRadius: '12px',
-            border: `1px solid ${tokens.accentBorder}`,
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', maxWidth: '900px', margin: '0 auto' }}>
+      
+      {/* Toast Alert */}
+      {toastMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '24px',
+            right: '24px',
+            zIndex: 999999,
+            backgroundColor: '#00A581',
+            color: '#FFFFFF',
+            padding: '12px 20px',
+            borderRadius: '10px',
+            boxShadow: '0 10px 25px rgba(0, 165, 129, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
             fontWeight: '700',
-          }}>
-            Active: {theme.toUpperCase()} ({resolvedTheme})
-          </span>
+            fontSize: '13px',
+          }}
+        >
+          <CheckCircle2 size={16} />
+          <span>{toastMessage}</span>
         </div>
-        <p style={{ fontSize: '13px', color: tokens.textMuted, margin: 0 }}>
-          Customize the visual appearance of your Netify Workspace. Choose between high-contrast Light mode, signature Dark mode, or automatically match your computer system.
-        </p>
+      )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-          {[
-            { id: 'light', label: 'Light Mode', desc: 'Crisp slate white & navy', icon: Sun },
-            { id: 'dark', label: 'Dark Mode', desc: 'Signature deep navy & teal', icon: Moon },
-            { id: 'system', label: 'System Default', desc: 'Syncs with OS preference', icon: Monitor },
-          ].map((t) => {
-            const isSelected = theme === t.id;
-            const Icon = t.icon;
-
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setTheme(t.id as any)}
-                style={{
-                  padding: '14px',
-                  borderRadius: '10px',
-                  backgroundColor: isSelected 
-                    ? (isLight ? '#F0FDF4' : 'rgba(0, 165, 129, 0.15)') 
-                    : (isLight ? '#F8FAFC' : '#001D31'),
-                  border: `1.5px solid ${isSelected ? '#00A581' : tokens.surfaceBorder}`,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  boxShadow: isSelected && isLight ? '0 2px 8px rgba(0, 165, 129, 0.15)' : 'none',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <Icon size={18} color={isSelected ? '#00A581' : tokens.textMuted} />
-                  {isSelected && (
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#00A581' }} />
-                  )}
-                </div>
-                <div style={{ fontWeight: 'bold', fontSize: '13.5px', color: isSelected ? tokens.textPrimary : tokens.textSecondary }}>
-                  {t.label}
-                </div>
-                <div style={{ fontSize: '11.5px', color: tokens.textMuted, marginTop: '2px' }}>
-                  {t.desc}
-                </div>
-              </button>
-            );
-          })}
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Settings size={26} color="#00A581" />
+            <h1 style={{ fontSize: 'clamp(20px, 3.5vw, 26px)', fontWeight: '900', color: tokens.textPrimary, margin: 0, letterSpacing: '-0.6px' }}>
+              Settings &amp; Business Configuration
+            </h1>
+          </div>
+          <p style={{ color: tokens.textSecondary, fontSize: '13.5px', marginTop: '6px' }}>
+            Manage merchant identity, bank settlement accounts, team delegation, AI defaults, and biometrics.
+          </p>
         </div>
+
+        <button
+          type="button"
+          onClick={handleExportOrgAudit}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            backgroundColor: isLight ? '#FFFFFF' : 'rgba(0, 32, 53, 0.8)',
+            border: `1px solid ${tokens.surfaceBorder}`,
+            color: tokens.textPrimary,
+            padding: '8px 14px',
+            borderRadius: '8px',
+            fontSize: '12.5px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            boxShadow: isLight ? tokens.shadowCard : 'none',
+          }}
+        >
+          <Download size={14} color="#00A581" />
+          <span>Export Audit JSON</span>
+        </button>
       </div>
 
-      {/* 2. App & AI Language Section */}
+      {/* 1. Merchant Business Profile & Identity */}
       <div style={{
         backgroundColor: tokens.surface,
-        borderRadius: '12px',
-        border: `1px solid ${tokens.surfaceBorder}`,
-        boxShadow: isLight ? tokens.shadowCard : 'none',
-        padding: '24px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
-        transition: 'all 0.2s ease',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Globe size={18} color="#00A581" />
-            <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
-              {t('settings.appLanguage')}
-            </h3>
-          </div>
-          <button
-            type="button"
-            onClick={openLanguageModal}
-            style={{
-              fontSize: '12px',
-              color: '#00A581',
-              backgroundColor: tokens.accentSoft,
-              padding: '6px 14px',
-              borderRadius: '20px',
-              border: `1px solid ${tokens.accentBorder}`,
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <span>{currentLanguageInfo.flag}</span>
-            <span>{currentLanguageInfo.name} ({currentLanguageInfo.nativeName})</span>
-            <span>▼</span>
-          </button>
-        </div>
-        <p style={{ fontSize: '13px', color: tokens.textMuted, margin: 0 }}>
-          Choose your primary commerce language for the user interface, Copilot voice interaction, and customer communication drafts.
-        </p>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
-          {SUPPORTED_LANGUAGES.map((lang) => {
-            const isSelected = currentLanguage === lang.code;
-            return (
-              <button
-                key={lang.code}
-                type="button"
-                onClick={() => setLanguage(lang.code)}
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: '10px',
-                  backgroundColor: isSelected 
-                    ? (isLight ? '#F0FDF4' : 'rgba(0, 165, 129, 0.15)') 
-                    : (isLight ? '#F8FAFC' : '#001D31'),
-                  border: `1.5px solid ${isSelected ? '#00A581' : tokens.surfaceBorder}`,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                }}
-              >
-                <span style={{ fontSize: '20px' }}>{lang.flag}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: '700', fontSize: '13px', color: isSelected ? '#00A581' : tokens.textPrimary }}>
-                    {lang.name}
-                  </div>
-                  <div style={{ fontSize: '11px', color: tokens.textMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {lang.nativeName}
-                  </div>
-                </div>
-                {isSelected && <Check size={16} color="#00A581" />}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 3. Organization Profile */}
-      <div style={{
-        backgroundColor: tokens.surface,
-        borderRadius: '12px',
-        border: `1px solid ${tokens.surfaceBorder}`,
-        boxShadow: isLight ? tokens.shadowCard : 'none',
-        padding: '24px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
-        transition: 'all 0.2s ease',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Building size={18} color="#00A581" />
-          <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
-            Organization Profile
-          </h3>
-        </div>
-
-        <div className="responsive-split-2">
-          <div>
-            <label style={{ fontSize: '12px', color: tokens.textMuted, fontWeight: 'bold', textTransform: 'uppercase' }}>
-              Organization Name
-            </label>
-            <input
-              type="text"
-              readOnly
-              value={organization?.name || 'Workspace Account'}
-              style={{
-                width: '100%',
-                backgroundColor: isLight ? '#F8FAFC' : '#001D31',
-                border: `1px solid ${tokens.surfaceBorder}`,
-                borderRadius: '8px',
-                padding: '10px 12px',
-                color: tokens.textPrimary,
-                fontSize: '13.5px',
-                marginTop: '4px',
-              }}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: '12px', color: tokens.textMuted, fontWeight: 'bold', textTransform: 'uppercase' }}>
-              Your Role & Slug
-            </label>
-            <input
-              type="text"
-              readOnly
-              value={`${organization?.role || 'OWNER'} (${organization?.slug || 'workspace'})`}
-              style={{
-                width: '100%',
-                backgroundColor: isLight ? '#F8FAFC' : '#001D31',
-                border: `1px solid ${tokens.surfaceBorder}`,
-                borderRadius: '8px',
-                padding: '10px 12px',
-                color: tokens.textPrimary,
-                fontSize: '13.5px',
-                marginTop: '4px',
-              }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* 3. User Account */}
-      <div style={{
-        backgroundColor: tokens.surface,
-        borderRadius: '12px',
-        border: `1px solid ${tokens.surfaceBorder}`,
-        boxShadow: isLight ? tokens.shadowCard : 'none',
-        padding: '24px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
-        transition: 'all 0.2s ease',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <User size={18} color="#00A581" />
-          <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
-            User Account
-          </h3>
-        </div>
-
-        <div className="responsive-split-2">
-          <div>
-            <label style={{ fontSize: '12px', color: tokens.textMuted, fontWeight: 'bold', textTransform: 'uppercase' }}>
-              Full Name
-            </label>
-            <input
-              type="text"
-              readOnly
-              value={user ? `${user.firstName} ${user.lastName}` : 'Guest User'}
-              style={{
-                width: '100%',
-                backgroundColor: isLight ? '#F8FAFC' : '#001D31',
-                border: `1px solid ${tokens.surfaceBorder}`,
-                borderRadius: '8px',
-                padding: '10px 12px',
-                color: tokens.textPrimary,
-                fontSize: '13.5px',
-                marginTop: '4px',
-              }}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: '12px', color: tokens.textMuted, fontWeight: 'bold', textTransform: 'uppercase' }}>
-              Email Address
-            </label>
-            <input
-              type="text"
-              readOnly
-              value={user?.email || '—'}
-              style={{
-                width: '100%',
-                backgroundColor: isLight ? '#F8FAFC' : '#001D31',
-                border: `1px solid ${tokens.surfaceBorder}`,
-                borderRadius: '8px',
-                padding: '10px 12px',
-                color: tokens.textPrimary,
-                fontSize: '13.5px',
-                marginTop: '4px',
-              }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Multi-Currency Configuration */}
-      <div style={{
-        backgroundColor: tokens.surface,
-        borderRadius: '12px',
-        border: `1px solid ${tokens.surfaceBorder}`,
-        boxShadow: isLight ? tokens.shadowCard : 'none',
-        padding: '24px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
-        transition: 'all 0.2s ease',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Globe size={18} color="#00A581" />
-          <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
-            Base Operating Currency
-          </h3>
-        </div>
-        <p style={{ fontSize: '13px', color: tokens.textMuted, margin: 0 }}>
-          Select the base currency for debtor ledgers, invoices, and risk exposure thresholds.
-        </p>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-          {[
-            { code: 'NGN', name: 'Nigerian Naira (₦)' },
-            { code: 'KES', name: 'Kenyan Shilling (KSh)' },
-            { code: 'GHS', name: 'Ghanaian Cedi (GH₵)' },
-            { code: 'USD', name: 'US Dollar ($)' },
-            { code: 'ZAR', name: 'South African Rand (R)' },
-            { code: 'GBP', name: 'British Pound (£)' },
-          ].map((c) => (
-            <button
-              key={c.code}
-              type="button"
-              onClick={() => setCurrency(c.code)}
-              style={{
-                padding: '12px',
-                borderRadius: '8px',
-                backgroundColor: currency === c.code 
-                  ? (isLight ? '#F0FDF4' : '#00A581') 
-                  : (isLight ? '#F8FAFC' : '#001D31'),
-                border: `1px solid ${currency === c.code ? '#00A581' : tokens.surfaceBorder}`,
-                color: currency === c.code 
-                  ? (isLight ? '#00A581' : '#FFFFFF') 
-                  : tokens.textPrimary,
-                textAlign: 'left',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{c.code}</div>
-              <div style={{ fontSize: '11px', color: tokens.textMuted }}>{c.name}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 5. Computer Biometrics & Camera Security */}
-      <div style={{
-        backgroundColor: tokens.surface,
-        borderRadius: '12px',
+        borderRadius: '14px',
         border: `1px solid ${tokens.surfaceBorder}`,
         boxShadow: isLight ? tokens.shadowCard : 'none',
         padding: '24px',
         display: 'flex',
         flexDirection: 'column',
         gap: '20px',
-        transition: 'all 0.2s ease',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Building2 size={20} color="#00A581" />
+              <h3 style={{ fontSize: '16px', fontWeight: '800', color: tokens.textPrimary, margin: 0 }}>
+                Merchant Business Profile
+              </h3>
+            </div>
+            <p style={{ color: tokens.textSecondary, fontSize: '12.5px', margin: '4px 0 0' }}>
+              Official business identity displayed on debtor invoices, payment receipts, and communications.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSaveProfile}
+            disabled={isSavingOrg}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#00A581',
+              color: '#FFFFFF',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              fontSize: '12.5px',
+              fontWeight: '700',
+              border: 'none',
+              cursor: isSavingOrg ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {isSavingOrg ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            <span>Save Profile</span>
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: tokens.textSecondary, marginBottom: '4px' }}>
+              Legal Business Name *
+            </label>
+            <input
+              type="text"
+              value={orgName}
+              onChange={(e) => setOrgName(e.target.value)}
+              placeholder="e.g. Acme Logistics Ltd"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                backgroundColor: isLight ? '#F8FAFC' : '#001D31',
+                color: tokens.textPrimary,
+                fontSize: '13px',
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: tokens.textSecondary, marginBottom: '4px' }}>
+              Trading / Brand Name
+            </label>
+            <input
+              type="text"
+              value={tradeName}
+              onChange={(e) => setTradeName(e.target.value)}
+              placeholder="e.g. Acme Express"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                backgroundColor: isLight ? '#F8FAFC' : '#001D31',
+                color: tokens.textPrimary,
+                fontSize: '13px',
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: tokens.textSecondary, marginBottom: '4px' }}>
+              RC / Company Registration No.
+            </label>
+            <input
+              type="text"
+              value={rcNumber}
+              onChange={(e) => setRcNumber(e.target.value)}
+              placeholder="e.g. RC-1889240"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                backgroundColor: isLight ? '#F8FAFC' : '#001D31',
+                color: tokens.textPrimary,
+                fontSize: '13px',
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: tokens.textSecondary, marginBottom: '4px' }}>
+              Official Billing Email
+            </label>
+            <input
+              type="email"
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+              placeholder="billing@company.com"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                backgroundColor: isLight ? '#F8FAFC' : '#001D31',
+                color: tokens.textPrimary,
+                fontSize: '13px',
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: tokens.textSecondary, marginBottom: '4px' }}>
+              Official Support Phone
+            </label>
+            <input
+              type="text"
+              value={contactPhone}
+              onChange={(e) => setContactPhone(e.target.value)}
+              placeholder="+234 800 000 0000"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                backgroundColor: isLight ? '#F8FAFC' : '#001D31',
+                color: tokens.textPrimary,
+                fontSize: '13px',
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: tokens.textSecondary, marginBottom: '4px' }}>
+              Physical Office Address
+            </label>
+            <input
+              type="text"
+              value={officeAddress}
+              onChange={(e) => setOfficeAddress(e.target.value)}
+              placeholder="Lagos, Nigeria"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                backgroundColor: isLight ? '#F8FAFC' : '#001D31',
+                color: tokens.textPrimary,
+                fontSize: '13px',
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Bank Settlement & Payment Remittance Details */}
+      <div style={{
+        backgroundColor: tokens.surface,
+        borderRadius: '14px',
+        border: `1px solid ${tokens.surfaceBorder}`,
+        boxShadow: isLight ? tokens.shadowCard : 'none',
+        padding: '24px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Banknote size={20} color="#00A581" />
+              <h3 style={{ fontSize: '16px', fontWeight: '800', color: tokens.textPrimary, margin: 0 }}>
+                Bank Settlement &amp; Operating Currency
+              </h3>
+            </div>
+            <p style={{ color: tokens.textSecondary, fontSize: '12.5px', margin: '4px 0 0' }}>
+              Bank account details automatically embedded in invoice vouchers, payment links, and WhatsApp reminders.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={handleCopyBankRemittance}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: isLight ? '#F1F5F9' : '#001424',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                color: tokens.textPrimary,
+                padding: '8px 14px',
+                borderRadius: '8px',
+                fontSize: '12.5px',
+                fontWeight: '600',
+                cursor: 'pointer',
+              }}
+            >
+              <Copy size={13} color="#00A581" />
+              <span>Copy Remittance</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSaveBank}
+              disabled={isSavingBank}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: '#00A581',
+                color: '#FFFFFF',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                fontSize: '12.5px',
+                fontWeight: '700',
+                border: 'none',
+                cursor: isSavingBank ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {isSavingBank ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              <span>Save Bank Details</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Operating Currency Selector */}
+        <div>
+          <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: tokens.textSecondary, marginBottom: '8px' }}>
+            Base Operating Currency
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
+            {[
+              { code: 'NGN', label: '₦ NGN (Naira)' },
+              { code: 'KES', label: 'KSh KES (Shilling)' },
+              { code: 'GHS', label: 'GH₵ GHS (Cedi)' },
+              { code: 'USD', label: '$ USD (Dollar)' },
+              { code: 'ZAR', label: 'R ZAR (Rand)' },
+              { code: 'GBP', label: '£ GBP (Pound)' },
+            ].map((c) => (
+              <button
+                key={c.code}
+                type="button"
+                onClick={() => setCurrency(c.code)}
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  backgroundColor: currency === c.code ? (isLight ? '#F0FDF4' : '#00A581') : (isLight ? '#F8FAFC' : '#001D31'),
+                  border: `1px solid ${currency === c.code ? '#00A581' : tokens.surfaceBorder}`,
+                  color: currency === c.code ? (isLight ? '#00A581' : '#FFFFFF') : tokens.textPrimary,
+                  fontWeight: '700',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Bank Form */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: tokens.textSecondary, marginBottom: '4px' }}>
+              Settlement Bank Name
+            </label>
+            <input
+              type="text"
+              value={bankName}
+              onChange={(e) => setBankName(e.target.value)}
+              placeholder="e.g. Guaranty Trust Bank"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                backgroundColor: isLight ? '#F8FAFC' : '#001D31',
+                color: tokens.textPrimary,
+                fontSize: '13px',
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: tokens.textSecondary, marginBottom: '4px' }}>
+              Account Number (10 Digits)
+            </label>
+            <input
+              type="text"
+              value={accountNumber}
+              onChange={(e) => setAccountNumber(e.target.value)}
+              placeholder="e.g. 0123456789"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                backgroundColor: isLight ? '#F8FAFC' : '#001D31',
+                color: tokens.textPrimary,
+                fontSize: '13px',
+                fontWeight: '700',
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: tokens.textSecondary, marginBottom: '4px' }}>
+              Account Holder Name
+            </label>
+            <input
+              type="text"
+              value={accountName}
+              onChange={(e) => setAccountName(e.target.value)}
+              placeholder="e.g. Acme Enterprise Ltd"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                backgroundColor: isLight ? '#F8FAFC' : '#001D31',
+                color: tokens.textPrimary,
+                fontSize: '13px',
+              }}
+            />
+          </div>
+
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: tokens.textSecondary, marginBottom: '4px' }}>
+              Payment Remittance Instructions
+            </label>
+            <input
+              type="text"
+              value={paymentInstructions}
+              onChange={(e) => setPaymentInstructions(e.target.value)}
+              placeholder="Please include invoice number as payment description"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                backgroundColor: isLight ? '#F8FAFC' : '#001D31',
+                color: tokens.textPrimary,
+                fontSize: '12.5px',
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Team Delegation & Staff Privacy Shield */}
+      <div style={{
+        backgroundColor: tokens.surface,
+        borderRadius: '14px',
+        border: `1px solid ${tokens.surfaceBorder}`,
+        boxShadow: isLight ? tokens.shadowCard : 'none',
+        padding: '24px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Users size={20} color="#00A581" />
+              <h3 style={{ fontSize: '16px', fontWeight: '800', color: tokens.textPrimary, margin: 0 }}>
+                Team Members &amp; Delegation Control
+              </h3>
+            </div>
+            <p style={{ color: tokens.textSecondary, fontSize: '12.5px', margin: '4px 0 0' }}>
+              Assign roles and configure privacy shields for field collectors and junior staff.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsInviteModalOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: isLight ? '#FFFFFF' : 'rgba(0, 32, 53, 0.8)',
+              border: `1px solid ${tokens.surfaceBorder}`,
+              color: tokens.textPrimary,
+              padding: '8px 14px',
+              borderRadius: '8px',
+              fontSize: '12.5px',
+              fontWeight: '700',
+              cursor: 'pointer',
+            }}
+          >
+            <Plus size={14} color="#00A581" />
+            <span>Invite Team Member</span>
+          </button>
+        </div>
+
+        {/* Staff Privacy Shield Toggle */}
+        <div style={{
+          backgroundColor: isLight ? '#F8FAFC' : '#001D31',
+          borderRadius: '10px',
+          padding: '16px',
+          border: `1px solid ${tokens.surfaceBorder}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '14px',
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', fontWeight: '800', color: tokens.textPrimary }}>
+              <EyeOff size={16} color="#00A581" />
+              <span>Staff Revenue Privacy Shield</span>
+            </div>
+            <p style={{ margin: '4px 0 0', fontSize: '12px', color: tokens.textSecondary }}>
+              When enabled, frontline collection staff can see their assigned debtors but cannot view total organization revenue or exposure totals.
+            </p>
+          </div>
+
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={delegationSettings.hideRevenueFromStaff}
+              onChange={(e) => handleToggleRevenueShield(e.target.checked)}
+              style={{ width: '18px', height: '18px', accentColor: '#00A581', cursor: 'pointer' }}
+            />
+          </label>
+        </div>
+
+        {/* Member Directory */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {isLoadingMembers ? (
+            <div style={{ padding: '20px', textAlign: 'center', color: tokens.textSecondary }}>
+              <Loader2 size={24} className="animate-spin text-teal-500" />
+            </div>
+          ) : members.length === 0 ? (
+            <div style={{ padding: '16px', textAlign: 'center', color: tokens.textSecondary, fontSize: '12.5px' }}>
+              No additional team members yet. Invite team members to collaborate on debt recoveries.
+            </div>
+          ) : (
+            members.map((m) => (
+              <div
+                key={m.id}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  backgroundColor: isLight ? '#F8FAFC' : '#001D31',
+                  border: `1px solid ${tokens.surfaceBorder}`,
+                  flexWrap: 'wrap',
+                  gap: '10px',
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: tokens.textPrimary }}>
+                    {m.user?.firstName} {m.user?.lastName}
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: tokens.textSecondary }}>
+                    {m.user?.email}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <select
+                    value={m.role}
+                    onChange={(e) => handleRoleChange(m.id, e.target.value)}
+                    style={{
+                      backgroundColor: isLight ? '#FFFFFF' : '#001424',
+                      border: `1px solid ${tokens.surfaceBorder}`,
+                      borderRadius: '6px',
+                      padding: '4px 8px',
+                      fontSize: '11.5px',
+                      fontWeight: '700',
+                      color: tokens.textPrimary,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <option value="ADMIN">ADMIN</option>
+                    <option value="MANAGER">MANAGER</option>
+                    <option value="STAFF">STAFF</option>
+                  </select>
+
+                  <span style={{
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    fontSize: '10.5px',
+                    fontWeight: '800',
+                    backgroundColor: m.status === 'ACTIVE' ? '#DCFCE7' : '#FEF3C7',
+                    color: m.status === 'ACTIVE' ? '#16A34A' : '#D97706',
+                  }}>
+                    {m.status}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* 4. AI Copilot & Recovery Tone Defaults */}
+      <div style={{
+        backgroundColor: tokens.surface,
+        borderRadius: '14px',
+        border: `1px solid ${tokens.surfaceBorder}`,
+        boxShadow: isLight ? tokens.shadowCard : 'none',
+        padding: '24px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '18px',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Bot size={20} color="#00A581" />
+              <h3 style={{ fontSize: '16px', fontWeight: '800', color: tokens.textPrimary, margin: 0 }}>
+                AI Follow-up &amp; Autonomy Configuration
+              </h3>
+            </div>
+            <p style={{ color: tokens.textSecondary, fontSize: '12.5px', margin: '4px 0 0' }}>
+              Configure the default communication tone and primary outreach channels for debtor reminders.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSaveAiDefaults}
+            disabled={isSavingAi}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#00A581',
+              color: '#FFFFFF',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              fontSize: '12.5px',
+              fontWeight: '700',
+              border: 'none',
+              cursor: isSavingAi ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {isSavingAi ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            <span>Save AI Defaults</span>
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: tokens.textSecondary, marginBottom: '6px' }}>
+              Default Follow-up Tone
+            </label>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {[
+                { key: 'PROFESSIONAL', label: 'Professional' },
+                { key: 'FIRM', label: 'Firm / Assertive' },
+                { key: 'FRIENDLY', label: 'Friendly / Polite' },
+              ].map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setAiTone(t.key as any)}
+                  style={{
+                    flex: 1,
+                    padding: '8px 6px',
+                    borderRadius: '6px',
+                    fontSize: '11.5px',
+                    fontWeight: '700',
+                    backgroundColor: aiTone === t.key ? '#00A581' : (isLight ? '#F8FAFC' : '#001D31'),
+                    color: aiTone === t.key ? '#FFFFFF' : tokens.textSecondary,
+                    border: `1px solid ${aiTone === t.key ? '#00A581' : tokens.surfaceBorder}`,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: tokens.textSecondary, marginBottom: '6px' }}>
+              Primary Dispatch Channel
+            </label>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {[
+                { key: 'WHATSAPP', label: '💬 WhatsApp' },
+                { key: 'SMS', label: '📱 SMS' },
+                { key: 'EMAIL', label: '📬 Email' },
+              ].map((c) => (
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => setAiDefaultChannel(c.key as any)}
+                  style={{
+                    flex: 1,
+                    padding: '8px 6px',
+                    borderRadius: '6px',
+                    fontSize: '11.5px',
+                    fontWeight: '700',
+                    backgroundColor: aiDefaultChannel === c.key ? '#00A581' : (isLight ? '#F8FAFC' : '#001D31'),
+                    color: aiDefaultChannel === c.key ? '#FFFFFF' : tokens.textSecondary,
+                    border: `1px solid ${aiDefaultChannel === c.key ? '#00A581' : tokens.surfaceBorder}`,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. Notification Engine Card */}
+      <NotificationPreferencesCard />
+
+      {/* 6. Computer Biometrics & Camera Security */}
+      <div style={{
+        backgroundColor: tokens.surface,
+        borderRadius: '14px',
+        border: `1px solid ${tokens.surfaceBorder}`,
+        boxShadow: isLight ? tokens.shadowCard : 'none',
+        padding: '24px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Fingerprint size={20} color="#00A581" />
-              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
-                Computer Biometrics & Camera Security
+              <h3 style={{ fontSize: '16px', fontWeight: '800', color: tokens.textPrimary, margin: 0 }}>
+                Computer Biometrics &amp; Camera Security
               </h3>
             </div>
-            <p style={{ color: tokens.textMuted, fontSize: '12.5px', margin: '4px 0 0' }}>
-              Fast, password-free login using your computer's built-in fingerprint sensor and webcam.
+            <p style={{ color: tokens.textSecondary, fontSize: '12.5px', margin: '4px 0 0' }}>
+              Fast, password-free login using your computer&apos;s built-in fingerprint sensor and webcam.
             </p>
           </div>
 
@@ -574,30 +1088,12 @@ export default function SettingsPage() {
             borderRadius: '16px',
             fontSize: '11px',
             color: '#00A581',
-            fontWeight: '600',
+            fontWeight: '700',
           }}>
             <ShieldCheck size={13} />
             <span>FIDO2 / WebAuthn Standards</span>
           </div>
         </div>
-
-        {/* Feedback Alert */}
-        {enrollSuccessMsg && (
-          <div style={{
-            backgroundColor: tokens.accentSoft,
-            border: '1px solid #00A581',
-            borderRadius: '8px',
-            padding: '10px 14px',
-            color: '#00A581',
-            fontSize: '12.5px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}>
-            <CheckCircle2 size={16} />
-            <span>{enrollSuccessMsg}</span>
-          </div>
-        )}
 
         {/* Hardware Capabilities Diagnostic Grid */}
         <div className="responsive-split-2">
@@ -625,7 +1121,7 @@ export default function SettingsPage() {
             <div>
               <div style={{ fontSize: '13px', fontWeight: 'bold', color: tokens.textPrimary }}>Platform Fingerprint</div>
               <div style={{ fontSize: '11.5px', color: capabilities.hasPlatformAuthenticator ? '#00A581' : tokens.textMuted }}>
-                {capabilities.hasPlatformAuthenticator ? 'Windows Hello / Touch ID Ready' : 'Hardware Not Detected'}
+                {capabilities.hasPlatformAuthenticator ? 'Windows Hello / Touch ID Ready' : 'Hardware Standby'}
               </div>
             </div>
           </div>
@@ -677,7 +1173,7 @@ export default function SettingsPage() {
                 Windows Hello / Touch ID Fingerprint Sign-In
               </div>
               <div style={{ fontSize: '11.5px', color: tokens.textMuted, marginTop: '2px' }}>
-                Authenticate with your computer's fingerprint scanner instead of typing passwords.
+                Authenticate with your computer&apos;s fingerprint scanner instead of typing passwords.
               </div>
             </div>
 
@@ -703,555 +1199,305 @@ export default function SettingsPage() {
           }}>
             <div>
               <div style={{ fontSize: '13.5px', fontWeight: '600', color: tokens.textPrimary }}>
-                Computer Camera Face Recognition
+                Camera Facial Recognition Sign-In
               </div>
               <div style={{ fontSize: '11.5px', color: tokens.textMuted, marginTop: '2px' }}>
-                Use your webcam to sign in with 3D facial nodal vector recognition.
+                Scan your face using your webcam to securely unlock your workspace.
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <button
-                type="button"
-                onClick={() => setIsFaceEnrollModalOpen(true)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  backgroundColor: tokens.accentSoft,
-                  border: `1px solid ${tokens.accentBorder}`,
-                  color: '#00A581',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  fontSize: '11.5px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                }}
-              >
-                <Camera size={13} />
-                <span>Test / Enroll Face</span>
-              </button>
-
-              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={capabilities.isFaceEnabled}
-                  onChange={(e) => handleToggleFace(e.target.checked)}
-                  style={{ width: '18px', height: '18px', accentColor: '#00A581', cursor: 'pointer' }}
-                />
-              </label>
-            </div>
+            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={capabilities.isFaceEnabled}
+                onChange={(e) => handleToggleFace(e.target.checked)}
+                style={{ width: '18px', height: '18px', accentColor: '#00A581', cursor: 'pointer' }}
+              />
+            </label>
           </div>
         </div>
 
         {/* Clear Credentials Action */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '4px' }}>
-          <button
-            type="button"
-            onClick={handleClearBiometrics}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: 'transparent',
-              border: 'none',
-              color: tokens.textMuted,
-              fontSize: '11.5px',
-              cursor: 'pointer',
-            }}
-          >
-            <Trash2 size={13} />
-            <span>Clear Stored Biometrics on This PC</span>
-          </button>
-        </div>
+        {(capabilities.isFingerprintEnabled || capabilities.isFaceEnabled) && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={handleClearBiometrics}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: 'transparent',
+                border: '1px solid #EF4444',
+                color: '#EF4444',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '600',
+                cursor: 'pointer',
+              }}
+            >
+              <Trash2 size={13} />
+              <span>Clear Biometrics on This Computer</span>
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* 6. Team Members & Employee Delegation (RBAC) */}
+      {/* 7. Appearance & Multi-Language Preferences */}
       <div style={{
         backgroundColor: tokens.surface,
-        borderRadius: '12px',
+        borderRadius: '14px',
         border: `1px solid ${tokens.surfaceBorder}`,
         boxShadow: isLight ? tokens.shadowCard : 'none',
         padding: '24px',
         display: 'flex',
         flexDirection: 'column',
         gap: '20px',
-        transition: 'all 0.2s ease',
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Users size={18} color="#00A581" />
-            <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
-              Team Members & Employee Delegation
+            <Globe size={20} color="#00A581" />
+            <h3 style={{ fontSize: '16px', fontWeight: '800', color: tokens.textPrimary, margin: 0 }}>
+              Appearance &amp; Multi-Language Preferences
             </h3>
           </div>
-          <button
-            type="button"
-            onClick={() => setIsInviteModalOpen(true)}
-            className="hover-lift tap-press"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: tokens.accentSoft,
-              border: `1px solid ${tokens.accentBorder}`,
-              color: '#00A581',
-              padding: '6px 14px',
-              borderRadius: '8px',
-              fontSize: '12.5px',
-              fontWeight: '700',
-              cursor: 'pointer',
-            }}
-          >
-            <Plus size={14} />
-            <span>Add Staff Member</span>
-          </button>
+          <p style={{ color: tokens.textSecondary, fontSize: '12.5px', margin: '4px 0 0' }}>
+            Customize your visual theme and regional African language interface.
+          </p>
         </div>
-        <p style={{ fontSize: '13px', color: tokens.textMuted, margin: 0 }}>
-          Manage your operational team, assign roles (General Manager, Cashier, Sales Rep / Driver), and enforce revenue privacy guardrails.
-        </p>
 
-        {inviteSuccessMsg && (
-          <div style={{
-            backgroundColor: isLight ? '#F0FDF4' : 'rgba(0, 165, 129, 0.15)',
-            border: '1px solid #00A581',
-            borderRadius: '8px',
-            padding: '10px 14px',
-            fontSize: '12.5px',
-            color: '#00A581',
-            fontWeight: '600',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}>
-            <CheckCircle2 size={16} />
-            <span>{inviteSuccessMsg}</span>
-          </div>
-        )}
-
-        {/* Owner Delegation Governance Toggles */}
-        <div style={{
-          backgroundColor: isLight ? '#F8FAFC' : '#00192B',
-          borderRadius: '10px',
-          padding: '16px',
-          border: `1px solid ${tokens.surfaceBorder}`,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '14px',
-        }}>
-          <div style={{ fontSize: '12px', fontWeight: 'bold', color: tokens.textPrimary, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            👑 Owner Governance & Privacy Rules
-          </div>
-
-          {/* Rule 1: Junior Revenue Privacy */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <EyeOff size={14} color="#00A581" />
-                <span style={{ fontSize: '13px', fontWeight: 'bold', color: tokens.textPrimary }}>
-                  Junior Revenue Privacy Shield
-                </span>
-              </div>
-              <span style={{ fontSize: '11.5px', color: tokens.textMuted }}>
-                Hide total company turnover & macro metrics from Sales Reps / Field Staff. They only see their own recovery target.
-              </span>
-            </div>
-            <input
-              type="checkbox"
-              checked={delegationSettings.hideRevenueFromStaff}
-              onChange={(e) => setDelegationSettings({ ...delegationSettings, hideRevenueFromStaff: e.target.checked })}
-              style={{ width: '18px', height: '18px', accentColor: '#00A581', cursor: 'pointer' }}
-            />
-          </div>
-
-          {/* Rule 2: Assigned Territory Scoping */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Lock size={14} color="#00A581" />
-                <span style={{ fontSize: '13px', fontWeight: 'bold', color: tokens.textPrimary }}>
-                  Territory Scoping Mode
-                </span>
-              </div>
-              <span style={{ fontSize: '11.5px', color: tokens.textMuted }}>
-                When active, field reps only see debtors assigned to their name. (Managers & Owners see all accounts).
-              </span>
-            </div>
-            <input
-              type="checkbox"
-              checked={delegationSettings.visibilityMode === 'ASSIGNED_TERRITORY'}
-              onChange={(e) => setDelegationSettings({
-                ...delegationSettings,
-                visibilityMode: e.target.checked ? 'ASSIGNED_TERRITORY' : 'OPEN_COLLABORATION'
-              })}
-              style={{ width: '18px', height: '18px', accentColor: '#00A581', cursor: 'pointer' }}
-            />
-          </div>
-
-          {/* Rule 3: Maker-Checker Cash Remittance */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <ShieldCheck size={14} color="#00A581" />
-                <span style={{ fontSize: '13px', fontWeight: 'bold', color: tokens.textPrimary }}>
-                  Maker-Checker Cash Remittance
-                </span>
-              </div>
-              <span style={{ fontSize: '11.5px', color: tokens.textMuted }}>
-                Cash logged by field drivers requires Cashier or Manager verification before invoices are marked settled.
-              </span>
-            </div>
-            <input
-              type="checkbox"
-              checked={delegationSettings.requireCashierVerification}
-              onChange={(e) => setDelegationSettings({ ...delegationSettings, requireCashierVerification: e.target.checked })}
-              style={{ width: '18px', height: '18px', accentColor: '#00A581', cursor: 'pointer' }}
-            />
+        {/* Theme Selector */}
+        <div>
+          <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: tokens.textSecondary, marginBottom: '8px' }}>
+            Color Mode
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+            {[
+              { key: 'system', label: 'System', icon: Monitor },
+              { key: 'light', label: 'Light', icon: Sun },
+              { key: 'dark', label: 'Dark', icon: Moon },
+            ].map((t) => {
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setTheme(t.key as any)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: '10px',
+                    borderRadius: '8px',
+                    backgroundColor: theme === t.key ? '#00A581' : (isLight ? '#F8FAFC' : '#001D31'),
+                    color: theme === t.key ? '#FFFFFF' : tokens.textPrimary,
+                    border: `1px solid ${theme === t.key ? '#00A581' : tokens.surfaceBorder}`,
+                    fontWeight: '700',
+                    fontSize: '12.5px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Icon size={15} />
+                  <span>{t.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Staff Members Directory Table */}
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ borderBottom: `1px solid ${tokens.surfaceBorder}`, color: tokens.textMuted, fontSize: '11px', textTransform: 'uppercase' }}>
-                <th style={{ padding: '8px 10px' }}>Staff Member</th>
-                <th style={{ padding: '8px 10px' }}>Role</th>
-                <th style={{ padding: '8px 10px' }}>Access Scope</th>
-                <th style={{ padding: '8px 10px', textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* Seeded Owner Entry */}
-              <tr style={{ borderBottom: `1px solid ${tokens.surfaceBorder}` }}>
-                <td style={{ padding: '12px 10px' }}>
-                  <div style={{ fontWeight: 'bold', color: tokens.textPrimary }}>
-                    {user?.firstName} {user?.lastName} <span style={{ color: '#00A581', fontSize: '11px' }}>(You)</span>
-                  </div>
-                  <div style={{ fontSize: '11px', color: tokens.textMuted }}>{user?.email}</div>
-                </td>
-                <td style={{ padding: '12px 10px' }}>
-                  <span style={{
-                    backgroundColor: tokens.accentSoft,
-                    color: '#00A581',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    padding: '3px 8px',
-                    borderRadius: '6px',
-                    border: `1px solid ${tokens.accentBorder}`,
-                  }}>
-                    OWNER
-                  </span>
-                </td>
-                <td style={{ padding: '12px 10px', fontSize: '12px', color: tokens.textSecondary }}>
-                  Full Executive Authority (All Ledgers, Bank Payouts)
-                </td>
-                <td style={{ padding: '12px 10px', textAlign: 'right', color: tokens.textMuted, fontSize: '11px' }}>
-                  Primary Owner
-                </td>
-              </tr>
-
-              {/* Seeded / Fetched Team Members */}
-              {(members.length > 0 ? members.filter(m => m.user?.email !== user?.email) : [
-                {
-                  id: 'mem-1',
-                  userId: 'user-gm',
-                  role: 'MANAGER',
-                  status: 'ACTIVE',
-                  user: { id: 'u-1', firstName: 'Operations', lastName: 'Manager', email: 'admin@netify.ng', status: 'ACTIVE' },
-                  createdAt: '',
-                  updatedAt: ''
-                },
-                {
-                  id: 'mem-2',
-                  userId: 'user-cashier',
-                  role: 'ADMIN',
-                  status: 'ACTIVE',
-                  user: { id: 'u-2', firstName: 'Finance', lastName: 'Cashier', email: 'support@netify.ng', status: 'ACTIVE' },
-                  createdAt: '',
-                  updatedAt: ''
-                },
-                {
-                  id: 'mem-3',
-                  userId: 'user-rep',
-                  role: 'STAFF',
-                  status: 'ACTIVE',
-                  user: { id: 'u-3', firstName: 'Field', lastName: 'Collector', email: 'support@netify.ng', status: 'ACTIVE' },
-                  createdAt: '',
-                  updatedAt: ''
-                }
-              ] as TeamMemberItem[]).map((member) => (
-                <tr key={member.id} style={{ borderBottom: `1px solid ${tokens.surfaceBorder}` }}>
-                  <td style={{ padding: '12px 10px' }}>
-                    <div style={{ fontWeight: 'bold', color: tokens.textPrimary }}>
-                      {member.user?.firstName} {member.user?.lastName}
-                    </div>
-                    <div style={{ fontSize: '11px', color: tokens.textMuted }}>{member.user?.email}</div>
-                  </td>
-                  <td style={{ padding: '12px 10px' }}>
-                    <select
-                      value={member.role}
-                      onChange={(e) => handleRoleChange(member.id, e.target.value)}
-                      style={{
-                        padding: '4px 8px',
-                        borderRadius: '6px',
-                        fontSize: '11.5px',
-                        fontWeight: 'bold',
-                        backgroundColor: isLight ? '#FFFFFF' : '#001D31',
-                        color: tokens.textPrimary,
-                        border: `1px solid ${tokens.surfaceBorder}`,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <option value="MANAGER">MANAGER (Operations Lead)</option>
-                      <option value="ADMIN">ADMIN (Cashier / Finance)</option>
-                      <option value="STAFF">STAFF (Field Driver / Sales Rep)</option>
-                    </select>
-                  </td>
-                  <td style={{ padding: '12px 10px', fontSize: '12px', color: tokens.textSecondary }}>
-                    {member.role === 'MANAGER'
-                      ? 'Full Operational Control & Follow-Up Approvals'
-                      : member.role === 'ADMIN'
-                      ? 'Bank Reconciliation & Cash Payment Verification'
-                      : 'Assigned Debtors Only (Zero Revenue Visibility)'}
-                  </td>
-                  <td style={{ padding: '12px 10px', textAlign: 'right' }}>
-                    <span style={{ fontSize: '11px', color: '#00A581', fontWeight: 'bold' }}>
-                      Active
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* 7. AI Provider & WebMCP Integration */}
-      <div style={{
-        backgroundColor: tokens.surface,
-        borderRadius: '12px',
-        border: `1px solid ${tokens.surfaceBorder}`,
-        boxShadow: isLight ? tokens.shadowCard : 'none',
-        padding: '24px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-        transition: 'all 0.2s ease',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Sparkles size={18} color="#00A581" />
-          <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
-            AI Provider & WebMCP Integration
-          </h3>
-        </div>
-        <div style={{
-          backgroundColor: isLight ? '#F8FAFC' : '#001D31',
-          borderRadius: '8px',
-          padding: '14px',
-          border: `1px solid ${tokens.surfaceBorder}`,
-          fontSize: '13px',
-          color: tokens.textPrimary,
-        }}>
-          <div><strong>WebMCP Standard:</strong> W3C / Chrome Native (<code style={{ color: '#00A581' }}>document.modelContext</code>)</div>
-          <div style={{ marginTop: '6px', color: tokens.textMuted, fontSize: '12px' }}>
-            Backend automatically routes to Google Gemini or OpenAI GPT models based on server configuration.
+        {/* Multi-Language Selector */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <label style={{ fontSize: '11.5px', fontWeight: '700', color: tokens.textSecondary }}>
+              Interface Language &amp; African Dialect
+            </label>
+            <button
+              type="button"
+              onClick={openLanguageModal}
+              style={{ fontSize: '11.5px', color: '#00A581', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '700' }}
+            >
+              Open Dialect Switcher →
+            </button>
           </div>
-        </div>
-      </div>
-
-      {/* Save Button */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button
-          type="button"
-          onClick={handleSave}
-          style={{
-            backgroundColor: '#00A581',
-            color: '#FFFFFF',
-            padding: '12px 24px',
-            borderRadius: '8px',
-            fontSize: '13px',
-            fontWeight: 'bold',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            boxShadow: '0 4px 12px rgba(0, 165, 129, 0.3)',
-          }}
-        >
-          {saved ? <Check size={16} /> : null}
-          <span>{saved ? 'Preferences Saved!' : 'Save Preferences'}</span>
-        </button>
-      </div>
-
-      {/* Face ID Test / Enrollment Modal */}
-      <WebFaceRecognitionScanner
-        isOpen={isFaceEnrollModalOpen}
-        onSuccess={handleFaceEnrollSuccess}
-        onClose={() => setIsFaceEnrollModalOpen(false)}
-        title="Enroll Camera Face Recognition"
-        subtitle="Hold steady in front of your computer webcam to register face biometrics"
-        isEnrollment={true}
-      />
-
-      {/* Add Staff Member Modal */}
-      {isInviteModalOpen && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.65)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '20px',
-        }}>
-          <div style={{
-            backgroundColor: tokens.surface,
-            border: `1px solid ${tokens.surfaceBorder}`,
-            borderRadius: '16px',
-            width: '100%',
-            maxWidth: '460px',
-            padding: '28px',
-            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.4)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '18px',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <UserCheck size={20} color="#00A581" />
-                <h3 style={{ fontSize: '17px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
-                  Add Team Staff Member
-                </h3>
-              </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
+            {SUPPORTED_LANGUAGES.map((lang) => (
               <button
+                key={lang.code}
                 type="button"
-                onClick={() => setIsInviteModalOpen(false)}
+                onClick={() => setLanguage(lang.code)}
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  color: tokens.textMuted,
+                  padding: '8px 10px',
+                  borderRadius: '8px',
+                  backgroundColor: currentLanguage === lang.code ? '#00A581' : (isLight ? '#F8FAFC' : '#001D31'),
+                  color: currentLanguage === lang.code ? '#FFFFFF' : tokens.textPrimary,
+                  border: `1px solid ${currentLanguage === lang.code ? '#00A581' : tokens.surfaceBorder}`,
+                  fontWeight: '700',
+                  fontSize: '12px',
                   cursor: 'pointer',
-                  fontSize: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
                 }}
               >
-                ✕
+                <span>{lang.nativeName}</span>
+                {currentLanguage === lang.code && <Check size={12} />}
               </button>
-            </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
-            <p style={{ fontSize: '13px', color: tokens.textSecondary, margin: 0 }}>
-              Designate an operational role for your employee. Staff members can be assigned customer portfolios immediately.
-            </p>
+      {/* Staff Invite Modal */}
+      {isInviteModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 14, 26, 0.8)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 999999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}
+          onClick={() => setIsInviteModalOpen(false)}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '440px',
+              backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+              borderRadius: '16px',
+              border: `1px solid ${tokens.surfaceBorder}`,
+              padding: '24px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: tokens.textPrimary }}>
+              Invite Team Member
+            </h3>
 
-            <form onSubmit={handleInviteStaff} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <form onSubmit={handleInviteStaff} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: tokens.textPrimary, marginBottom: '6px', textTransform: 'uppercase' }}>
-                  Full Name *
+                <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: tokens.textSecondary, marginBottom: '4px' }}>
+                  Full Name
                 </label>
                 <input
                   type="text"
                   value={inviteName}
                   onChange={(e) => setInviteName(e.target.value)}
-                  placeholder="e.g. Emeka Okonkwo"
-                  required
+                  placeholder="e.g. John Doe"
                   style={{
                     width: '100%',
-                    padding: '10px 12px',
+                    padding: '8px 12px',
                     borderRadius: '8px',
                     border: `1px solid ${tokens.surfaceBorder}`,
-                    backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                    backgroundColor: isLight ? '#F8FAFC' : '#001424',
                     color: tokens.textPrimary,
                     fontSize: '13px',
-                    outline: 'none',
                   }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: tokens.textPrimary, marginBottom: '6px', textTransform: 'uppercase' }}>
-                  Staff Email Address *
+                <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: tokens.textSecondary, marginBottom: '4px' }}>
+                  Email Address *
                 </label>
                 <input
                   type="email"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="driver@business.com"
+                  placeholder="colleague@company.com"
                   required
                   style={{
                     width: '100%',
-                    padding: '10px 12px',
+                    padding: '8px 12px',
                     borderRadius: '8px',
                     border: `1px solid ${tokens.surfaceBorder}`,
-                    backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                    backgroundColor: isLight ? '#F8FAFC' : '#001424',
                     color: tokens.textPrimary,
                     fontSize: '13px',
-                    outline: 'none',
                   }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: tokens.textPrimary, marginBottom: '6px', textTransform: 'uppercase' }}>
-                  Assigned Operational Role
+                <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: tokens.textSecondary, marginBottom: '4px' }}>
+                  Access Role
                 </label>
                 <select
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value as any)}
                   style={{
                     width: '100%',
-                    padding: '10px 12px',
+                    padding: '8px 12px',
                     borderRadius: '8px',
                     border: `1px solid ${tokens.surfaceBorder}`,
-                    backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                    backgroundColor: isLight ? '#F8FAFC' : '#001424',
                     color: tokens.textPrimary,
                     fontSize: '13px',
-                    cursor: 'pointer',
                   }}
                 >
-                  <option value="STAFF">STAFF (Field Driver / Sales Rep - Revenue Hidden)</option>
-                  <option value="ADMIN">ADMIN (Cashier / Bookkeeper - Payment Verification)</option>
-                  <option value="MANAGER">MANAGER (General Manager - Full Operations)</option>
+                  <option value="STAFF">STAFF (Field Collector / Limited View)</option>
+                  <option value="MANAGER">MANAGER (Operations Lead)</option>
+                  <option value="ADMIN">ADMIN (Full Business Management)</option>
                 </select>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
                 <button
                   type="button"
                   onClick={() => setIsInviteModalOpen(false)}
                   style={{
-                    padding: '9px 16px',
+                    padding: '8px 14px',
                     borderRadius: '8px',
                     border: `1px solid ${tokens.surfaceBorder}`,
                     backgroundColor: 'transparent',
                     color: tokens.textSecondary,
-                    fontSize: '13px',
+                    fontSize: '12.5px',
                     cursor: 'pointer',
                   }}
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
-                  className="hover-lift tap-press"
                   style={{
-                    padding: '9px 20px',
+                    padding: '8px 18px',
                     borderRadius: '8px',
                     border: 'none',
                     backgroundColor: '#00A581',
                     color: '#FFFFFF',
-                    fontWeight: 'bold',
-                    fontSize: '13px',
+                    fontSize: '12.5px',
+                    fontWeight: '700',
                     cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(0, 165, 129, 0.3)',
                   }}
                 >
-                  Add Staff Member
+                  Send Invitation
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {/* Face Enroll Modal */}
+      {isFaceEnrollModalOpen && (
+        <WebFaceRecognitionScanner
+          isOpen={isFaceEnrollModalOpen}
+          isEnrollment={true}
+          onClose={() => setIsFaceEnrollModalOpen(false)}
+          onSuccess={handleFaceEnrollSuccess}
+          title="Enroll Computer Camera Face Recognition"
+        />
       )}
     </div>
   );

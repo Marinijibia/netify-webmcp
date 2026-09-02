@@ -30,9 +30,25 @@ export interface NotificationListResponse {
   unreadCount: number;
 }
 
+export interface NotificationPreferences {
+  soundEnabled?: boolean;
+  emailAlertsEnabled?: boolean;
+  pushAlertsEnabled?: boolean;
+  urgentRiskAlerts?: boolean;
+  paymentConfirmations?: boolean;
+  commitmentReminders?: boolean;
+  aiCopilotBriefings?: boolean;
+  quietHoursEnabled?: boolean;
+  quietHoursStart?: string;
+  quietHoursEnd?: string;
+}
+
 export const notificationApi = {
   getNotifications: async (params?: {
     unreadOnly?: boolean;
+    category?: 'ALL' | 'RISK' | 'PAYMENT' | 'COMMITMENT' | 'AI' | 'SYSTEM';
+    search?: string;
+    priority?: 'HIGH' | 'MEDIUM' | 'LOW';
     page?: number;
     pageSize?: number;
   }): Promise<NotificationListResponse> => {
@@ -67,8 +83,32 @@ export const notificationApi = {
     return (res.data?.data || res.data) as { updatedCount: number };
   },
 
+  deleteNotification: async (id: string): Promise<{ success: boolean; id: string }> => {
+    const res = await apiClient.delete<ApiResponse<{ success: boolean; id: string }>>(`/notifications/${id}`);
+    return (res.data?.data || res.data) as { success: boolean; id: string };
+  },
+
+  bulkAction: async (ids: string[], action: 'READ' | 'DELETE'): Promise<{ action: string; count: number; ids: string[] }> => {
+    const res = await apiClient.post<ApiResponse<{ action: string; count: number; ids: string[] }>>('/notifications/bulk', {
+      ids,
+      action,
+    });
+    return (res.data?.data || res.data) as { action: string; count: number; ids: string[] };
+  },
+
+  getPreferences: async (): Promise<NotificationPreferences> => {
+    const res = await apiClient.get<ApiResponse<NotificationPreferences>>('/notifications/preferences');
+    return (res.data?.data || res.data) as NotificationPreferences;
+  },
+
+  updatePreferences: async (prefs: NotificationPreferences): Promise<NotificationPreferences> => {
+    const res = await apiClient.patch<ApiResponse<NotificationPreferences>>('/notifications/preferences', prefs);
+    return (res.data?.data || res.data) as NotificationPreferences;
+  },
+
   scanSignals: async (): Promise<{ detectedCount: number; signals: any[] }> => {
     const res = await apiClient.post<ApiResponse<{ detectedCount: number; signals: any[] }>>('/notifications/scan-signals');
     return (res.data?.data || res.data) as { detectedCount: number; signals: any[] };
   },
 };
+

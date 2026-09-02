@@ -78,6 +78,24 @@ export class OnboardingController {
       },
     });
 
+    // Also synchronize organization details if provided
+    if (body.onboardingData?.businessName || body.onboardingData?.currency) {
+      const membership = await prisma.membership.findFirst({
+        where: { userId: user.userId },
+        select: { organizationId: true },
+      });
+      if (membership) {
+        await prisma.organization.update({
+          where: { id: membership.organizationId },
+          data: {
+            ...(body.onboardingData.businessName ? { name: body.onboardingData.businessName } : {}),
+            ...(body.onboardingData.currency ? { currency: body.onboardingData.currency } : {}),
+            ...(body.onboardingData.country ? { country: body.onboardingData.country } : {}),
+          },
+        });
+      }
+    }
+
     return {
       success: true,
       data: updatedUser,

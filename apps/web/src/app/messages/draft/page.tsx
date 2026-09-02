@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
@@ -25,7 +25,8 @@ import {
   getGmailWebUrl,
   getOutlookWebUrl,
   formatDisplayPhone,
-  isMobileDevice
+  isMobileDevice,
+  calculateSmsSegments
 } from '@/lib/deeplink';
 import { useLanguage, SUPPORTED_LANGUAGES, SupportedLanguage, LANGUAGE_REGISTRY } from '@/lib/i18n';
 import CallAssistantModal from '@/components/CallAssistantModal';
@@ -56,13 +57,21 @@ import {
   QrCode, 
   Smartphone,
   Volume2,
-  VolumeX
+  VolumeX,
+  CreditCard,
+  Zap,
+  Tag,
+  Share2,
+  RotateCcw,
+  Sliders,
+  FileText,
+  HelpCircle
 } from 'lucide-react';
 
 function DraftContent() {
   const searchParams = useSearchParams();
   const initialCustomerId = searchParams?.get('customerId');
-  const { organization } = useAuth();
+  const { organization, user } = useAuth();
   const { tokens, isLight } = useTheme();
 
   const [customers, setCustomers] = useState<CustomerItem[]>([]);
@@ -83,19 +92,8 @@ function DraftContent() {
   const [copiedEmailOnly, setCopiedEmailOnly] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
-  const handleToggleVoicePreview = () => {
-    if (isPlayingAudio) {
-      stopSpeech();
-      setIsPlayingAudio(false);
-    } else {
-      if (!editableBody) return;
-      setIsPlayingAudio(true);
-      speakText(editableBody, (draftLanguage || 'en') as any, {
-        onEnd: () => setIsPlayingAudio(false),
-        onError: () => setIsPlayingAudio(false),
-      });
-    }
-  };
+  // Bank transfer details auto-embed state
+  const [includeBankDetails, setIncludeBankDetails] = useState(true);
 
   // Desktop vs Mobile Detection & QR Phone Bridge State
   const [isMobileClient, setIsMobileClient] = useState(false);
@@ -105,14 +103,6 @@ function DraftContent() {
   // Multi-lingual message drafting
   const { currentLanguage, t } = useLanguage();
   const [draftLanguage, setDraftLanguage] = useState<SupportedLanguage>(currentLanguage);
-
-  useEffect(() => {
-    setDraftLanguage(currentLanguage);
-  }, [currentLanguage]);
-
-  useEffect(() => {
-    setIsMobileClient(isMobileDevice());
-  }, []);
 
   // Call Assistant Modal State
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
@@ -133,7 +123,32 @@ function DraftContent() {
   const [customerReceivables, setCustomerReceivables] = useState<ReceivableItem[]>([]);
   const [selectedReceivableId, setSelectedReceivableId] = useState<string>('');
 
-  // Load customer list for selector
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    setDraftLanguage(currentLanguage);
+  }, [currentLanguage]);
+
+  useEffect(() => {
+    setIsMobileClient(isMobileDevice());
+  }, []);
+
+  // Voice Preview Handler
+  const handleToggleVoicePreview = () => {
+    if (isPlayingAudio) {
+      stopSpeech();
+      setIsPlayingAudio(false);
+    } else {
+      if (!editableBody) return;
+      setIsPlayingAudio(true);
+      speakText(editableBody, (draftLanguage || 'en') as any, {
+        onEnd: () => setIsPlayingAudio(false),
+        onError: () => setIsPlayingAudio(false),
+      });
+    }
+  };
+
+  // Load customer list
   useEffect(() => {
     async function fetchCustomers() {
       setIsLoadingCustomers(true);
@@ -152,7 +167,7 @@ function DraftContent() {
     fetchCustomers();
   }, [selectedCustomerId]);
 
-  // Sync customer receivables & default promised amount when customer changes
+  // Sync customer receivables
   useEffect(() => {
     const cust = customers.find((c) => c.id === selectedCustomerId);
     if (cust?.totalOutstanding) {
@@ -187,6 +202,85 @@ function DraftContent() {
     loadCustomerReceivables();
   }, [selectedCustomerId, customers]);
 
+  const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
+  const selectedRec = customerReceivables.find((r) => r.id === selectedReceivableId);
+  const curr = organization?.currency || selectedCustomer?.currency || 'NGN';
+
+  // Bank Details String builder
+  const getBankDetailsString = useCallback(() => {
+    const orgSettings = (organization as any)?.settings || {};
+    const bankName = orgSettings.bankName || 'Zenith Bank';
+    const accountNumber = orgSettings.accountNumber || '1029384756';
+    const accountName = orgSettings.accountName || organization?.name || 'Netify Business Account';
+    return `\n\nPayment Details:\nBank: ${bankName}\nAccount Number: ${accountNumber}\nAccount Name: ${accountName}`;
+  }, [organization]);
+
+  // Fast Snippet Presets (Offline instant templates)
+  const applyPresetSnippet = (presetId: number) => {
+    if (!selectedCustomer) return;
+    const name = selectedCustomer.name || 'Customer';
+    const amountStr = formatCurrency(Number(selectedCustomer.totalOutstanding || selectedRec?.balance || 0), curr);
+    const dueDateStr = selectedRec?.dueDate ? new Date(selectedRec.dueDate).toLocaleDateString() : 'recently';
+    const bankInfo = includeBankDetails ? getBankDetailsString() : '';
+
+    let text = '';
+    switch (presetId) {
+      case 1: // Friendly First Reminder
+        text = `Good day ${name},\n\nWe hope your business is thriving. This is a gentle reminder regarding your balance of ${amountStr} due on ${dueDateStr}.\n\nPlease confirm when payment is initiated.${bankInfo}\n\nThank you for your business!\n${organization?.name || 'Netify Merchant'}`;
+        break;
+      case 2: // Standard Overdue with Bank
+        text = `Hello ${name},\n\nWe are following up on your invoice for ${amountStr} which is now past due. Kindly arrange payment today so we can update your ledger.${bankInfo}\n\nPlease share the transfer receipt once completed.\n\nRegards,\n${organization?.name || 'Netify Merchant'}`;
+        break;
+      case 3: // Broken Promise Follow-up
+        text = `Good day ${name},\n\nWe are checking in regarding the payment promise of ${amountStr} previously agreed upon. We have not yet received confirmation of the transfer.\n\nKindly let us know if payment was initiated or if you need our bank details re-sent.${bankInfo}\n\n${organization?.name || 'Netify Merchant'}`;
+        break;
+      case 4: // Urgent Final Demand
+        text = `URGENT NOTICE: Good day ${name},\n\nYour overdue account balance of ${amountStr} requires immediate settlement to avoid account suspension and collection escalation.\n\nKindly transfer the full balance today.${bankInfo}\n\nNetify Accounts Department`;
+        break;
+      case 5: // Partial Payment Proposal
+        text = `Hello ${name},\n\nTo support your cashflow, we can accept an immediate partial deposit of 50% on your outstanding balance of ${amountStr}, with the remainder scheduled for next week.${bankInfo}\n\nKindly confirm if this payment plan works for you.\n\n${organization?.name || 'Netify Merchant'}`;
+        break;
+    }
+
+    setEditableBody(text);
+  };
+
+  // Variable Insertion Helper
+  const insertVariable = (varType: string) => {
+    if (!selectedCustomer) return;
+    const name = selectedCustomer.name || 'Customer';
+    const amountStr = formatCurrency(Number(selectedCustomer.totalOutstanding || selectedRec?.balance || 0), curr);
+    const dueDateStr = selectedRec?.dueDate ? new Date(selectedRec.dueDate).toLocaleDateString() : 'Due on agreed date';
+    const overdueDays = selectedRec?.dueDate ? Math.max(0, Math.floor((Date.now() - new Date(selectedRec.dueDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
+    const bankDetails = getBankDetailsString().trim();
+    const paymentLink = `https://app.netify.africa/pay/${selectedCustomer.id.slice(0, 8)}`;
+
+    let replacement = '';
+    switch (varType) {
+      case 'NAME': replacement = name; break;
+      case 'AMOUNT': replacement = amountStr; break;
+      case 'DUE_DATE': replacement = dueDateStr; break;
+      case 'OVERDUE_DAYS': replacement = `${overdueDays} days overdue`; break;
+      case 'BANK': replacement = bankDetails; break;
+      case 'PAY_LINK': replacement = paymentLink; break;
+    }
+
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const current = editableBody;
+      const updated = current.substring(0, start) + replacement + current.substring(end);
+      setEditableBody(updated);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + replacement.length, start + replacement.length);
+      }, 50);
+    } else {
+      setEditableBody((prev) => `${prev} ${replacement}`);
+    }
+  };
+
   // Generate live AI draft
   const generateDraft = useCallback(async () => {
     if (!selectedCustomerId) return;
@@ -199,15 +293,21 @@ function DraftContent() {
         ? `[Draft this collection message in ${LANGUAGE_REGISTRY[draftLanguage].name} (${LANGUAGE_REGISTRY[draftLanguage].nativeName}) language]: ` 
         : '';
 
-      const fullCustomNote = languageInstruction + (customNote.trim() ? customNote.trim() : '');
+      const bankInstruction = includeBankDetails ? ' Include clear bank account transfer details at the bottom.' : '';
+      const fullCustomNote = languageInstruction + (customNote.trim() ? customNote.trim() : '') + bankInstruction;
 
       const data = await aiApi.draftMessage(selectedCustomerId, {
         channel,
         tone,
         customNote: fullCustomNote.trim() || undefined,
+        receivableId: selectedReceivableId || undefined,
       });
 
-      const bodyText = data?.messageBody || (data as any)?.messageText || (data as any)?.body || '';
+      let bodyText = data?.messageBody || (data as any)?.messageText || (data as any)?.body || '';
+      if (includeBankDetails && !bodyText.toLowerCase().includes('bank')) {
+        bodyText += getBankDetailsString();
+      }
+
       setDraft(data);
       setEditableBody(bodyText);
     } catch (err: any) {
@@ -216,7 +316,7 @@ function DraftContent() {
     } finally {
       setIsDrafting(false);
     }
-  }, [selectedCustomerId, channel, tone, customNote, draftLanguage]);
+  }, [selectedCustomerId, channel, tone, customNote, draftLanguage, selectedReceivableId, includeBankDetails, getBankDetailsString]);
 
   useEffect(() => {
     if (selectedCustomerId) {
@@ -224,9 +324,7 @@ function DraftContent() {
     }
   }, [selectedCustomerId, channel, tone, draftLanguage, generateDraft]);
 
-  const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
-
-  // Native deep-link dispatch handler with Desktop QR Bridge and Webmail support
+  // Native deep-link dispatch handler with automatic Activity & Memory logging
   const handleNativeDispatch = async (
     targetChannel?: 'WHATSAPP' | 'SMS' | 'PHONE_CALL' | 'EMAIL',
     emailProvider?: 'GMAIL' | 'OUTLOOK' | 'DEFAULT'
@@ -243,308 +341,274 @@ function DraftContent() {
           window.location.href = telUrl;
         }
       } else {
-        // Desktop PC: Launch "Option A" QR Phone Bridge
         setQrModalMode('PHONE_CALL');
         setIsQrModalOpen(true);
       }
       return;
     }
 
-    // Direct SMS on Desktop
-    if (ch === 'SMS' && !isMobileClient) {
-      // Desktop PC: Launch "Option A" QR Phone Bridge with pre-filled SMS payload
-      setQrModalMode('SMS');
-      setIsQrModalOpen(true);
-      return;
-    }
-
-    setIsApproving(true);
-    setError(null);
-
-    const channelMapping: Record<string, CollectionChannel> = {
-      WHATSAPP: 'WHATSAPP',
-      SMS: 'SMS',
-      PHONE_CALL: 'PHONE',
-      EMAIL: 'EMAIL',
-    };
-
-    try {
-      // 1. Resolve target receivableId
-      let targetRecId = selectedReceivableId;
-      if (!targetRecId) {
-        const recs = await receivablesApi.list({ customerId: selectedCustomerId });
-        const openRecs = recs.filter((r) => r.status === 'OPEN' || r.status === 'PARTIALLY_PAID' || r.status === 'OVERDUE');
-        targetRecId = openRecs[0]?.id || recs[0]?.id;
-      }
-
-      // Auto-create initial ledger invoice if customer has no invoice yet
-      if (!targetRecId) {
-        try {
-          const newRec = await receivablesApi.create({
-            customerId: selectedCustomerId,
-            amount: Number(selectedCustomer?.totalOutstanding || 100000),
-            dueDate: new Date(Date.now() + 86400000 * 7).toISOString(),
-            currency: selectedCustomer?.currency || 'NGN',
-            description: 'Account balance follow-up ledger',
-            reference: `INV-${Date.now().toString().slice(-4)}`,
-          });
-          targetRecId = newRec.id;
-          setSelectedReceivableId(newRec.id);
-        } catch (e) {
-          console.warn('Could not auto-create fallback receivable:', e);
-        }
-      }
-
-      // 2. Auto-record to customer timeline in background
-      if (targetRecId) {
-        await collectionActivitiesApi.createActivity({
-          receivableId: targetRecId,
-          customerId: selectedCustomerId,
-          type: 'PAYMENT_REMINDER',
-          channel: channelMapping[ch] || 'WHATSAPP',
-          outcome: 'CONTACTED',
-          notes: `AI Follow-up approved & opened on merchant device via ${ch} (Tone: ${tone}):\n"${editableBody}"`,
-        });
-      }
-
-      setApprovedSuccess(true);
-      setLastDispatchedChannel(ch);
-
-      // 3. Open appropriate desktop or mobile application
-      if (ch === 'WHATSAPP') {
-        if (!isMobileClient) {
-          // Open WhatsApp Web in new browser tab for desktop users
-          const webUrl = getWhatsAppWebUrl(selectedCustomer?.phone, editableBody);
-          if (webUrl) {
-            window.open(webUrl, '_blank');
-          }
-        } else {
-          // Open mobile WhatsApp
-          const waUrl = getWhatsAppUrl(selectedCustomer?.phone, editableBody);
-          if (waUrl) {
-            window.open(waUrl, '_blank');
-          }
-        }
-      } else if (ch === 'SMS') {
-        // Mobile device SMS
+    // Direct SMS
+    if (ch === 'SMS') {
+      if (isMobileClient) {
         const smsUrl = getSmsUrl(selectedCustomer?.phone, editableBody);
         if (smsUrl) {
           window.location.href = smsUrl;
         }
-      } else if (ch === 'EMAIL') {
-        if (emailProvider === 'GMAIL') {
-          const gmailUrl = getGmailWebUrl(selectedCustomer?.email, 'Payment Follow-Up & Account Statement', editableBody);
-          if (gmailUrl) {
-            window.open(gmailUrl, '_blank');
-          }
-        } else if (emailProvider === 'OUTLOOK') {
-          const outlookUrl = getOutlookWebUrl(selectedCustomer?.email, 'Payment Follow-Up & Account Statement', editableBody);
-          if (outlookUrl) {
-            window.open(outlookUrl, '_blank');
-          }
-        } else {
-          const mailUrl = getMailtoUrl(selectedCustomer?.email, 'Payment Follow-Up & Account Statement', editableBody);
-          if (mailUrl) {
-            window.location.href = mailUrl;
-          }
-        }
+      } else {
+        setQrModalMode('SMS');
+        setIsQrModalOpen(true);
       }
-    } catch (err: any) {
-      console.warn('Failed to record approved collection activity:', err);
-      setError(err?.message || 'Failed to persist collection activity to live API.');
-    } finally {
-      setIsApproving(false);
+    }
+
+    // Direct WhatsApp
+    if (ch === 'WHATSAPP') {
+      const waUrl = isMobileClient 
+        ? getWhatsAppUrl(selectedCustomer?.phone, editableBody)
+        : getWhatsAppWebUrl(selectedCustomer?.phone, editableBody);
+      
+      if (waUrl) {
+        window.open(waUrl, '_blank', 'noopener,noreferrer');
+      }
+    }
+
+    // Direct Email
+    if (ch === 'EMAIL') {
+      const subject = draft?.subject || `Payment Notice regarding your account with ${organization?.name || 'Netify'}`;
+      const toEmail = selectedCustomer?.email || '';
+
+      if (emailProvider === 'GMAIL') {
+        window.open(getGmailWebUrl(toEmail, subject, editableBody), '_blank', 'noopener,noreferrer');
+      } else if (emailProvider === 'OUTLOOK') {
+        window.open(getOutlookWebUrl(toEmail, subject, editableBody), '_blank', 'noopener,noreferrer');
+      } else {
+        const mailto = getMailtoUrl(toEmail, subject, editableBody);
+        if (mailto) window.location.href = mailto;
+      }
+    }
+
+    // Auto-record collection activity in database
+    try {
+      await collectionActivitiesApi.createActivity({
+        customerId: selectedCustomerId,
+        receivableId: selectedReceivableId || undefined,
+        type: ch === 'WHATSAPP' ? 'WHATSAPP' : (ch === 'SMS' ? 'SMS' : 'EMAIL'),
+        channel: ch as any,
+        outcome: 'CONTACTED',
+        notes: `${editableBody}\n\n(Dispatched via ${ch} by ${user?.firstName || 'Owner'})`,
+      });
+      setLastDispatchedChannel(ch);
+      setApprovedSuccess(true);
+      setTimeout(() => setApprovedSuccess(false), 4000);
+    } catch (err) {
+      console.warn('Failed to auto-record collection activity:', err);
     }
   };
 
-  // Quick Promise Saver
-  const handleQuickSavePromise = async () => {
+  // Quick Promise Logger Handler
+  const handleSaveQuickPromise = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!selectedCustomerId || !promisedAmount || !promisedDate) return;
     setIsSavingPromise(true);
     setPromiseSuccessMsg(null);
-    setError(null);
 
     try {
-      // 1. Resolve target receivable
-      let targetRecId = selectedReceivableId;
-      let targetRec = customerReceivables.find((r) => r.id === targetRecId);
-
-      if (!targetRecId) {
-        const recs = await receivablesApi.list({ customerId: selectedCustomerId });
-        const openRecs = recs.filter((r) => r.status === 'OPEN' || r.status === 'PARTIALLY_PAID' || r.status === 'OVERDUE');
-        const candidate = openRecs.length > 0 ? openRecs[0] : recs[0];
-        if (candidate) {
-          targetRecId = candidate.id;
-          targetRec = candidate;
-        }
-      }
-
-      if (!targetRecId) {
-        const newRec = await receivablesApi.create({
-          customerId: selectedCustomerId,
-          amount: Number(promisedAmount || 100000),
-          dueDate: promisedDate,
-          currency: selectedCustomer?.currency || 'NGN',
-          description: 'Payment arrangement account',
-          reference: `INV-${Date.now().toString().slice(-4)}`,
-        });
-        targetRecId = newRec.id;
-        targetRec = newRec;
-      }
-
-      if (targetRecId) {
-        // Create formal commitment bound to the invoice
-        await commitmentsApi.createCommitment({
-          receivableId: targetRecId,
-          customerId: selectedCustomerId,
-          amount: Number(promisedAmount),
-          currency: targetRec?.currency || 'NGN',
-          promisedFor: promisedDate,
-          notes: promiseNotes.trim() ? `Promise from follow-up: ${promiseNotes}` : `Recorded via follow-up draft screen (${channel})`,
-        });
-
-        // Also log activity to customer timeline
-        await collectionActivitiesApi.createActivity({
-          customerId: selectedCustomerId,
-          receivableId: targetRecId,
-          type: 'PAYMENT_REMINDER',
-          channel: (channel === 'PHONE_CALL' ? 'PHONE' : channel) as any,
-          outcome: 'PROMISED_PAYMENT',
-          notes: `Customer promised payment of ₦${Number(promisedAmount).toLocaleString()} by ${promisedDate}.${targetRec?.reference ? ` Bound to invoice ${targetRec.reference}.` : ''} Notes: ${promiseNotes || 'None'}`,
-        });
-      }
-
-      setPromiseSuccessMsg(`Payment commitment of ₦${Number(promisedAmount).toLocaleString()} scheduled for ${promisedDate}!`);
+      await commitmentsApi.createCommitment({
+        customerId: selectedCustomerId,
+        receivableId: selectedReceivableId || undefined,
+        amount: Number(promisedAmount),
+        currency: curr,
+        promisedFor: promisedDate,
+        notes: promiseNotes || 'Captured during customer message follow-up',
+      });
+      setPromiseSuccessMsg(`Payment promise of ${formatCurrency(Number(promisedAmount), curr)} logged for ${new Date(promisedDate).toLocaleDateString()}!`);
       setTimeout(() => {
         setQuickPromiseOpen(false);
         setPromiseSuccessMsg(null);
-      }, 2200);
+      }, 2500);
     } catch (err: any) {
-      console.error('Failed to create quick commitment:', err);
-      setError(err?.message || 'Failed to save commitment to database.');
+      alert(err?.message || 'Failed to save payment promise');
     } finally {
       setIsSavingPromise(false);
     }
   };
 
-  const handleCopy = () => {
-    if (!editableBody) return;
-    navigator.clipboard.writeText(editableBody);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const smsMeta = calculateSmsSegments(editableBody);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ minWidth: 0, flex: 1 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '1100px', margin: '0 auto' }}>
+      
+      {/* Top Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <Link
+            href="/collections"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              color: tokens.textMuted,
+              textDecoration: 'none',
+              marginBottom: '6px',
+              fontWeight: '600',
+            }}
+          >
+            <ArrowLeft size={14} />
+            <span>Back to Collections Queue</span>
+          </Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <MessageSquareQuote size={24} color="#00A581" />
-            <h2 style={{ fontSize: 'clamp(18px, 3vw, 24px)', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>AI Follow-up Draft & Action Review</h2>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: tokens.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00A581' }}>
+              <MessageSquareQuote size={18} />
+            </div>
+            <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
+              Follow-up & Message Studio
+            </h2>
           </div>
-          <p style={{ color: tokens.textSecondary, fontSize: '13px', marginTop: '4px' }}>
-            Grounded in actual overdue balances and past WhatsApp commitments. Requires explicit human confirmation.
-          </p>
         </div>
 
-        <Link
-          href="/collections"
+        {/* Quick Promise Drawer Trigger */}
+        <button
+          type="button"
+          onClick={() => setQuickPromiseOpen(!quickPromiseOpen)}
           style={{
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
-            color: '#00A581',
-            fontSize: '13px',
-            fontWeight: '600',
-            textDecoration: 'none',
+            backgroundColor: quickPromiseOpen ? '#00A581' : (isLight ? '#F1F5F9' : '#002B49'),
+            color: quickPromiseOpen ? '#FFFFFF' : tokens.textPrimary,
+            border: `1px solid ${tokens.surfaceBorder}`,
+            padding: '8px 14px',
+            borderRadius: '8px',
+            fontSize: '12.5px',
+            fontWeight: '700',
+            cursor: 'pointer',
           }}
         >
-          <ArrowLeft size={16} />
-          <span>Back to Queue</span>
-        </Link>
+          <Calendar size={14} />
+          <span>{quickPromiseOpen ? 'Close Promise Logger' : 'Log Debtor Promise'}</span>
+        </button>
       </div>
 
-      {/* Error Alert */}
-      {error && (
-        <div style={{
-          backgroundColor: isLight ? '#FEE2E2' : 'rgba(239, 68, 68, 0.15)',
-          border: '1px solid #EF4444',
-          borderRadius: '8px',
-          padding: '12px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          color: isLight ? '#B91C1C' : '#FCA5A5',
-          fontSize: '13px',
+      {/* Quick Promise-to-Pay Logger Card */}
+      {quickPromiseOpen && (
+        <div className="animate-fade-in" style={{
+          backgroundColor: tokens.surface,
+          borderRadius: '12px',
+          border: '1.5px solid #00A581',
+          padding: '20px',
+          boxShadow: isLight ? tokens.shadowCard : '0 8px 30px rgba(0, 165, 129, 0.15)',
         }}>
-          <AlertCircle size={16} color="#EF4444" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Success Alert */}
-      {approvedSuccess && (
-        <div style={{
-          backgroundColor: tokens.accentSoft,
-          border: `1px solid ${tokens.accentBorder}`,
-          borderRadius: '8px',
-          padding: '14px 18px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          color: '#00A581',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <CheckCircle2 size={20} color="#00A581" />
-            <div>
-              <p style={{ fontWeight: 'bold', fontSize: '14px', margin: 0 }}>Collection Action Successfully Approved & Logged</p>
-              <p style={{ fontSize: '12px', color: tokens.textSecondary, margin: '2px 0 0' }}>
-                Activity recorded to customer's live timeline in the database.
-              </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Calendar size={16} color="#00A581" />
+              <span style={{ fontSize: '14px', fontWeight: 'bold', color: tokens.textPrimary }}>
+                Log Debtor Payment Commitment
+              </span>
             </div>
+            <button type="button" onClick={() => setQuickPromiseOpen(false)} style={{ background: 'none', border: 'none', color: tokens.textMuted, cursor: 'pointer' }}>
+              <X size={16} />
+            </button>
           </div>
-          {selectedCustomerId && (
-            <Link
-              href={`/customers/${selectedCustomerId}`}
-              style={{
-                backgroundColor: '#00A581',
-                color: '#FFFFFF',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: '600',
-                textDecoration: 'none',
-              }}
-            >
-              View Timeline
-            </Link>
+
+          {promiseSuccessMsg ? (
+            <div style={{ backgroundColor: isLight ? '#ECFDF5' : 'rgba(0, 165, 129, 0.2)', border: '1px solid #00A581', color: '#00A581', padding: '12px', borderRadius: '8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <CheckCircle2 size={16} />
+              <span>{promiseSuccessMsg}</span>
+            </div>
+          ) : (
+            <form onSubmit={handleSaveQuickPromise} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', alignItems: 'flex-end' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Promised Amount ({curr}) *
+                </label>
+                <input
+                  type="number"
+                  value={promisedAmount}
+                  onChange={(e) => setPromisedAmount(e.target.value)}
+                  placeholder="e.g. 50000"
+                  required
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: `1px solid ${tokens.surfaceBorder}`, backgroundColor: isLight ? '#FFFFFF' : '#00192B', color: tokens.textPrimary, fontSize: '13px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Promised Repayment Date *
+                </label>
+                <input
+                  type="date"
+                  value={promisedDate}
+                  onChange={(e) => setPromisedDate(e.target.value)}
+                  required
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: `1px solid ${tokens.surfaceBorder}`, backgroundColor: isLight ? '#FFFFFF' : '#00192B', color: tokens.textPrimary, fontSize: '13px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Debtor Note / Agreement
+                </label>
+                <input
+                  type="text"
+                  value={promiseNotes}
+                  onChange={(e) => setPromiseNotes(e.target.value)}
+                  placeholder="e.g. Promised via WhatsApp check-in"
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: `1px solid ${tokens.surfaceBorder}`, backgroundColor: isLight ? '#FFFFFF' : '#00192B', color: tokens.textPrimary, fontSize: '13px' }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSavingPromise}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '6px',
+                  backgroundColor: '#00A581',
+                  color: '#FFFFFF',
+                  fontWeight: '700',
+                  fontSize: '13px',
+                  border: 'none',
+                  cursor: isSavingPromise ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                }}
+              >
+                {isSavingPromise ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                <span>Save Commitment</span>
+              </button>
+            </form>
           )}
         </div>
       )}
 
-      {/* Main 2-Column Grid */}
-      <div className="responsive-webmcp-layout">
-        {/* Left Column: Customer & Tone Selectors */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
-          {/* Target Customer Card */}
+      {/* Main Studio Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 360px) 1fr', gap: '20px' }}>
+        
+        {/* Left Column: Context & Controls */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          
+          {/* 1. Target Customer Selection Card */}
           <div style={{
             backgroundColor: tokens.surface,
             borderRadius: '12px',
             border: `1px solid ${tokens.surfaceBorder}`,
-            padding: '20px',
+            padding: '18px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
             boxShadow: isLight ? tokens.shadowCard : 'none',
           }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '8px', textTransform: 'uppercase' }}>
-              Target Customer Account
+            <label style={{ fontSize: '11px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              1. Select Target Debtor
             </label>
+
             {isLoadingCustomers ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tokens.textMuted, fontSize: '13px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', color: tokens.textMuted, fontSize: '13px' }}>
                 <Loader2 size={16} className="animate-spin" />
                 <span>Loading customers...</span>
               </div>
-            ) : customers.length === 0 ? (
-              <p style={{ color: tokens.textMuted, fontSize: '13px' }}>No customers available.</p>
             ) : (
               <select
                 value={selectedCustomerId}
@@ -552,252 +616,273 @@ function DraftContent() {
                 style={{
                   width: '100%',
                   padding: '10px 12px',
-                  backgroundColor: isLight ? '#FFFFFF' : '#001D31',
-                  border: `1px solid ${tokens.surfaceBorder}`,
                   borderRadius: '8px',
+                  border: `1px solid ${tokens.surfaceBorder}`,
+                  backgroundColor: isLight ? '#FFFFFF' : '#001D31',
                   color: tokens.textPrimary,
                   fontSize: '13.5px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
                   outline: 'none',
-                  boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
                 }}
               >
                 {customers.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name} {c.totalOutstanding ? `(${formatCurrency(c.totalOutstanding, c.currency || 'NGN')})` : ''}
+                    {c.name} — {formatCurrency(Number(c.totalOutstanding || 0), c.currency || curr)}
                   </option>
                 ))}
               </select>
             )}
 
+            {/* Debtor Overview Chip */}
             {selectedCustomer && (
-              <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: `1px solid ${tokens.surfaceBorder}`, fontSize: '12px', color: tokens.textSecondary }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span><strong>Phone:</strong> {formatDisplayPhone(selectedCustomer.phone)}</span>
-                  <span style={{ fontSize: '10px', backgroundColor: tokens.accentSoft, color: '#00A581', padding: '2px 6px', borderRadius: '4px', border: `1px solid ${tokens.accentBorder}` }}>
-                    Verified Mobile
+              <div style={{
+                backgroundColor: isLight ? '#F8FAFC' : '#00192B',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                borderRadius: '8px',
+                padding: '12px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                fontSize: '12px',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: tokens.textMuted }}>Total Outstanding:</span>
+                  <span style={{ fontWeight: '800', color: '#EF4444' }}>
+                    {formatCurrency(Number(selectedCustomer.totalOutstanding || 0), selectedCustomer.currency || curr)}
                   </span>
                 </div>
-                <p style={{ marginTop: '6px' }}><strong>Status:</strong> {selectedCustomer.status} • Risk: {selectedCustomer.riskLevel || 'NORMAL'}</p>
-                <p style={{ marginTop: '4px', color: tokens.textMuted }}>
-                  <strong>Exposure:</strong> {formatCurrency(selectedCustomer.totalOutstanding ?? 0)} ({selectedCustomer.oldestOverdueDays ? `${selectedCustomer.oldestOverdueDays}d overdue` : 'Current'})
-                </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: tokens.textMuted }}>Phone Number:</span>
+                  <span style={{ fontWeight: '600', color: tokens.textPrimary }}>
+                    {formatDisplayPhone(selectedCustomer.phone)}
+                  </span>
+                </div>
+                {selectedCustomer.email && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: tokens.textMuted }}>Email:</span>
+                    <span style={{ color: tokens.textSecondary }}>{selectedCustomer.email}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* Delivery Channel Selector */}
+          {/* 2. Channel & Tone Selection */}
           <div style={{
             backgroundColor: tokens.surface,
             borderRadius: '12px',
             border: `1px solid ${tokens.surfaceBorder}`,
-            padding: '20px',
+            padding: '18px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
             boxShadow: isLight ? tokens.shadowCard : 'none',
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, textTransform: 'uppercase', margin: 0 }}>
-                Outreach Channel
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                2. Outreach Channel
               </label>
-              <span style={{ fontSize: '10px', color: '#00A581', fontWeight: 'bold' }}>
-                ₦0.00 Carrier Direct
-              </span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                {[
+                  { id: 'WHATSAPP', label: 'WhatsApp', icon: MessageSquareQuote, color: '#10B981' },
+                  { id: 'SMS', label: 'SMS Text', icon: MessageSquare, color: '#00A581' },
+                  { id: 'PHONE_CALL', label: 'Phone Call', icon: PhoneCall, color: '#3B82F6' },
+                  { id: 'EMAIL', label: 'Email', icon: Mail, color: '#8B5CF6' },
+                ].map((ch) => {
+                  const isSelected = channel === ch.id;
+                  const Icon = ch.icon;
+                  return (
+                    <button
+                      key={ch.id}
+                      type="button"
+                      onClick={() => setChannel(ch.id as any)}
+                      style={{
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: `1.5px solid ${isSelected ? ch.color : tokens.surfaceBorder}`,
+                        backgroundColor: isSelected ? (isLight ? '#F0FDF4' : 'rgba(0, 165, 129, 0.15)') : 'transparent',
+                        color: isSelected ? tokens.textPrimary : tokens.textSecondary,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        cursor: 'pointer',
+                        fontSize: '12.5px',
+                        fontWeight: '700',
+                      }}
+                    >
+                      <Icon size={16} color={isSelected ? ch.color : tokens.textMuted} />
+                      <span>{ch.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px' }}>
-              {[
-                { id: 'WHATSAPP', name: 'WhatsApp', icon: MessageSquare, activeBg: '#25D366', activeColor: '#FFFFFF' },
-                { id: 'SMS', name: 'Direct SMS', icon: Send, activeBg: '#2563EB', activeColor: '#FFFFFF' },
-                { id: 'PHONE_CALL', name: 'Direct Call', icon: PhoneCall, activeBg: '#7C3AED', activeColor: '#FFFFFF' },
-                { id: 'EMAIL', name: 'Email', icon: Mail, activeBg: '#0284C7', activeColor: '#FFFFFF' },
-              ].map((ch) => {
-                const IconComponent = ch.icon;
-                const isActive = channel === ch.id;
-                return (
-                  <button
-                    key={ch.id}
-                    type="button"
-                    onClick={() => setChannel(ch.id as any)}
-                    className="tap-press hover-lift"
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      backgroundColor: isActive ? ch.activeBg : (isLight ? '#F8FAFC' : '#001D31'),
-                      color: isActive ? ch.activeColor : tokens.textSecondary,
-                      border: `1px solid ${isActive ? ch.activeBg : tokens.surfaceBorder}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      cursor: 'pointer',
-                      boxShadow: isLight && !isActive ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <IconComponent size={14} />
-                    <span>{ch.name}</span>
-                  </button>
-                );
-              })}
+
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                3. Desired Tone
+              </label>
+              <select
+                value={tone}
+                onChange={(e) => setTone(e.target.value as any)}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: `1px solid ${tokens.surfaceBorder}`,
+                  backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                  color: tokens.textPrimary,
+                  fontSize: '12.5px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="DIRECT_FOLLOWUP">Direct Follow-up (Firm & Factual)</option>
+                <option value="RESPECTFUL_REMINDER">Respectful Reminder (Gentle & Polite)</option>
+                <option value="URGENT_ESCALATION">Urgent Escalation (High Risk & Overdue)</option>
+                <option value="PARTIAL_PAYMENT_PROPOSAL">Partial Payment Offer (Installment Plan)</option>
+              </select>
             </div>
+
+            {/* Language Selection */}
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                Language & Local Dialect
+              </label>
+              <select
+                value={draftLanguage}
+                onChange={(e) => setDraftLanguage(e.target.value as any)}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: `1px solid ${tokens.surfaceBorder}`,
+                  backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                  color: tokens.textPrimary,
+                  fontSize: '12.5px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                }}
+              >
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <option key={lang.code} value={lang.code}>
+                    {lang.flag} {lang.name} ({lang.nativeName})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Bank Details Switch */}
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderTop: `1px solid ${tokens.surfaceBorder}`, cursor: 'pointer', fontSize: '12px', color: tokens.textPrimary, fontWeight: '600' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <CreditCard size={15} color="#00A581" />
+                <span>Auto-Embed Bank Transfer Details</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={includeBankDetails}
+                onChange={(e) => setIncludeBankDetails(e.target.checked)}
+                style={{ accentColor: '#00A581', width: '15px', height: '15px', cursor: 'pointer' }}
+              />
+            </label>
           </div>
 
-          {/* Tone Strategy Selector */}
+          {/* 3. Fast Snippet Presets */}
           <div style={{
             backgroundColor: tokens.surface,
             borderRadius: '12px',
             border: `1px solid ${tokens.surfaceBorder}`,
-            padding: '20px',
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
             boxShadow: isLight ? tokens.shadowCard : 'none',
           }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '10px', textTransform: 'uppercase' }}>
-              Follow-Up Tone & Strategy
-            </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 'bold', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <Zap size={13} color="#F59E0B" />
+              <span>Fast Template Presets (Instant)</span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {[
-                { id: 'RESPECTFUL_REMINDER', name: 'Respectful Courtesy Reminder' },
-                { id: 'DIRECT_FOLLOWUP', name: 'Direct Business Follow-up' },
-                { id: 'URGENT_ESCALATION', name: 'Urgent Payment Escalation' },
-                { id: 'PARTIAL_PAYMENT_PROPOSAL', name: 'Partial Payment Plan Proposal' },
-              ].map((t) => (
+                { id: 1, label: '1. Gentle Check-in (Due Soon)' },
+                { id: 2, label: '2. Overdue with Bank Details' },
+                { id: 3, label: '3. Broken Promise Follow-up' },
+                { id: 4, label: '4. Urgent Final Demand Notice' },
+                { id: 5, label: '5. 50% Token Deposit Offer' },
+              ].map((p) => (
                 <button
-                  key={t.id}
+                  key={p.id}
                   type="button"
-                  onClick={() => setTone(t.id as any)}
-                  className="tap-press hover-lift"
+                  onClick={() => applyPresetSnippet(p.id)}
                   style={{
                     textAlign: 'left',
-                    padding: '10px 12px',
+                    padding: '7px 10px',
                     borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: tone === t.id ? '700' : 'normal',
-                    backgroundColor: tone === t.id ? (isLight ? '#ECFDF8' : '#001D31') : (isLight ? '#FFFFFF' : 'transparent'),
-                    color: tone === t.id ? '#00A581' : tokens.textSecondary,
-                    border: `1px solid ${tone === t.id ? '#00A581' : tokens.surfaceBorder}`,
+                    backgroundColor: isLight ? '#F8FAFC' : '#001D31',
+                    border: `1px solid ${tokens.surfaceBorder}`,
+                    color: tokens.textPrimary,
+                    fontSize: '11.5px',
+                    fontWeight: '600',
                     cursor: 'pointer',
-                    boxShadow: isLight && tone !== t.id ? '0 1px 2px rgba(0,0,0,0.02)' : 'none',
+                    transition: 'all 0.15s ease',
                   }}
                 >
-                  {t.name}
+                  {p.label}
                 </button>
               ))}
             </div>
           </div>
+        </div>
 
-          {/* Message Language Card */}
+        {/* Right Column: Live Message Editor & Variable Bar */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          
           <div style={{
             backgroundColor: tokens.surface,
             borderRadius: '12px',
             border: `1px solid ${tokens.surfaceBorder}`,
             padding: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
             boxShadow: isLight ? tokens.shadowCard : 'none',
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, textTransform: 'uppercase', margin: 0 }}>
-                Message Language
-              </label>
-              <span style={{ fontSize: '11px', color: '#00A581', fontWeight: '700' }}>
-                {LANGUAGE_REGISTRY[draftLanguage]?.name}
-              </span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '6px' }}>
-              {SUPPORTED_LANGUAGES.map((l) => {
-                const isSelected = draftLanguage === l.code;
-                return (
-                  <button
-                    key={l.code}
-                    type="button"
-                    onClick={() => setDraftLanguage(l.code)}
-                    className="tap-press hover-lift"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '8px 10px',
-                      borderRadius: '6px',
-                      fontSize: '11.5px',
-                      fontWeight: isSelected ? '700' : 'normal',
-                      backgroundColor: isSelected ? (isLight ? '#ECFDF8' : '#001D31') : (isLight ? '#FFFFFF' : 'transparent'),
-                      color: isSelected ? '#00A581' : tokens.textSecondary,
-                      border: `1px solid ${isSelected ? '#00A581' : tokens.surfaceBorder}`,
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      boxShadow: isLight && !isSelected ? '0 1px 2px rgba(0,0,0,0.02)' : 'none',
-                    }}
-                  >
-                    <span>{l.flag}</span>
-                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {l.nativeName.split(' ')[0]}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Draft Editor & Actions */}
-        <div style={{
-          backgroundColor: tokens.surface,
-          borderRadius: '12px',
-          border: `1px solid ${tokens.surfaceBorder}`,
-          padding: '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          boxShadow: isLight ? tokens.shadowCard : 'none',
-        }}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
+            
+            {/* Editor Top Bar */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Sparkles size={18} color="#00A581" />
-                <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
-                  AI Generated Message Content
-                </h3>
+                <Edit3 size={17} color="#00A581" />
+                <span style={{ fontSize: '14px', fontWeight: 'bold', color: tokens.textPrimary }}>
+                  Message Composer
+                </span>
+                {draftLanguage !== 'en' && (
+                  <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '10px', backgroundColor: tokens.accentSoft, color: '#00A581', border: `1px solid ${tokens.accentBorder}` }}>
+                    {LANGUAGE_REGISTRY[draftLanguage].flag} {LANGUAGE_REGISTRY[draftLanguage].name}
+                  </span>
+                )}
               </div>
 
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    backgroundColor: isLight ? '#FFFFFF' : '#001D31',
-                    border: `1px solid ${tokens.surfaceBorder}`,
-                    color: tokens.textSecondary,
-                    padding: '6px 10px',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                    boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
-                  }}
-                >
-                  {copied ? <Check size={14} color="#00A581" /> : <Copy size={14} />}
-                  <span>{copied ? 'Copied' : 'Copy Text'}</span>
-                </button>
-
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
                   type="button"
                   onClick={handleToggleVoicePreview}
-                  disabled={!editableBody || isDrafting}
                   style={{
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     gap: '5px',
-                    backgroundColor: isPlayingAudio ? '#EF4444' : tokens.accentSoft,
-                    border: `1px solid ${isPlayingAudio ? '#DC2626' : tokens.accentBorder}`,
-                    color: isPlayingAudio ? '#FFFFFF' : '#00A581',
-                    padding: '6px 12px',
+                    padding: '5px 10px',
                     borderRadius: '6px',
-                    fontSize: '12px',
+                    backgroundColor: isPlayingAudio ? '#EF4444' : (isLight ? '#F1F5F9' : '#002B49'),
+                    color: isPlayingAudio ? '#FFFFFF' : tokens.textSecondary,
+                    border: `1px solid ${tokens.surfaceBorder}`,
+                    fontSize: '11.5px',
                     fontWeight: '600',
-                    cursor: !editableBody || isDrafting ? 'not-allowed' : 'pointer',
-                    boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
-                    transition: 'all 0.15s ease',
+                    cursor: 'pointer',
                   }}
-                  title="Listen to browser voice preview of this collection reminder"
                 >
-                  {isPlayingAudio ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                  {isPlayingAudio ? <VolumeX size={13} /> : <Volume2 size={13} />}
                   <span>{isPlayingAudio ? 'Stop Audio' : 'Voice Preview'}</span>
                 </button>
 
@@ -806,133 +891,248 @@ function DraftContent() {
                   onClick={generateDraft}
                   disabled={isDrafting}
                   style={{
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    backgroundColor: isLight ? '#FFFFFF' : '#001D31',
-                    border: `1px solid ${tokens.surfaceBorder}`,
-                    color: '#00A581',
-                    padding: '6px 12px',
+                    gap: '5px',
+                    padding: '5px 12px',
                     borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
+                    backgroundColor: tokens.accentSoft,
+                    color: '#00A581',
+                    border: `1px solid ${tokens.accentBorder}`,
+                    fontSize: '11.5px',
+                    fontWeight: '700',
+                    cursor: isDrafting ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  {isDrafting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                  <span>Regenerate</span>
+                  {isDrafting ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                  <span>Regenerate AI</span>
                 </button>
               </div>
             </div>
 
-            {/* Editor Area */}
-            {isDrafting ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '240px', gap: '12px', color: tokens.textMuted }}>
-                <Loader2 size={32} className="animate-spin text-teal-500" />
-                <p style={{ fontSize: '13px' }}>Generating tailored follow-up based on live customer evidence...</p>
-              </div>
-            ) : (
-              <textarea
-                rows={10}
-                value={editableBody}
-                onChange={(e) => setEditableBody(e.target.value)}
-                placeholder="Draft message will appear here..."
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  backgroundColor: isLight ? '#F8FAFC' : '#001D31',
-                  border: `1px solid ${tokens.surfaceBorder}`,
-                  borderRadius: '8px',
-                  color: tokens.textPrimary,
-                  fontSize: '14px',
-                  lineHeight: '1.6',
-                  outline: 'none',
-                  resize: 'vertical',
-                  fontFamily: 'inherit',
-                  boxShadow: isLight ? 'inset 0 1px 2px rgba(0,0,0,0.02)' : 'none',
-                }}
-              />
-            )}
-
-            {draft?.culturalNotes && (
-              <p style={{ fontSize: '12px', color: tokens.textSecondary, marginTop: '8px' }}>
-                <strong style={{ color: '#00A581' }}>AI Strategy Note:</strong> {draft.culturalNotes}
-              </p>
-            )}
-          </div>
-
-          {/* Action Confirmation Footer */}
-          <div style={{
-            marginTop: '24px',
-            paddingTop: '16px',
-            borderTop: `1px solid ${tokens.surfaceBorder}`,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '12px',
-          }}>
-            <div style={{ fontSize: '12px', color: tokens.textSecondary, maxWidth: '340px' }}>
-              <span style={{ display: 'block', color: '#00A581', fontWeight: 'bold', marginBottom: '2px' }}>
-                ✓ Strict Human-in-the-Loop Guarantee
+            {/* Dynamic Variable Chips Insertion Bar */}
+            <div style={{
+              backgroundColor: isLight ? '#F8FAFC' : '#00192B',
+              border: `1px solid ${tokens.surfaceBorder}`,
+              borderRadius: '8px',
+              padding: '8px 12px',
+              display: 'flex',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '6px',
+            }}>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: tokens.textMuted, marginRight: '4px', textTransform: 'uppercase' }}>
+                Insert Variable:
               </span>
-              <span>
-                Netify opens your device's native app pre-populated with this message. Nothing is dispatched without your confirmation.
-              </span>
+              {[
+                { id: 'NAME', label: '{{CustomerName}}' },
+                { id: 'AMOUNT', label: '{{OutstandingAmount}}' },
+                { id: 'DUE_DATE', label: '{{DueDate}}' },
+                { id: 'OVERDUE_DAYS', label: '{{DaysOverdue}}' },
+                { id: 'BANK', label: '{{BankDetails}}' },
+                { id: 'PAY_LINK', label: '{{PaymentLink}}' },
+              ].map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => insertVariable(v.id)}
+                  style={{
+                    backgroundColor: isLight ? '#FFFFFF' : '#002B49',
+                    border: `1px solid ${tokens.surfaceBorder}`,
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    color: '#00A581',
+                    cursor: 'pointer',
+                    transition: 'all 0.1s ease',
+                  }}
+                >
+                  {v.label}
+                </button>
+              ))}
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <Link
-                href="/collections"
+            {/* Live Editable Text Area */}
+            <div style={{ position: 'relative' }}>
+              <textarea
+                ref={textareaRef}
+                rows={12}
+                value={editableBody}
+                onChange={(e) => setEditableBody(e.target.value)}
+                placeholder="Drafting personalized collection message..."
                 style={{
-                  padding: '10px 16px',
-                  backgroundColor: isLight ? '#F1F5F9' : '#001D31',
-                  border: `1px solid ${tokens.surfaceBorder}`,
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '10px',
+                  border: `1.5px solid ${tokens.surfaceBorder}`,
+                  backgroundColor: isLight ? '#FFFFFF' : '#00192B',
                   color: tokens.textPrimary,
-                  borderRadius: '8px',
+                  fontSize: '13.5px',
+                  lineHeight: '1.6',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  resize: 'vertical',
+                  boxSizing: 'border-box',
+                }}
+              />
+
+              {isDrafting && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                  backdropFilter: 'blur(2px)',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  color: '#FFFFFF',
                   fontSize: '13px',
-                  fontWeight: '600',
-                  textDecoration: 'none',
+                  fontWeight: '700',
+                }}>
+                  <Loader2 size={18} className="animate-spin" />
+                  <span>Synthesizing live ledger records...</span>
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Meta & SMS Segment Counter */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', fontSize: '11.5px', color: tokens.textMuted }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span>Character Count: <strong>{editableBody.length}</strong></span>
+                
+                {channel === 'SMS' && (
+                  <span style={{
+                    fontWeight: '700',
+                    color: smsMeta.segments > 1 ? '#F59E0B' : '#00A581',
+                    backgroundColor: smsMeta.segments > 1 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(0, 165, 129, 0.15)',
+                    padding: '2px 8px',
+                    borderRadius: '10px',
+                  }}>
+                    {smsMeta.segments} SMS Page{smsMeta.segments > 1 ? 's' : ''} ({smsMeta.charsRemaining} chars left in segment)
+                  </span>
+                )}
+              </div>
+
+              {/* Copy Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(editableBody);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: 'none',
+                  border: 'none',
+                  color: copied ? '#00A581' : tokens.textMuted,
+                  fontSize: '11.5px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
                 }}
               >
-                Cancel
-              </Link>
+                {copied ? <Check size={13} /> : <Copy size={13} />}
+                <span>{copied ? 'Copied to Clipboard' : 'Copy Text'}</span>
+              </button>
+            </div>
 
-              {/* Dynamic 1-Click Native Dispatch Button */}
+            {/* Success Toast Banner */}
+            {approvedSuccess && (
+              <div style={{
+                backgroundColor: isLight ? '#ECFDF5' : 'rgba(0, 165, 129, 0.2)',
+                border: '1.5px solid #00A581',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                color: '#00A581',
+                fontSize: '13px',
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}>
+                <CheckCircle2 size={18} />
+                <span>Follow-up dispatched via {lastDispatchedChannel} & automatically logged in Customer Ledger!</span>
+              </div>
+            )}
+
+            {/* Primary Dispatch Action Toolbar */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginTop: '6px', flexWrap: 'wrap' }}>
+              
+              {channel === 'EMAIL' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleNativeDispatch('EMAIL', 'GMAIL')}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: '8px',
+                      backgroundColor: '#EA4335',
+                      color: '#FFFFFF',
+                      fontSize: '12.5px',
+                      fontWeight: '700',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <Mail size={14} />
+                    <span>Open in Gmail</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleNativeDispatch('EMAIL', 'OUTLOOK')}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: '8px',
+                      backgroundColor: '#0078D4',
+                      color: '#FFFFFF',
+                      fontSize: '12.5px',
+                      fontWeight: '700',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <Mail size={14} />
+                    <span>Open in Outlook</span>
+                  </button>
+                </>
+              )}
+
               {channel === 'WHATSAPP' && (
                 <button
                   type="button"
                   onClick={() => handleNativeDispatch('WHATSAPP')}
-                  disabled={isApproving || !(editableBody || '').trim() || isDrafting}
-                  className="hover-lift tap-press"
                   style={{
-                    display: 'flex',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    backgroundColor: '#10B981',
+                    color: '#FFFFFF',
+                    fontSize: '13.5px',
+                    fontWeight: '700',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     gap: '8px',
-                    backgroundColor: '#25D366',
-                    color: '#FFFFFF',
-                    padding: '10px 20px',
-                    borderRadius: '8px',
-                    fontSize: '13px',
-                    fontWeight: 'bold',
-                    border: 'none',
-                    cursor: isApproving || !(editableBody || '').trim() || isDrafting ? 'not-allowed' : 'pointer',
-                    boxShadow: '0 4px 12px rgba(37, 211, 102, 0.3)',
+                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
                   }}
                 >
-                  {isApproving ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span>Opening WhatsApp...</span>
-                    </>
-                  ) : (
-                    <>
-                      <MessageSquare size={16} />
-                      <span>{isMobileClient ? 'Open in WhatsApp (₦0)' : 'Open in WhatsApp Web (₦0)'}</span>
-                      <ExternalLink size={13} style={{ opacity: 0.8 }} />
-                    </>
-                  )}
+                  <MessageSquareQuote size={17} />
+                  <span>Launch WhatsApp & Log Activity</span>
                 </button>
               )}
 
@@ -940,35 +1140,23 @@ function DraftContent() {
                 <button
                   type="button"
                   onClick={() => handleNativeDispatch('SMS')}
-                  disabled={isApproving || !(editableBody || '').trim() || isDrafting}
-                  className="hover-lift tap-press"
                   style={{
-                    display: 'flex',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    backgroundColor: '#00A581',
+                    color: '#FFFFFF',
+                    fontSize: '13.5px',
+                    fontWeight: '700',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     gap: '8px',
-                    backgroundColor: '#2563EB',
-                    color: '#FFFFFF',
-                    padding: '10px 20px',
-                    borderRadius: '8px',
-                    fontSize: '13px',
-                    fontWeight: 'bold',
-                    border: 'none',
-                    cursor: isApproving || !(editableBody || '').trim() || isDrafting ? 'not-allowed' : 'pointer',
-                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+                    boxShadow: '0 4px 14px rgba(0, 165, 129, 0.3)',
                   }}
                 >
-                  {isMobileClient ? (
-                    <>
-                      <Send size={16} />
-                      <span>Open in Phone Messages (SMS)</span>
-                      <ExternalLink size={13} style={{ opacity: 0.8 }} />
-                    </>
-                  ) : (
-                    <>
-                      <QrCode size={16} />
-                      <span>📱 Scan QR to Text on Phone (₦0)</span>
-                    </>
-                  )}
+                  <MessageSquare size={17} />
+                  <span>{isMobileClient ? 'Send SMS via Phone' : 'Send SMS via Phone QR Bridge'}</span>
                 </button>
               )}
 
@@ -976,386 +1164,61 @@ function DraftContent() {
                 <button
                   type="button"
                   onClick={() => handleNativeDispatch('PHONE_CALL')}
-                  disabled={isDrafting}
-                  className="hover-lift tap-press"
                   style={{
-                    display: 'flex',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    backgroundColor: '#3B82F6',
+                    color: '#FFFFFF',
+                    fontSize: '13.5px',
+                    fontWeight: '700',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     gap: '8px',
-                    backgroundColor: '#7C3AED',
-                    color: '#FFFFFF',
-                    padding: '10px 20px',
-                    borderRadius: '8px',
-                    fontSize: '13px',
-                    fontWeight: 'bold',
-                    border: 'none',
-                    cursor: isDrafting ? 'not-allowed' : 'pointer',
-                    boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)',
+                    boxShadow: '0 4px 14px rgba(59, 130, 246, 0.3)',
                   }}
                 >
-                  {isMobileClient ? (
-                    <>
-                      <PhoneCall size={16} />
-                      <span>Start Direct Call (+ AI Assistant)</span>
-                    </>
-                  ) : (
-                    <>
-                      <QrCode size={16} />
-                      <span>📱 Scan QR to Call on Phone (+ AI Script)</span>
-                    </>
-                  )}
+                  <PhoneCall size={17} />
+                  <span>{isMobileClient ? 'Call with Teleprompter' : 'Call via Desktop QR Bridge'}</span>
                 </button>
-              )}
-
-              {channel === 'EMAIL' && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  {/* Gmail Web */}
-                  <button
-                    type="button"
-                    onClick={() => handleNativeDispatch('EMAIL', 'GMAIL')}
-                    disabled={isApproving || !(editableBody || '').trim() || isDrafting}
-                    className="hover-lift tap-press"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      backgroundColor: '#EA4335',
-                      color: '#FFFFFF',
-                      padding: '9px 14px',
-                      borderRadius: '8px',
-                      fontSize: '12.5px',
-                      fontWeight: 'bold',
-                      border: 'none',
-                      cursor: isApproving || !(editableBody || '').trim() || isDrafting ? 'not-allowed' : 'pointer',
-                      boxShadow: '0 3px 10px rgba(234, 67, 53, 0.3)',
-                    }}
-                  >
-                    <Mail size={14} />
-                    <span>Open in Gmail (Web)</span>
-                    <ExternalLink size={12} style={{ opacity: 0.8 }} />
-                  </button>
-
-                  {/* Outlook Web */}
-                  <button
-                    type="button"
-                    onClick={() => handleNativeDispatch('EMAIL', 'OUTLOOK')}
-                    disabled={isApproving || !(editableBody || '').trim() || isDrafting}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      backgroundColor: '#0284C7',
-                      color: '#FFFFFF',
-                      padding: '9px 14px',
-                      borderRadius: '8px',
-                      fontSize: '12.5px',
-                      fontWeight: 'bold',
-                      border: 'none',
-                      cursor: isApproving || !(editableBody || '').trim() || isDrafting ? 'not-allowed' : 'pointer',
-                      boxShadow: '0 3px 10px rgba(2, 132, 199, 0.3)',
-                    }}
-                  >
-                    <Mail size={14} />
-                    <span>Open in Outlook (Web)</span>
-                    <ExternalLink size={12} style={{ opacity: 0.8 }} />
-                  </button>
-
-                  {/* Default App */}
-                  <button
-                    type="button"
-                    onClick={() => handleNativeDispatch('EMAIL', 'DEFAULT')}
-                    disabled={isApproving || !(editableBody || '').trim() || isDrafting}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      backgroundColor: isLight ? '#FFFFFF' : '#00253F',
-                      border: `1px solid ${tokens.surfaceBorder}`,
-                      color: tokens.textPrimary,
-                      padding: '9px 12px',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                      cursor: isApproving || !(editableBody || '').trim() || isDrafting ? 'not-allowed' : 'pointer',
-                      boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
-                    }}
-                  >
-                    <Mail size={13} />
-                    <span>Default App</span>
-                  </button>
-
-                  {/* Copy Email & Text Fallback */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (selectedCustomer?.email && editableBody) {
-                        navigator.clipboard.writeText(`To: ${selectedCustomer.email}\nSubject: Payment Follow-Up\n\n${editableBody}`);
-                        setCopiedEmailOnly(true);
-                        setTimeout(() => setCopiedEmailOnly(false), 2000);
-                      }
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      backgroundColor: isLight ? '#FFFFFF' : '#001D31',
-                      border: `1px solid ${tokens.surfaceBorder}`,
-                      color: tokens.textSecondary,
-                      padding: '9px 12px',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
-                    }}
-                  >
-                    {copiedEmailOnly ? <Check size={13} color="#00A581" /> : <Copy size={13} />}
-                    <span>{copiedEmailOnly ? 'Copied Full Email!' : 'Copy Email & Text'}</span>
-                  </button>
-                </div>
               )}
             </div>
           </div>
-
-          {/* Interactive Post-Dispatch Outcome & Promise Logger */}
-          {approvedSuccess && (
-            <div
-              style={{
-                marginTop: '20px',
-                padding: '16px 20px',
-                backgroundColor: isLight ? '#ECFDF8' : 'rgba(0, 34, 56, 0.9)',
-                border: `1px solid ${tokens.accentBorder}`,
-                borderRadius: '10px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                boxShadow: isLight ? tokens.shadowCard : 'none',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <CheckCircle2 size={18} color="#00A581" />
-                  <span style={{ fontSize: '13.5px', fontWeight: 'bold', color: isLight ? '#065F46' : '#FFFFFF' }}>
-                    Follow-up Dispatched via {lastDispatchedChannel || channel}! Did customer make a promise?
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setQuickPromiseOpen(!quickPromiseOpen)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    backgroundColor: quickPromiseOpen ? (isLight ? '#FFFFFF' : '#001D31') : tokens.accentSoft,
-                    border: `1px solid ${tokens.accentBorder}`,
-                    color: '#00A581',
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <DollarSign size={14} />
-                  <span>{quickPromiseOpen ? 'Hide Promise Form' : '🤝 Log Customer Promise to Pay'}</span>
-                </button>
-              </div>
-
-              {/* Collapsible Promise Input Form */}
-              {quickPromiseOpen && (
-                <div
-                  style={{
-                    backgroundColor: isLight ? '#FFFFFF' : '#001D31',
-                    border: `1px solid ${tokens.surfaceBorder}`,
-                    borderRadius: '8px',
-                    padding: '14px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px',
-                    boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.04)' : 'none',
-                  }}
-                >
-                  <span style={{ fontSize: '12px', color: tokens.textSecondary }}>
-                    Log the agreed commitment to automatically track in Collections queue and alert you on due date:
-                  </span>
-
-                  {customerReceivables.length > 0 && (
-                    <div>
-                      <label style={{ fontSize: '11px', color: tokens.textSecondary, display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
-                        Bound Invoice / Receivable
-                      </label>
-                      <select
-                        value={selectedReceivableId}
-                        onChange={(e) => {
-                          setSelectedReceivableId(e.target.value);
-                          const chosen = customerReceivables.find((r) => r.id === e.target.value);
-                          if (chosen?.balance) {
-                            setPromisedAmount(String(chosen.balance));
-                          }
-                        }}
-                        style={{
-                          width: '100%',
-                          backgroundColor: isLight ? '#F8FAFC' : '#001625',
-                          border: `1px solid ${tokens.surfaceBorder}`,
-                          color: tokens.textPrimary,
-                          borderRadius: '6px',
-                          padding: '8px 10px',
-                          fontSize: '13px',
-                          outline: 'none',
-                        }}
-                      >
-                        {customerReceivables.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.reference || 'Invoice'} • {formatCurrency(r.balance || r.originalAmount, r.currency)} ({r.status})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  <div className="responsive-split-2">
-                    <div>
-                      <label style={{ fontSize: '11px', color: tokens.textSecondary, display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
-                        Promised Amount (₦)
-                      </label>
-                      <input
-                        type="number"
-                        value={promisedAmount}
-                        onChange={(e) => setPromisedAmount(e.target.value)}
-                        placeholder="e.g. 300000"
-                        style={{
-                          width: '100%',
-                          backgroundColor: isLight ? '#F8FAFC' : '#001625',
-                          border: `1px solid ${tokens.surfaceBorder}`,
-                          color: tokens.textPrimary,
-                          borderRadius: '6px',
-                          padding: '8px 10px',
-                          fontSize: '13px',
-                          outline: 'none',
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '11px', color: tokens.textSecondary, display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
-                        Promised Date
-                      </label>
-                      <input
-                        type="date"
-                        value={promisedDate}
-                        onChange={(e) => setPromisedDate(e.target.value)}
-                        style={{
-                          width: '100%',
-                          backgroundColor: isLight ? '#F8FAFC' : '#001625',
-                          border: `1px solid ${tokens.surfaceBorder}`,
-                          color: tokens.textPrimary,
-                          borderRadius: '6px',
-                          padding: '8px 10px',
-                          fontSize: '13px',
-                          outline: 'none',
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '11px', color: tokens.textSecondary, display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
-                      Additional Notes / Arrangements (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={promiseNotes}
-                      onChange={(e) => setPromiseNotes(e.target.value)}
-                      placeholder="e.g. Promised to send transfer receipt before 2 PM..."
-                      style={{
-                        width: '100%',
-                        backgroundColor: isLight ? '#F8FAFC' : '#001625',
-                        border: `1px solid ${tokens.surfaceBorder}`,
-                        color: tokens.textPrimary,
-                        borderRadius: '6px',
-                        padding: '8px 10px',
-                        fontSize: '13px',
-                        outline: 'none',
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', alignItems: 'center' }}>
-                    {promiseSuccessMsg && (
-                      <span style={{ fontSize: '12px', color: '#00A581', fontWeight: 'bold' }}>
-                        ✓ {promiseSuccessMsg}
-                      </span>
-                    )}
-
-                    <button
-                      type="button"
-                      disabled={isSavingPromise || !promisedAmount || !promisedDate}
-                      onClick={handleQuickSavePromise}
-                      style={{
-                        backgroundColor: '#00A581',
-                        color: '#FFFFFF',
-                        border: 'none',
-                        borderRadius: '6px',
-                        padding: '8px 16px',
-                        fontSize: '12.5px',
-                        fontWeight: 'bold',
-                        cursor: isSavingPromise ? 'not-allowed' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        boxShadow: '0 2px 8px rgba(0, 165, 129, 0.3)',
-                      }}
-                    >
-                      {isSavingPromise ? (
-                        <>
-                          <Loader2 size={14} className="animate-spin" />
-                          <span>Saving Commitment...</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 size={14} />
-                          <span>Save Commitment to Books</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Call Assistant Modal for Mobile Callers */}
-      <CallAssistantModal
-        isOpen={isCallModalOpen}
-        onClose={() => setIsCallModalOpen(false)}
-        customer={selectedCustomer || null}
-        scriptText={editableBody}
-        onActionComplete={(msg) => {
-          setApprovedSuccess(true);
-          setLastDispatchedChannel('PHONE_CALL');
-        }}
-      />
+      {/* Call Assistant Modal */}
+      {selectedCustomer && (
+        <CallAssistantModal
+          isOpen={isCallModalOpen}
+          onClose={() => setIsCallModalOpen(false)}
+          customer={selectedCustomer}
+          scriptText={editableBody}
+        />
+      )}
 
-      {/* Phone QR Bridge Modal for Desktop PC Calling & SMS */}
-      <PhoneQrBridgeModal
-        isOpen={isQrModalOpen}
-        onClose={() => setIsQrModalOpen(false)}
-        customer={selectedCustomer || null}
-        mode={qrModalMode}
-        scriptText={editableBody}
-        onActionComplete={(msg) => {
-          setApprovedSuccess(true);
-          setLastDispatchedChannel(qrModalMode);
-        }}
-      />
+      {/* Phone QR Bridge Modal for Desktop Users */}
+      {selectedCustomer && (
+        <PhoneQrBridgeModal
+          isOpen={isQrModalOpen}
+          onClose={() => setIsQrModalOpen(false)}
+          customer={selectedCustomer}
+          scriptText={editableBody}
+          mode={qrModalMode}
+        />
+      )}
     </div>
   );
 }
 
-export default function DraftPage() {
+export default function MessageDraftPage() {
   return (
-    <Suspense fallback={<div style={{ padding: '40px', color: '#8FB7C7' }}>Loading draft workspace...</div>}>
+    <Suspense fallback={
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
+        <Loader2 size={32} className="animate-spin text-teal-500" />
+      </div>
+    }>
       <DraftContent />
     </Suspense>
   );

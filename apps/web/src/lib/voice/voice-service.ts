@@ -7,7 +7,7 @@
 
 import { WebStorageService } from '../api/storage';
 
-export type VoiceLanguage = 'en' | 'pcm' | 'ha' | 'yo' | 'ig';
+export type VoiceLanguage = 'en' | 'pcm' | 'ha' | 'yo' | 'ig' | 'sw' | 'fr';
 
 export interface VisualizerData {
   frequencies: number[]; // 16 frequency bands (0 - 255)
@@ -29,6 +29,7 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
 
 /**
  * Strips markdown symbols, code fences, and JSON brackets so speech is human-smooth.
+ * Converts currencies, technical acronyms, and dates into natural conversational speech.
  */
 export function cleanTextForSpeech(raw: string): string {
   if (!raw) return '';
@@ -39,7 +40,7 @@ export function cleanTextForSpeech(raw: string): string {
   if (text.startsWith('{') && text.endsWith('}')) {
     try {
       const parsed = JSON.parse(text);
-      text = parsed.content || parsed.message || parsed.reply || parsed.summary || '';
+      text = parsed.content || parsed.message || parsed.reply || parsed.summary || parsed.response || parsed.text || '';
     } catch {}
   }
 
@@ -47,18 +48,35 @@ export function cleanTextForSpeech(raw: string): string {
   text = text.replace(/```[\s\S]*?```/g, '');
   text = text.replace(/`([^`]+)`/g, '$1');
 
+  // Strip evidence and citation brackets (e.g. [Memory #MEM-01], [Event #EVT-08])
+  text = text.replace(/\[(?:Memory|Event|Citation|Evidence)\s*#?[^\]]+\]/gi, '');
+
   // Convert currencies to natural spoken words
   text = text.replace(/₦\s*([\d,]+)/g, '$1 Naira');
   text = text.replace(/\$\s*([\d,]+)/g, '$1 Dollars');
   text = text.replace(/KSh\s*([\d,]+)/g, '$1 Kenyan Shillings');
   text = text.replace(/GH₵\s*([\d,]+)/g, '$1 Ghana Cedis');
+  text = text.replace(/€\s*([\d,]+)/g, '$1 Euros');
+  text = text.replace(/£\s*([\d,]+)/g, '$1 Pounds');
+
+  // Smooth common business acronyms for clear voice pronunciation
+  text = text.replace(/\bSMS\b/g, 'S.M.S.');
+  text = text.replace(/\bOTP\b/g, 'O.T.P.');
+  text = text.replace(/\bPOS\b/g, 'P.O.S.');
+  text = text.replace(/\bAPI\b/g, 'A.P.I.');
+  text = text.replace(/\bMCP\b/g, 'M.C.P.');
+  text = text.replace(/\bINV-(\d+)/gi, 'Invoice $1');
+  text = text.replace(/\bREC-(\d+)/gi, 'Receivable $1');
 
   // Remove markdown headers, bullets, bold, italics, links
   text = text.replace(/^#+\s+/gm, '');
-  text = text.replace(/^[-*]\s+/gm, '');
+  text = text.replace(/^[-*•]\s+/gm, '');
   text = text.replace(/\*\*(.*?)\*\*/g, '$1');
   text = text.replace(/\*(.*?)\*/g, '$1');
   text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+
+  // Clean raw emojis/icons that confuse speech synthesis engines
+  text = text.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
 
   // Strip excessive whitespace
   return text.replace(/\s+/g, ' ').trim();
@@ -220,6 +238,8 @@ function playWithBrowserSpeech(
     ha: 'ha-NG',
     yo: 'yo-NG',
     ig: 'ig-NG',
+    sw: 'sw-KE',
+    fr: 'fr-FR',
   };
 
   const targetLangCode = langMap[language] || 'en-US';

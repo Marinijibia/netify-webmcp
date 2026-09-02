@@ -1,0 +1,46 @@
+{
+  "name": "Netify — AI Debt Collections & Business Memory",
+  "short_name": "Netify",
+  "description": "Know who owes you. Remember what they promised. Know who needs attention. Get paid.",
+  "start_url": "/workspace",
+  "display": "standalone",
+  "background_color": "#001424",
+  "theme_color": "#00A581",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Collections Queue",
+      "url": "/collections",
+      "description": "View prioritized delinquent debtor queue"
+    },
+    {
+      "name": "Message Studio",
+      "url": "/messages/draft",
+      "description": "Draft and dispatch WhatsApp follow-ups"
+    },
+    {
+      "name": "AI Assistant Chat",
+      "url": "/chat",
+      "description": "Ask Netify AI financial questions"
+    },
+    {
+      "name": "Debtor Ledgers",
+      "url": "/customers",
+      "description": "Browse 360° debtor directories"
+    }
+  ]
+}

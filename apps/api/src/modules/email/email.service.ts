@@ -7,12 +7,14 @@ import {
   SendEmailOptions,
   VerificationEmailData,
   WelcomeEmailData,
+  TeamInviteEmailData,
 } from './email.types';
 import { renderVerificationEmail } from './templates/verification.template';
 import { renderPasswordResetEmail } from './templates/password-reset.template';
 import { renderWelcomeEmail } from './templates/welcome.template';
 import { renderPasswordChangedEmail } from './templates/password-changed.template';
 import { renderNewSignInEmail } from './templates/new-signin.template';
+import { renderTeamInviteEmail } from './templates/team-invite.template';
 
 @Injectable()
 export class EmailService {
@@ -20,8 +22,10 @@ export class EmailService {
   private readonly resendClient: Resend | null = null;
   private readonly fromEmail: string;
   private readonly fromName: string;
+  private readonly replyToEmail: string | undefined;
   private readonly verificationUrlTemplate: string | null;
   private readonly resetUrlTemplate: string | null;
+  private readonly appUrl: string;
 
   constructor(private readonly configService: ConfigService) {
     const apiKey = this.configService.get<string>('RESEND_API_KEY');
@@ -30,6 +34,17 @@ export class EmailService {
       this.configService.get<string>('RESEND_FROM_EMAIL') ||
       'onboarding@resend.dev';
     this.fromName = this.configService.get<string>('RESEND_FROM_NAME') || 'Netify';
+    this.replyToEmail =
+      this.configService.get<string>('EMAIL_REPLY_TO') ||
+      this.configService.get<string>('SUPPORT_EMAIL') ||
+      undefined;
+
+    this.appUrl = (
+      this.configService.get<string>('APP_URL') ||
+      this.configService.get<string>('FRONTEND_URL') ||
+      'https://app.netify.africa'
+    ).replace(/\/$/, '');
+
     this.verificationUrlTemplate =
       this.configService.get<string>('AUTH_VERIFICATION_URL') || null;
     this.resetUrlTemplate =
@@ -44,10 +59,11 @@ export class EmailService {
   }
 
   /**
-   * Dispatches an email through Resend
+   * Dispatches an email through Resend with automatic reply-to and dev fallback
    */
   async sendEmail(options: SendEmailOptions): Promise<EmailDeliveryResult> {
     const fromAddress = `${this.fromName} <${this.fromEmail}>`;
+    const replyTo = options.replyTo || this.replyToEmail;
 
     if (this.resendClient) {
       try {
@@ -57,7 +73,7 @@ export class EmailService {
           subject: options.subject,
           html: options.html,
           text: options.text,
-          replyTo: options.replyTo,
+          replyTo,
         });
 
         if (error) {
@@ -89,7 +105,7 @@ export class EmailService {
   }
 
   /**
-   * Sends email verification with 6-digit PIN and optional app deep link
+   * Sends email verification with 6-digit PIN and intelligent app deep link
    */
   async sendVerificationEmail(
     to: string,
@@ -99,10 +115,14 @@ export class EmailService {
   ): Promise<EmailDeliveryResult> {
     let verificationUrl: string | undefined;
 
-    if (this.verificationUrlTemplate && verificationToken) {
-      verificationUrl = this.verificationUrlTemplate
-        .replace('{token}', verificationToken)
-        .replace('{email}', encodeURIComponent(to));
+    if (verificationToken) {
+      if (this.verificationUrlTemplate) {
+        verificationUrl = this.verificationUrlTemplate
+          .replace('{token}', verificationToken)
+          .replace('{email}', encodeURIComponent(to));
+      } else {
+        verificationUrl = `${this.appUrl}/verify-email?email=${encodeURIComponent(to)}&token=${verificationToken}`;
+      }
     }
 
     const { subject, html, text } = renderVerificationEmail({
@@ -116,7 +136,7 @@ export class EmailService {
   }
 
   /**
-   * Sends password reset email with 6-digit PIN and optional reset deep link
+   * Sends password reset email with 6-digit PIN and intelligent reset deep link
    */
   async sendPasswordResetEmail(
     to: string,
@@ -126,10 +146,14 @@ export class EmailService {
   ): Promise<EmailDeliveryResult> {
     let resetUrl: string | undefined;
 
-    if (this.resetUrlTemplate && resetToken) {
-      resetUrl = this.resetUrlTemplate
-        .replace('{token}', resetToken)
-        .replace('{email}', encodeURIComponent(to));
+    if (resetToken) {
+      if (this.resetUrlTemplate) {
+        resetUrl = this.resetUrlTemplate
+          .replace('{token}', resetToken)
+          .replace('{email}', encodeURIComponent(to));
+      } else {
+        resetUrl = `${this.appUrl}/reset-password?email=${encodeURIComponent(to)}&token=${resetToken}`;
+      }
     }
 
     const { subject, html, text } = renderPasswordResetEmail({
@@ -150,17 +174,19 @@ export class EmailService {
     firstName: string,
     organizationName?: string
   ): Promise<EmailDeliveryResult> {
+    const dashboardUrl = `${this.appUrl}/workspace`;
     const { subject, html, text } = renderWelcomeEmail({
       to,
       firstName,
       organizationName,
+      dashboardUrl,
     });
 
     return this.sendEmail({ to, subject, html, text });
   }
 
   /**
-   * Sends password changed notification
+   * Sends password changed security notification
    */
   async sendPasswordChangedNotification(
     to: string,
@@ -194,6 +220,31 @@ export class EmailService {
       platform,
       ipAddress,
       timestamp,
+    });
+
+    return this.sendEmail({ to, subject, html, text });
+  }
+
+  /**
+   * Sends team member invitation email
+   */
+  async sendTeamInviteEmail(
+    to: string,
+    inviterName: string,
+    organizationName: string,
+    role: string,
+    inviteTokenOrUrl?: string
+  ): Promise<EmailDeliveryResult> {
+    const inviteUrl = inviteTokenOrUrl?.startsWith('http')
+      ? inviteTokenOrUrl
+      : `${this.appUrl}/register?invite=${encodeURIComponent(inviteTokenOrUrl || '')}&email=${encodeURIComponent(to)}`;
+
+    const { subject, html, text } = renderTeamInviteEmail({
+      to,
+      inviterName,
+      organizationName,
+      role,
+      inviteUrl,
     });
 
     return this.sendEmail({ to, subject, html, text });

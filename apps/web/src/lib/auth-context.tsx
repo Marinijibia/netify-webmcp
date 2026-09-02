@@ -10,6 +10,7 @@ import {
   WebStorageService 
 } from '@/lib/api';
 import { WebBiometricService } from './biometrics';
+import { initOneSignal, logoutOneSignal } from '@/lib/push/onesignal';
 
 export interface ActiveOrganization {
   id: string;
@@ -146,6 +147,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         WebStorageService.setActiveOrg(org);
       }
       const profile = await refreshProfile();
+      // Initialize OneSignal push (non-blocking — links this browser to the user)
+      if (profile?.id) {
+        initOneSignal(profile.id).catch(() => {});
+      }
       if (profile && !profile.onboardingCompleted) {
         router.push('/onboarding');
       } else {
@@ -199,6 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     setIsLoading(true);
+    logoutOneSignal().catch(() => {}); // non-blocking
     try {
       await authApi.logout();
     } finally {

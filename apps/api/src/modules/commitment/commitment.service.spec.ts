@@ -252,7 +252,7 @@ describe('CommitmentService (Domain Design 04 Test Suite)', () => {
           id: 'comm-1',
           amount: new Prisma.Decimal('200000.00'),
           status: CommitmentStatus.FULFILLED,
-          promisedFor: new Date('2026-08-30'),
+          promisedFor: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         },
       ];
 

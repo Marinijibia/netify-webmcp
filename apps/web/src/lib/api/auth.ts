@@ -107,6 +107,14 @@ export const authApi = {
     return apiClient.get<UserProfile>('/auth/me');
   },
 
+  async forgotPassword(email: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.post<{ message: string }>('/auth/forgot-password', { email }, { requiresAuth: false });
+  },
+
+  async resetPassword(token: string, newPassword: string): Promise<ApiResponse<{ message: string }>> {
+    return apiClient.post<{ message: string }>('/auth/reset-password', { token, newPassword }, { requiresAuth: false });
+  },
+
   async logout(): Promise<void> {
     const refreshToken = WebStorageService.getRefreshToken();
     if (refreshToken) {

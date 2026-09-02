@@ -10,21 +10,27 @@ import { useLanguage } from '@/lib/i18n';
 import { useTheme } from '@/lib/theme/theme-context';
 import LiveVoiceAssistantModal from './LiveVoiceAssistantModal';
 import { AgentCoPilotDrawer } from './AgentCoPilotDrawer';
+import { NotificationPopover } from './NotificationPopover';
+import { NotificationToast } from './NotificationToast';
+import { useNotificationStream } from '@/lib/hooks/useNotificationStream';
+import { AppNotification } from '@/lib/api';
 
 export function Navbar() {
   const pathname = usePathname();
   const { user, organization, isAuthenticated } = useAuth();
   const { currentLanguageInfo, openLanguageModal, t } = useLanguage();
   const { tokens, isLight, toggleTheme } = useTheme();
-  const [unreadCount, setUnreadCount] = React.useState(0);
   const [isVoiceAssistantOpen, setIsVoiceAssistantOpen] = React.useState(false);
   const [isCoPilotDrawerOpen, setIsCoPilotDrawerOpen] = React.useState(false);
+  const [isNotificationPopoverOpen, setIsNotificationPopoverOpen] = React.useState(false);
+  const [toastNotification, setToastNotification] = React.useState<AppNotification | null>(null);
 
-  React.useEffect(() => {
-    if (isAuthenticated) {
-      notificationApi.getUnreadCount().then(setUnreadCount).catch(() => {});
-    }
-  }, [isAuthenticated, pathname]);
+  const { unreadCount, setUnreadCount } = useNotificationStream({
+    onNewNotification: (notif) => {
+      setToastNotification(notif);
+    },
+  });
+
 
   // Hide navbar on auth pages
   if (pathname === '/login' || pathname === '/register') {
@@ -224,48 +230,62 @@ export function Navbar() {
           <span style={{ fontSize: '10px', color: '#00A581' }}>▼</span>
         </button>
 
-        {/* Notification Bell */}
-        <Link
-          href="/notifications"
-          style={{
-            position: 'relative',
-            width: '36px',
-            height: '36px',
-            borderRadius: '9px',
-            backgroundColor: isLight ? '#FFFFFF' : 'rgba(0, 32, 53, 0.8)',
-            border: `1px solid ${tokens.surfaceBorder}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: unreadCount > 0 ? '#00A581' : tokens.textMuted,
-            textDecoration: 'none',
-            flexShrink: 0,
-            transition: 'all 0.15s ease',
-            boxShadow: isLight ? tokens.shadowCard : 'none',
-          }}
-        >
-          <Bell size={17} />
-          {unreadCount > 0 && (
-            <span style={{
-              position: 'absolute',
-              top: '-3px',
-              right: '-3px',
-              backgroundColor: '#EF4444',
-              color: '#FFFFFF',
-              borderRadius: '50%',
-              width: '18px',
-              height: '18px',
-              fontSize: '10.5px',
-              fontWeight: '800',
+        {/* Notification Bell — opens quick-access popover */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => setIsNotificationPopoverOpen((prev) => !prev)}
+            style={{
+              position: 'relative',
+              width: '36px',
+              height: '36px',
+              borderRadius: '9px',
+              backgroundColor: isNotificationPopoverOpen
+                ? (isLight ? '#E6F7F3' : 'rgba(0, 165, 129, 0.15)')
+                : (isLight ? '#FFFFFF' : 'rgba(0, 32, 53, 0.8)'),
+              border: `1px solid ${isNotificationPopoverOpen ? '#00A581' : tokens.surfaceBorder}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              border: `2px solid ${tokens.background}`,
-            }}>
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
-          )}
-        </Link>
+              color: unreadCount > 0 ? '#00A581' : tokens.textMuted,
+              cursor: 'pointer',
+              flexShrink: 0,
+              transition: 'all 0.15s ease',
+              boxShadow: isLight ? tokens.shadowCard : 'none',
+            }}
+            aria-label="Open notification panel"
+          >
+            <Bell size={17} />
+            {unreadCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-4px',
+                right: '-4px',
+                backgroundColor: '#EF4444',
+                color: '#FFFFFF',
+                borderRadius: '50%',
+                width: '18px',
+                height: '18px',
+                fontSize: '10.5px',
+                fontWeight: '800',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: `2px solid ${tokens.background}`,
+                animation: 'pulse 2s infinite',
+              }}>
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          <NotificationPopover
+            isOpen={isNotificationPopoverOpen}
+            onClose={() => setIsNotificationPopoverOpen(false)}
+            unreadCount={unreadCount}
+            onUnreadCountChange={setUnreadCount}
+          />
+        </div>
 
         {/* User Pill */}
         {isAuthenticated && (
@@ -318,6 +338,12 @@ export function Navbar() {
       <AgentCoPilotDrawer
         isOpen={isCoPilotDrawerOpen}
         onClose={() => setIsCoPilotDrawerOpen(false)}
+      />
+
+      {/* Live In-App Floating Toast Notification */}
+      <NotificationToast
+        notification={toastNotification}
+        onDismiss={() => setToastNotification(null)}
       />
     </header>
   );

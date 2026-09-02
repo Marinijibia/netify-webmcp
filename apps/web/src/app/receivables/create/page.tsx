@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { 
   receivablesApi, 
@@ -17,22 +17,34 @@ import {
   DollarSign, 
   CheckCircle2, 
   AlertCircle, 
-  Loader2 
+  Loader2,
+  Sparkles,
+  Plus,
+  RefreshCw,
+  Clock
 } from 'lucide-react';
 import { useTheme } from '@/lib/theme/theme-context';
 import { useLanguage } from '@/lib/i18n';
 
-const TERM_OPTIONS = [7, 14, 30, 60];
+const TERM_OPTIONS = [
+  { days: 7, label: 'Net 7 (1 Week)' },
+  { days: 14, label: 'Net 14 (2 Weeks)' },
+  { days: 30, label: 'Net 30 (1 Month)' },
+  { days: 60, label: 'Net 60 (2 Months)' },
+];
 
-export default function CreateReceivablePage() {
+function CreateReceivableForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialCustomerId = searchParams.get('customerId') || '';
+
   const { organization } = useAuth();
   const { tokens, isLight } = useTheme();
   const { t } = useLanguage();
 
   const [customers, setCustomers] = useState<CustomerItem[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(true);
-  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState(initialCustomerId);
   
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -46,12 +58,20 @@ export default function CreateReceivablePage() {
 
   const currency = organization?.currency || 'NGN';
 
+  // Generate Reference
+  const generateReference = () => {
+    const dateStr = new Date().toISOString().slice(2, 7).replace('-', '');
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    setReference(`INV-${dateStr}-${rand}`);
+  };
+
   useEffect(() => {
+    generateReference();
     async function loadCustomers() {
       try {
-        const list = await customersApi.list();
+        const list = await customersApi.list({ pageSize: 200 });
         setCustomers(list);
-        if (list.length > 0) {
+        if (!selectedCustomerId && list.length > 0) {
           setSelectedCustomerId(list[0].id);
         }
       } catch (err: any) {
@@ -61,7 +81,7 @@ export default function CreateReceivablePage() {
       }
     }
     loadCustomers();
-  }, []);
+  }, [selectedCustomerId]);
 
   const calculateDueDate = () => {
     const d = new Date();
@@ -88,7 +108,7 @@ export default function CreateReceivablePage() {
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + termDays);
 
-      await receivablesApi.create({
+      const created = await receivablesApi.create({
         customerId: selectedCustomerId,
         amount: num,
         currency,
@@ -99,17 +119,17 @@ export default function CreateReceivablePage() {
         notes: notes.trim() || undefined,
       });
 
-      router.push('/receivables');
+      router.push(`/receivables/${created.id}`);
     } catch (err: any) {
       console.warn('Failed to create receivable:', err);
-      setError(err?.message || 'Failed to issue receivable in live API.');
+      setError(err?.message || 'Failed to create receivable invoice in live API.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '680px', margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '720px', margin: '0 auto' }}>
       {/* Back Link */}
       <Link
         href="/receivables"
@@ -124,13 +144,13 @@ export default function CreateReceivablePage() {
         }}
       >
         <ArrowLeft size={16} />
-        <span>Back to Receivables Ledger</span>
+        <span>Back to Invoices & Receivables</span>
       </Link>
 
-      {/* Form Card */}
+      {/* Main Card */}
       <div style={{
         backgroundColor: tokens.surface,
-        borderRadius: '12px',
+        borderRadius: '16px',
         border: `1px solid ${tokens.surfaceBorder}`,
         padding: 'clamp(20px, 4vw, 32px)',
         boxShadow: isLight ? tokens.shadowCard : 'none',
@@ -138,12 +158,12 @@ export default function CreateReceivablePage() {
         <div style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <FileText size={22} color="#00A581" />
-            <h2 style={{ fontSize: 'clamp(18px, 3vw, 20px)', fontWeight: 'bold', color: tokens.textPrimary, margin: 0 }}>
-              {t('receivables.issueInvoiceTitle')}
+            <h2 style={{ fontSize: 'clamp(18px, 3vw, 22px)', fontWeight: '900', color: tokens.textPrimary, margin: 0 }}>
+              {t('receivables.addReceivableModalTitle')}
             </h2>
           </div>
           <p style={{ color: tokens.textSecondary, fontSize: '13px', marginTop: '4px' }}>
-            Log a new credit sale or invoice with deterministic due dates.
+            Create an official commercial invoice or record credit sales to start recovery workflows.
           </p>
         </div>
 
@@ -165,107 +185,96 @@ export default function CreateReceivablePage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Customer Selector */}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          {/* Customer Selection */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
-              Select Debtor / Customer Account *
-            </label>
-            {loadingCustomers ? (
-              <div style={{ padding: '10px', color: tokens.textMuted, fontSize: '13px' }}>Loading customers...</div>
-            ) : customers.length === 0 ? (
-              <div style={{ padding: '12px', backgroundColor: isLight ? '#FEF3C7' : 'rgba(245, 158, 11, 0.15)', borderRadius: '8px', fontSize: '12.5px', color: isLight ? '#92400E' : '#FCD34D' }}>
-                No customers found. <Link href="/customers/create" style={{ color: '#00A581', fontWeight: 'bold', textDecoration: 'none' }}>Create customer first</Link>
-              </div>
-            ) : (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label style={{ fontSize: '11.5px', fontWeight: 'bold', color: tokens.textSecondary, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                Customer / Debtor *
+              </label>
+              <Link href="/customers/create" style={{ fontSize: '11.5px', color: '#00A581', fontWeight: '700', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                <Plus size={12} />
+                <span>Add New Customer</span>
+              </Link>
+            </div>
+            <div style={{ position: 'relative' }}>
+              <User size={14} color={tokens.textMuted} style={{ position: 'absolute', left: '12px', top: '12px' }} />
               <select
+                required
                 value={selectedCustomerId}
                 onChange={(e) => setSelectedCustomerId(e.target.value)}
-                required
+                disabled={loadingCustomers}
                 style={{
                   width: '100%',
-                  padding: '11px 14px',
+                  padding: '10px 12px 10px 34px',
                   backgroundColor: isLight ? '#FFFFFF' : '#001D31',
                   border: `1px solid ${tokens.surfaceBorder}`,
                   borderRadius: '8px',
                   color: tokens.textPrimary,
-                  fontSize: '13.5px',
+                  fontSize: '13px',
                   outline: 'none',
-                  boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
+                  cursor: 'pointer',
                 }}
               >
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} {c.phone ? `(${c.phone})` : ''}
-                  </option>
-                ))}
+                {loadingCustomers ? (
+                  <option value="">Loading customer directory...</option>
+                ) : customers.length === 0 ? (
+                  <option value="">No customers found. Please add one first.</option>
+                ) : (
+                  customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} {c.phone ? `(${c.phone})` : ''}
+                    </option>
+                  ))
+                )}
               </select>
-            )}
-          </div>
-
-          {/* Amount */}
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
-              Invoice Amount ({currency}) *
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              required
-              min="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              style={{
-                width: '100%',
-                padding: '12px 14px',
-                backgroundColor: isLight ? '#FFFFFF' : '#001D31',
-                border: `1px solid ${tokens.surfaceBorder}`,
-                borderRadius: '8px',
-                color: tokens.textPrimary,
-                fontSize: '16px',
-                fontWeight: 'bold',
-                outline: 'none',
-                boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
-              }}
-            />
-          </div>
-
-          {/* Payment Terms */}
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '8px', textTransform: 'uppercase' }}>
-              Payment Terms (Due in {termDays} days — {calculateDueDate()})
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(70px, 1fr))', gap: '8px' }}>
-              {TERM_OPTIONS.map((days) => (
-                <button
-                  key={days}
-                  type="button"
-                  onClick={() => setTermDays(days)}
-                  style={{
-                    padding: '10px',
-                    borderRadius: '8px',
-                    fontSize: '12.5px',
-                    fontWeight: '600',
-                    backgroundColor: termDays === days ? '#00A581' : (isLight ? '#FFFFFF' : '#001D31'),
-                    color: termDays === days ? '#FFFFFF' : tokens.textSecondary,
-                    border: `1px solid ${termDays === days ? '#00A581' : tokens.surfaceBorder}`,
-                    cursor: 'pointer',
-                    boxShadow: isLight && termDays !== days ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
-                  }}
-                >
-                  {days} Days
-                </button>
-              ))}
             </div>
           </div>
 
-          {/* Reference & Source */}
+          {/* Amount & Reference */}
           <div className="responsive-split-2">
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
-                Invoice Reference
+              <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                Invoice Amount ({currency}) *
               </label>
+              <div style={{ position: 'relative' }}>
+                <DollarSign size={14} color={tokens.textMuted} style={{ position: 'absolute', left: '12px', top: '12px' }} />
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px 9px 34px',
+                    backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                    border: `1px solid ${tokens.surfaceBorder}`,
+                    borderRadius: '8px',
+                    color: tokens.textPrimary,
+                    fontSize: '14px',
+                    fontWeight: '700',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ fontSize: '11.5px', fontWeight: 'bold', color: tokens.textSecondary, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                  Invoice Reference
+                </label>
+                <button
+                  type="button"
+                  onClick={generateReference}
+                  style={{ background: 'none', border: 'none', color: '#00A581', fontSize: '11px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px', padding: 0 }}
+                >
+                  <RefreshCw size={10} />
+                  <span>Regenerate</span>
+                </button>
+              </div>
               <input
                 type="text"
                 value={reference}
@@ -273,55 +282,74 @@ export default function CreateReceivablePage() {
                 placeholder="e.g. INV-2026-001"
                 style={{
                   width: '100%',
-                  padding: '10px 12px',
+                  padding: '9px 12px',
                   backgroundColor: isLight ? '#FFFFFF' : '#001D31',
                   border: `1px solid ${tokens.surfaceBorder}`,
                   borderRadius: '8px',
                   color: tokens.textPrimary,
                   fontSize: '13px',
                   outline: 'none',
-                  boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
                 }}
               />
             </div>
+          </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
-                Receivable Source
-              </label>
-              <select
-                value={source}
-                onChange={(e) => setSource(e.target.value as any)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  backgroundColor: isLight ? '#FFFFFF' : '#001D31',
-                  border: `1px solid ${tokens.surfaceBorder}`,
-                  borderRadius: '8px',
-                  color: tokens.textPrimary,
-                  fontSize: '13px',
-                  outline: 'none',
-                  boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
-                }}
-              >
-                <option value="INVOICE">Formal Invoice</option>
-                <option value="CREDIT_SALE">Credit Sale (Goods Dispatched)</option>
-                <option value="MANUAL">Manual Balance Entry</option>
-                <option value="OTHER">Other / Service Agreement</option>
-              </select>
+          {/* Payment Terms & Due Date */}
+          <div>
+            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+              Payment Terms & Due Date
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '10px' }}>
+              {TERM_OPTIONS.map((opt) => (
+                <button
+                  key={opt.days}
+                  type="button"
+                  onClick={() => setTermDays(opt.days)}
+                  style={{
+                    padding: '8px 4px',
+                    borderRadius: '8px',
+                    fontSize: '11.5px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    backgroundColor: termDays === opt.days ? '#00A581' : (isLight ? '#F1F5F9' : '#001424'),
+                    color: termDays === opt.days ? '#FFFFFF' : tokens.textPrimary,
+                    border: termDays === opt.days ? '1px solid #00A581' : `1px solid ${tokens.surfaceBorder}`,
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              backgroundColor: isLight ? '#F0FDF4' : 'rgba(0, 165, 129, 0.08)',
+              border: `1px solid ${tokens.accentBorder}`,
+              fontSize: '12.5px',
+            }}>
+              <Clock size={14} color="#00A581" />
+              <span style={{ color: tokens.textPrimary }}>
+                Calculated Due Date: <strong style={{ color: '#00A581' }}>{calculateDueDate()}</strong> ({termDays} days credit period)
+              </span>
             </div>
           </div>
 
           {/* Description */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
-              Item / Goods Description
+            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+              Itemized Description / Goods Supplied
             </label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g. 50 bags of flour, 20 cartons of sugar"
+              placeholder="e.g. 50 Cartons of Cooking Oil & 20 Bags of Sugar"
               style={{
                 width: '100%',
                 padding: '10px 12px',
@@ -331,21 +359,20 @@ export default function CreateReceivablePage() {
                 color: tokens.textPrimary,
                 fontSize: '13px',
                 outline: 'none',
-                boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
               }}
             />
           </div>
 
           {/* Notes */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase' }}>
-              Internal Notes
+            <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 'bold', color: tokens.textSecondary, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+              Commercial Terms & Notes
             </label>
             <textarea
-              rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Delivery confirmed by warehouse supervisor..."
+              placeholder="e.g. 5% penalty applies after due date. Bank details included."
+              rows={2}
               style={{
                 width: '100%',
                 padding: '10px 12px',
@@ -356,46 +383,66 @@ export default function CreateReceivablePage() {
                 fontSize: '13px',
                 outline: 'none',
                 resize: 'none',
-                boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none',
               }}
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting || customers.length === 0}
-            style={{
-              marginTop: '8px',
-              padding: '12px',
-              backgroundColor: '#00A581',
-              color: '#FFFFFF',
-              borderRadius: '8px',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              cursor: 'pointer',
-              border: 'none',
-              boxShadow: '0 4px 14px rgba(0, 165, 129, 0.35)',
-              opacity: isSubmitting || customers.length === 0 ? 0.6 : 1,
-            }}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                <span>Issuing Receivable...</span>
-              </>
-            ) : (
-              <>
-                <CheckCircle2 size={16} />
-                <span>{t('receivables.issueButton')}</span>
-              </>
-            )}
-          </button>
+          {/* Actions */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+            <Link
+              href="/receivables"
+              style={{
+                padding: '9px 16px',
+                borderRadius: '8px',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                backgroundColor: 'transparent',
+                color: tokens.textSecondary,
+                fontSize: '13px',
+                fontWeight: '600',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+              }}
+            >
+              Cancel
+            </Link>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 20px',
+                borderRadius: '8px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #00A581 0%, #007D62 100%)',
+                color: '#FFFFFF',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                boxShadow: '0 2px 8px rgba(0, 165, 129, 0.3)',
+              }}
+            >
+              {isSubmitting ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
+              <span>Create Invoice</span>
+            </button>
+          </div>
         </form>
       </div>
     </div>
+  );
+}
+
+export default function CreateReceivablePage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
+        <Loader2 size={32} className="animate-spin text-teal-500" />
+      </div>
+    }>
+      <CreateReceivableForm />
+    </Suspense>
   );
 }

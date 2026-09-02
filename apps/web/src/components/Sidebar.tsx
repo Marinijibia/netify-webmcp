@@ -12,6 +12,8 @@ import {
   BrainCircuit, 
   FileText,
   Clock, 
+  DollarSign,
+  TrendingUp,
   Bell, 
   Settings, 
   Building,
@@ -47,7 +49,9 @@ export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps = {}) {
       label: 'Core Operations',
       items: [
         { name: t('nav.commandCenter'), href: '/workspace', icon: LayoutDashboard },
+        { name: 'Recovery Analytics', href: '/analytics', icon: TrendingUp },
         { name: t('nav.receivables'), href: '/receivables', icon: FileText },
+        { name: 'Payments & Settlements', href: '/payments', icon: DollarSign },
         { name: t('nav.commitments'), href: '/commitments', icon: Clock },
         { name: t('common.followUp'), href: '/collections', icon: Layers, badge: 'Live' },
       ],

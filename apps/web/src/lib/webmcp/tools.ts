@@ -5,7 +5,9 @@ import {
   paymentsApi, 
   commitmentsApi, 
   collectionActivitiesApi, 
-  aiApi 
+  aiApi,
+  notificationApi,
+  businessMemoryApi,
 } from '../api';
 import { WebMCPToolDefinition } from './types';
 
@@ -422,4 +424,138 @@ export const webMCPTools: WebMCPToolDefinition[] = [
       };
     },
   },
+
+  // ──────────────────────────────────────────────
+  // NOTIFICATION TOOLS
+  // ──────────────────────────────────────────────
+  {
+    name: 'list_notifications',
+    description: 'List live business notifications for the active organization. Returns recent alerts, payment signals, promise reminders, and risk escalations with their read status.',
+    category: 'READ_ONLY',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        unreadOnly: {
+          type: 'boolean',
+          description: 'If true, returns only unread notifications',
+        },
+        category: {
+          type: 'string',
+          enum: ['ALL', 'RISK', 'PAYMENT', 'COMMITMENT', 'AI', 'SYSTEM'],
+          description: 'Filter by category: RISK (overdue/missed promises), PAYMENT (received), COMMITMENT (promise due), AI, SYSTEM',
+        },
+        pageSize: {
+          type: 'number',
+          description: 'Max number of notifications to return (default: 20, max: 50)',
+        },
+      },
+    },
+    execute: async (input: { unreadOnly?: boolean; category?: string; pageSize?: number } = {}) => {
+      const res = await notificationApi.getNotifications({
+        unreadOnly: input.unreadOnly,
+        category: input.category as any,
+        pageSize: Math.min(50, input.pageSize || 20),
+      });
+
+      return {
+        unreadCount: res.unreadCount,
+        totalCount: res.pagination?.totalCount || res.items.length,
+        notifications: res.items.map(n => ({
+          id: n.id,
+          title: n.title,
+          body: n.body,
+          priority: n.priority,
+          signalType: n.signalType,
+          isRead: n.status === 'READ',
+          createdAt: n.createdAt,
+          data: n.data,
+        })),
+      };
+    },
+  },
+
+  {
+    name: 'mark_notification_read',
+    description: 'Mark a specific notification as read by its ID. Use after the agent has surfaced or acted on the alert.',
+    category: 'MUTATING',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        notificationId: {
+          type: 'string',
+          description: 'The UUID of the notification to mark as read',
+        },
+      },
+      required: ['notificationId'],
+    },
+    execute: async (input: { notificationId: string }) => {
+      if (!input.notificationId) {
+        throw new Error('notificationId is required');
+      }
+      await notificationApi.markAsRead(input.notificationId);
+      return {
+        success: true,
+        notificationId: input.notificationId,
+        message: 'Notification marked as read.',
+      };
+    },
+  },
+
+  {
+    name: 'query_business_memory',
+    description: 'Query long-term behavioral memory records, commitment fulfillment rates, payment habits, and debtor notes derived from live business events.',
+    category: 'READ_ONLY',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        customerId: {
+          type: 'string',
+          description: 'The UUID of the customer to inspect memories for',
+        },
+      },
+      required: ['customerId'],
+    },
+    execute: async (input: { customerId: string }) => {
+      const targetCustomerId = await resolveCustomerId(input?.customerId);
+      const memories = await businessMemoryApi.getCustomerMemories(targetCustomerId);
+      return {
+        customerId: targetCustomerId,
+        count: memories.length,
+        memories: memories.map(m => ({
+          id: m.id,
+          category: m.category,
+          type: m.type,
+          statement: m.statement,
+          confidence: m.confidence,
+          timeWindow: m.timeWindow,
+          value: m.value,
+          evidenceCount: m.evidenceCount,
+          createdAt: m.createdAt,
+        })),
+      };
+    },
+  },
+
+  {
+    name: 'get_daily_briefing',
+    description: 'Fetch executive collection briefing including total overdue receivables, today promises, and high-urgency debtor accounts.',
+    category: 'READ_ONLY',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        currency: {
+          type: 'string',
+          description: 'Target currency filter (e.g. NGN, KES, USD)',
+        },
+      },
+    },
+    execute: async (input: { currency?: string } = {}) => {
+      const briefing = await aiApi.getTodayAttention({ currency: input.currency });
+      return {
+        briefing,
+        timestamp: new Date().toISOString(),
+      };
+    },
+  },
 ];
+
