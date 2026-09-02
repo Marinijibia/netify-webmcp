@@ -10,6 +10,7 @@ import {
   AIRouterConfig,
   AIRoutingOptions,
   AIRoutingDecision,
+  AIProviderName,
 } from './interfaces/ai-router.interface';
 import {
   ExtractCommitmentInput,
@@ -20,13 +21,14 @@ import {
 import {
   DeterministicRiskSignals,
   AIRiskReasoningResponse,
+  AIDraftMessageRequest,
   AIDraftMessageResponse,
   AIInvestigationRequest,
   AIInvestigationResponse,
 } from '@netify/types';
 
 export interface AIServiceConfig extends Partial<AIRouterConfig> {
-  provider?: 'gemini' | 'openai' | 'inna';
+  provider?: AIProviderName;
 }
 
 export class AIService {
@@ -41,15 +43,16 @@ export class AIService {
 
   constructor(config: AIServiceConfig) {
     const routerConfig: AIRouterConfig = {
-      defaultProvider: config.provider || 'gemini',
-      enableInnaForAfricanLanguages: config.enableInnaForAfricanLanguages ?? true,
-      geminiApiKey: config.geminiApiKey,
-      geminiModel: config.geminiModel,
+      defaultProvider: config.provider || config.defaultProvider || 'openai',
       openaiApiKey: config.openaiApiKey,
       openaiModel: config.openaiModel,
-      innaApiKey: config.innaApiKey,
-      innaBaseUrl: config.innaBaseUrl,
-      innaModel: config.innaModel,
+      geminiApiKey: config.geminiApiKey,
+      geminiModel: config.geminiModel,
+      deepseekApiKey: config.deepseekApiKey,
+      deepseekModel: config.deepseekModel,
+      deepseekBaseUrl: config.deepseekBaseUrl,
+      openrouterApiKey: config.openrouterApiKey,
+      openrouterModel: config.openrouterModel,
     };
 
     this.factory = new AIProviderFactory(routerConfig);
@@ -64,54 +67,76 @@ export class AIService {
     this.intent = new IntentRoutingCapability(this.defaultProvider);
   }
 
+  getFactory(): AIProviderFactory {
+    return this.factory;
+  }
+
   resolveProvider(options?: AIRoutingOptions): AIRoutingDecision {
     return this.factory.resolveProvider(options);
+  }
+
+  getProvider(name: AIProviderName): AIProvider | undefined {
+    return this.factory.getProvider(name);
   }
 
   getProviderName(): string {
     return this.defaultProvider.name;
   }
 
-  async detectIntent(
-    query: string,
-    preferredLanguage?: AppLanguage
-  ): Promise<StructuredBusinessIntent> {
-    return this.intent.detectIntentAndLanguage(query, preferredLanguage);
+  async embed(text: string): Promise<number[]> {
+    return this.defaultProvider.embed(text);
   }
 
-  async extractCommitment(input: ExtractCommitmentInput): Promise<ExtractedCommitmentOutput> {
-    return this.extraction.extractCommitment(input);
+  async summarize(content: string, options?: { maxWords?: number }): Promise<string> {
+    return this.defaultProvider.summarize(content, options);
+  }
+
+  async extractCommitment(
+    input: ExtractCommitmentInput,
+    options?: AIRoutingOptions
+  ): Promise<ExtractedCommitmentOutput> {
+    const provider = this.factory.resolveProvider(options).selectedProvider;
+    const capability = new ExtractionCapability(provider);
+    return capability.extractCommitment(input);
+  }
+
+  async detectIntent(
+    query: string,
+    preferredLanguage?: AppLanguage,
+    options?: AIRoutingOptions
+  ): Promise<StructuredBusinessIntent> {
+    const provider = this.factory.resolveProvider(options).selectedProvider;
+    const capability = new IntentRoutingCapability(provider);
+    return capability.detectIntentAndLanguage(query, preferredLanguage);
+  }
+
+  async detectIntentAndLanguage(
+    query: string,
+    preferredLanguage?: AppLanguage,
+    options?: AIRoutingOptions
+  ): Promise<StructuredBusinessIntent> {
+    const provider = this.factory.resolveProvider(options).selectedProvider;
+    const capability = new IntentRoutingCapability(provider);
+    return capability.detectIntentAndLanguage(query, preferredLanguage);
   }
 
   async explainRisk(
     signals: DeterministicRiskSignals,
-    context?: string
+    context?: string,
+    options?: AIRoutingOptions
   ): Promise<AIRiskReasoningResponse> {
-    return this.risk.explainRisk(signals, context);
+    const provider = this.factory.resolveProvider(options).selectedProvider;
+    const capability = new RiskReasoningCapability(provider);
+    return capability.explainRisk(signals, context);
   }
 
-  async draftFollowupMessage(input: {
-    customerId: string;
-    customerName: string;
-    totalOutstanding: number;
-    currency: string;
-    suggestedPaymentAmount?: number;
-    tone: 'polite_reminder' | 'firm_followup' | 'urgent_escalation' | 'payment_plan';
-    channel: 'whatsapp' | 'sms' | 'email';
-    daysOverdue?: number;
-    recentCommitmentSummary?: string;
-  }): Promise<AIDraftMessageResponse> {
-    return this.messaging.draftFollowupMessage({
-      customerId: input.customerId,
-      customerName: input.customerName,
-      currency: input.currency,
-      totalOutstanding: input.totalOutstanding,
-      suggestedPaymentAmount: input.suggestedPaymentAmount,
-      tone: input.tone,
-      channel: input.channel,
-      daysOverdue: input.daysOverdue,
-      recentCommitmentSummary: input.recentCommitmentSummary,
-    });
+  async draftFollowupMessage(
+    request: AIDraftMessageRequest,
+    options?: AIRoutingOptions
+  ): Promise<AIDraftMessageResponse> {
+    const provider = this.factory.resolveProvider(options).selectedProvider;
+    const capability = new MessagingCapability(provider);
+    return capability.draftFollowupMessage(request);
   }
 
   async investigate(
@@ -120,12 +145,11 @@ export class AIService {
       structuredFacts: string;
       semanticExcerpts: string;
       customerDetails?: string;
-    }
+    },
+    options?: AIRoutingOptions
   ): Promise<AIInvestigationResponse> {
-    return this.investigation.investigate(request, context);
-  }
-
-  async embed(text: string): Promise<number[]> {
-    return this.memory.generateMemoryEmbedding(text);
+    const provider = this.factory.resolveProvider(options).selectedProvider;
+    const capability = new InvestigationCapability(provider);
+    return capability.investigate(request, context);
   }
 }

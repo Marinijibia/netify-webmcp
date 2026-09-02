@@ -91,36 +91,41 @@ export class AIService {
     private readonly conversationService: ConversationService,
     private readonly actionService: ActionExecutionService
   ) {
-    const geminiKey = this.configService.get<string>('GEMINI_API_KEY');
-    const geminiModel = this.configService.get<string>('GEMINI_MODEL') || 'gemini-1.5-flash';
     const openaiKey = this.configService.get<string>('OPENAI_API_KEY');
     const openaiModel = this.configService.get<string>('OPENAI_MODEL') || 'gpt-4o-mini';
-    const innaKey = this.configService.get<string>('INNA_API_KEY');
-    const innaBaseUrl = this.configService.get<string>('INNA_BASE_URL');
-    const innaModel = this.configService.get<string>('INNA_MODEL');
-    const defaultProvider = (this.configService.get<string>('AI_PROVIDER') as any) || 'gemini';
+    const geminiKey = this.configService.get<string>('GEMINI_API_KEY');
+    const geminiModel = this.configService.get<string>('GEMINI_MODEL') || 'gemini-1.5-flash';
+    const deepseekKey = this.configService.get<string>('DEEPSEEK_API_KEY');
+    const deepseekModel = this.configService.get<string>('DEEPSEEK_MODEL') || 'deepseek-chat';
+    const deepseekBaseUrl = this.configService.get<string>('DEEPSEEK_BASE_URL') || 'https://api.deepseek.com';
+    const openrouterKey = this.configService.get<string>('OPENROUTER_API_KEY');
+    const openrouterModel = this.configService.get<string>('OPENROUTER_MODEL') || 'openai/gpt-4o-mini';
+    const defaultProvider = (this.configService.get<string>('AI_PROVIDER') as any) || 'openai';
 
     this.providerFactory = new AIProviderFactory({
       defaultProvider,
-      geminiApiKey: geminiKey,
-      geminiModel,
       openaiApiKey: openaiKey,
       openaiModel,
-      innaApiKey: innaKey,
-      innaBaseUrl,
-      innaModel,
-      enableInnaForAfricanLanguages: true,
+      geminiApiKey: geminiKey,
+      geminiModel,
+      deepseekApiKey: deepseekKey,
+      deepseekModel,
+      deepseekBaseUrl,
+      openrouterApiKey: openrouterKey,
+      openrouterModel,
     });
 
     this.aiPackage = new AIPackageService({
       provider: defaultProvider,
-      geminiApiKey: geminiKey,
-      geminiModel,
       openaiApiKey: openaiKey,
       openaiModel,
-      innaApiKey: innaKey,
-      innaBaseUrl,
-      innaModel,
+      geminiApiKey: geminiKey,
+      geminiModel,
+      deepseekApiKey: deepseekKey,
+      deepseekModel,
+      deepseekBaseUrl,
+      openrouterApiKey: openrouterKey,
+      openrouterModel,
     });
   }
 

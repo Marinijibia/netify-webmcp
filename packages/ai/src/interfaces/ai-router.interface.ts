@@ -1,6 +1,8 @@
 import { AIProvider } from './ai-provider.interface';
 import { AppLanguage } from '@netify/validation';
 
+export type AIProviderName = 'openai' | 'gemini' | 'deepseek' | 'openrouter';
+
 export interface AIRoutingOptions {
   language?: AppLanguage;
   taskType?: 'chat' | 'extraction' | 'reasoning' | 'embedding' | 'message_draft';
@@ -11,20 +13,23 @@ export interface AIRoutingOptions {
 
 export interface AIRoutingDecision {
   selectedProvider: AIProvider;
-  providerName: string;
+  providerName: AIProviderName;
   targetLanguage: AppLanguage;
   isFallback: boolean;
   reason: string;
 }
 
 export interface AIRouterConfig {
-  defaultProvider: 'gemini' | 'openai' | 'inna';
-  enableInnaForAfricanLanguages?: boolean;
-  geminiApiKey?: string;
-  geminiModel?: string;
+  defaultProvider?: AIProviderName;
+  // Direct Provider Keys
   openaiApiKey?: string;
   openaiModel?: string;
-  innaApiKey?: string;
-  innaBaseUrl?: string;
-  innaModel?: string;
+  geminiApiKey?: string;
+  geminiModel?: string;
+  deepseekApiKey?: string;
+  deepseekModel?: string;
+  deepseekBaseUrl?: string;
+  // OpenRouter Universal Fallback Key
+  openrouterApiKey?: string;
+  openrouterModel?: string;
 }

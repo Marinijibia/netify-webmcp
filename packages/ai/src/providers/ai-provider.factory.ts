@@ -1,126 +1,182 @@
 import { AIProvider } from '../interfaces/ai-provider.interface';
 import { GeminiProvider } from './gemini.provider';
 import { OpenAIProvider } from './openai.provider';
-import { InnaProvider } from './inna.provider';
+import { DeepSeekProvider } from './deepseek.provider';
+import { OpenRouterProvider } from './openrouter.provider';
 import {
   AIRouterConfig,
   AIRoutingOptions,
   AIRoutingDecision,
+  AIProviderName,
 } from '../interfaces/ai-router.interface';
 import { AppLanguage } from '@netify/validation';
 
 export class AIProviderFactory {
-  private geminiProvider?: GeminiProvider;
   private openaiProvider?: OpenAIProvider;
-  private innaProvider?: InnaProvider;
+  private geminiProvider?: GeminiProvider;
+  private deepseekProvider?: DeepSeekProvider;
+  private openrouterProvider?: OpenRouterProvider;
   private config: AIRouterConfig;
 
   constructor(config: AIRouterConfig) {
     this.config = config;
 
-    // Initialize Gemini
-    if (config.geminiApiKey) {
-      this.geminiProvider = new GeminiProvider(
-        config.geminiApiKey,
-        config.geminiModel || 'gemini-1.5-flash'
-      );
-    }
-
-    // Initialize OpenAI
-    if (config.openaiApiKey) {
+    // 1. Initialize Direct OpenAI (ChatGPT)
+    if (config.openaiApiKey && config.openaiApiKey.trim().length > 0 && config.openaiApiKey !== 'mock_prod_openai_key') {
       this.openaiProvider = new OpenAIProvider(
         config.openaiApiKey,
         config.openaiModel || 'gpt-4o-mini'
       );
     }
 
-    // Initialize Inna
-    if (config.innaApiKey) {
-      this.innaProvider = new InnaProvider(
-        config.innaApiKey,
-        config.innaBaseUrl,
-        config.innaModel
+    // 2. Initialize Direct Google Gemini
+    if (config.geminiApiKey && config.geminiApiKey.trim().length > 0 && config.geminiApiKey !== 'mock_prod_gemini_key') {
+      this.geminiProvider = new GeminiProvider(
+        config.geminiApiKey,
+        config.geminiModel || 'gemini-1.5-flash'
+      );
+    }
+
+    // 3. Initialize Direct DeepSeek
+    if (config.deepseekApiKey && config.deepseekApiKey.trim().length > 0 && config.deepseekApiKey !== 'mock_prod_deepseek_key') {
+      this.deepseekProvider = new DeepSeekProvider(
+        config.deepseekApiKey,
+        config.deepseekModel || 'deepseek-chat',
+        config.deepseekBaseUrl || 'https://api.deepseek.com'
+      );
+    }
+
+    // 4. Initialize Universal OpenRouter Hub (Fallback when direct keys not provided)
+    if (config.openrouterApiKey && config.openrouterApiKey.trim().length > 0 && config.openrouterApiKey !== 'mock_prod_openrouter_key') {
+      this.openrouterProvider = new OpenRouterProvider(
+        config.openrouterApiKey,
+        config.openrouterModel || 'openai/gpt-4o-mini'
       );
     }
   }
 
-  getProvider(name: 'gemini' | 'openai' | 'inna'): AIProvider | undefined {
+  getProvider(name: AIProviderName): AIProvider | undefined {
     switch (name) {
-      case 'gemini':
-        return this.geminiProvider;
       case 'openai':
         return this.openaiProvider;
-      case 'inna':
-        return this.innaProvider;
+      case 'gemini':
+        return this.geminiProvider;
+      case 'deepseek':
+        return this.deepseekProvider;
+      case 'openrouter':
+        return this.openrouterProvider;
       default:
         return undefined;
     }
   }
 
+  /**
+   * Resolves the active AI provider based on available direct API keys or OpenRouter fallback.
+   * Priority Cascade:
+   * 1. Direct ChatGPT (OpenAI)
+   * 2. Direct Google Gemini
+   * 3. Direct DeepSeek
+   * 4. OpenRouter Universal Hub
+   */
   resolveProvider(options?: AIRoutingOptions): AIRoutingDecision {
     const targetLanguage: AppLanguage = options?.language || 'en';
-    const isAfricanLanguage = ['ha', 'yo', 'ig', 'pcm'].includes(targetLanguage);
 
-    // 1. If African language and Inna is enabled and configured, route to Inna
-    if (
-      isAfricanLanguage &&
-      this.config.enableInnaForAfricanLanguages &&
-      this.innaProvider?.isConfigured()
-    ) {
+    // Check explicitly configured default first if available
+    if (this.config.defaultProvider) {
+      const explicit = this.getProvider(this.config.defaultProvider);
+      if (explicit) {
+        return {
+          selectedProvider: explicit,
+          providerName: this.config.defaultProvider,
+          targetLanguage,
+          isFallback: false,
+          reason: `Routed to explicitly configured provider: ${this.config.defaultProvider}.`,
+        };
+      }
+    }
+
+    // 1. Direct ChatGPT Primary
+    if (this.openaiProvider) {
       return {
-        selectedProvider: this.innaProvider,
-        providerName: 'inna',
+        selectedProvider: this.openaiProvider,
+        providerName: 'openai',
         targetLanguage,
         isFallback: false,
-        reason: `Routed to Inna provider for native African language support (${targetLanguage}).`,
+        reason: 'Routed to Direct ChatGPT (OpenAI) primary intelligence engine.',
       };
     }
 
-    // 2. Otherwise route to configured default provider
-    const defaultName = this.config.defaultProvider || 'gemini';
-    let primary = this.getProvider(defaultName);
-
-    if (primary) {
-      return {
-        selectedProvider: primary,
-        providerName: defaultName,
-        targetLanguage,
-        isFallback: isAfricanLanguage && defaultName !== 'inna',
-        reason: isAfricanLanguage
-          ? `Routed to ${defaultName} multilingual capability for language ${targetLanguage}.`
-          : `Routed to primary configured provider (${defaultName}).`,
-      };
-    }
-
-    // 3. Fallback to any available configured provider
+    // 2. Direct Gemini Fallback
     if (this.geminiProvider) {
       return {
         selectedProvider: this.geminiProvider,
         providerName: 'gemini',
         targetLanguage,
         isFallback: true,
-        reason: 'Fallback to Gemini provider (primary provider unavailable).',
+        reason: 'Routed to Direct Google Gemini high-speed multimodal fallback.',
       };
     }
 
-    if (this.openaiProvider) {
+    // 3. Direct DeepSeek Fallback
+    if (this.deepseekProvider) {
       return {
-        selectedProvider: this.openaiProvider,
-        providerName: 'openai',
+        selectedProvider: this.deepseekProvider,
+        providerName: 'deepseek',
         targetLanguage,
         isFallback: true,
-        reason: 'Fallback to OpenAI provider (primary provider unavailable).',
+        reason: 'Routed to Direct DeepSeek deep financial reasoning fallback.',
       };
     }
 
-    // 4. Default instance as last resort
-    const fallbackGemini = new GeminiProvider(this.config.geminiApiKey);
+    // 4. OpenRouter Universal Hub
+    if (this.openrouterProvider) {
+      return {
+        selectedProvider: this.openrouterProvider,
+        providerName: 'openrouter',
+        targetLanguage,
+        isFallback: true,
+        reason: 'Routed to OpenRouter Universal AI Hub (direct API keys not provided).',
+      };
+    }
+
+    // 5. Ultimate Mock / Standby
+    const mock = new OpenAIProvider('mock_prod_openai_key', 'gpt-4o-mini');
     return {
-      selectedProvider: fallbackGemini,
-      providerName: 'gemini',
+      selectedProvider: mock,
+      providerName: 'openai',
       targetLanguage,
       isFallback: true,
-      reason: 'Initialized default Gemini fallback provider.',
+      reason: 'No live AI API keys detected; initialized in deterministic standby mode.',
     };
+  }
+
+  /**
+   * Executes an AI operation with automatic multi-model failover cascade.
+   */
+  async executeWithCascade<T>(
+    operation: (provider: AIProvider) => Promise<T>,
+    options?: AIRoutingOptions
+  ): Promise<T> {
+    const providersToTry: { name: AIProviderName; provider?: AIProvider }[] = [
+      { name: 'openai' as AIProviderName, provider: this.openaiProvider },
+      { name: 'gemini' as AIProviderName, provider: this.geminiProvider },
+      { name: 'deepseek' as AIProviderName, provider: this.deepseekProvider },
+      { name: 'openrouter' as AIProviderName, provider: this.openrouterProvider },
+    ].filter((p) => Boolean(p.provider));
+
+    let lastError: any = null;
+
+    for (const item of providersToTry) {
+      try {
+        if (item.provider) {
+          return await operation(item.provider);
+        }
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[AIProviderFactory Cascade] Provider ${item.name} failed, cascading to next available provider... Error: ${err.message}`);
+      }
+    }
+
+    throw new Error(lastError ? `All AI providers in cascade failed. Last error: ${lastError.message}` : 'No AI providers configured');
   }
 }

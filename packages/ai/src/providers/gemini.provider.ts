@@ -11,12 +11,16 @@ export class GeminiProvider implements AIProvider {
   private genAI: GoogleGenerativeAI | null = null;
   private modelName: string;
 
-  constructor(apiKey?: string, modelName: string = 'gemini-3.5-flash') {
+  constructor(apiKey?: string, modelName: string = 'gemini-3.8-flash') {
     this.modelName = modelName;
     const isPlaceholder = !apiKey || apiKey === 'mock_dev_gemini_key' || apiKey.startsWith('your_');
     if (!isPlaceholder) {
       this.genAI = new GoogleGenerativeAI(apiKey!);
     }
+  }
+
+  isConfigured(): boolean {
+    return Boolean(this.genAI);
   }
 
   private getModelForName(name: string, options?: AIGenerateOptions, isJson: boolean = false): GenerativeModel | null {
@@ -35,10 +39,12 @@ export class GeminiProvider implements AIProvider {
   private getCandidateModels(): string[] {
     return Array.from(new Set([
       this.modelName,
+      'gemini-3.8-flash',
+      'gemini-3.7-flash',
       'gemini-3.5-flash',
       'gemini-3.1-flash-lite',
       'gemini-flash-latest',
-      'gemini-3.7-flash',
+      'gemini-2.0-flash',
     ])).filter(Boolean);
   }
 
@@ -59,11 +65,11 @@ export class GeminiProvider implements AIProvider {
         return response.text();
       } catch (error: any) {
         lastError = error;
-        console.warn(`[GeminiProvider] Model ${candidate} failed: ${error.message}. Trying next candidate...`);
+        console.warn(`[GeminiProvider.generate] Candidate ${candidate} failed, attempting next available... Error: ${error.message}`);
       }
     }
 
-    throw new Error(`Gemini generation failed: ${lastError?.message || 'Unknown error'}`);
+    throw new Error(`All Gemini candidate models failed. Last error: ${lastError?.message || 'Unknown'}`);
   }
 
   async structuredOutput<T>(
@@ -71,12 +77,20 @@ export class GeminiProvider implements AIProvider {
     schema: z.ZodType<T, any, any>,
     options?: AIGenerateOptions
   ): Promise<T> {
-    const jsonPrompt = `${prompt}\n\nIMPORTANT: Output ONLY valid JSON matching the requested schema. Ensure all keys match the requested format.`;
+    const result = await this.structuredOutputWithMetrics(prompt, schema, options);
+    return result.data;
+  }
 
+  async structuredOutputWithMetrics<T>(
+    prompt: string,
+    schema: z.ZodType<T, any, any>,
+    options?: AIGenerateOptions
+  ): Promise<StructuredAIResult<T>> {
     if (!this.genAI) {
-      throw new Error('Gemini API is not initialized. Please ensure GEMINI_API_KEY is configured.');
+      throw new Error('Gemini provider is not initialized. Please ensure a valid GEMINI_API_KEY is configured.');
     }
 
+    const startTime = Date.now();
     const candidateModels = this.getCandidateModels();
     let lastError: any = null;
 
@@ -85,64 +99,57 @@ export class GeminiProvider implements AIProvider {
         const model = this.getModelForName(candidate, options, true);
         if (!model) continue;
 
-        const result = await model.generateContent(jsonPrompt);
+        const systemInstruction = options?.systemInstruction
+          ? `${options.systemInstruction}\nOutput valid JSON conforming to the requested schema.`
+          : 'Output valid JSON conforming to the requested schema.';
+
+        const fullPrompt = `${systemInstruction}\n\nTask:\n${prompt}`;
+        const result = await model.generateContent(fullPrompt);
         const response = await result.response;
-        let text = response.text().trim();
+        const latencyMs = Date.now() - startTime;
+        const text = response.text();
 
-        // Clean markdown code fence if present
-        if (text.startsWith('```json')) {
-          text = text.replace(/^```json/, '').replace(/```$/, '').trim();
-        } else if (text.startsWith('```')) {
-          text = text.replace(/^```/, '').replace(/```$/, '').trim();
-        }
+        const cleanJson = text.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+        const parsed = JSON.parse(cleanJson);
+        const validatedData = schema.parse(parsed);
 
-        const parsed = JSON.parse(text);
-        return schema.parse(parsed);
+        return {
+          data: validatedData,
+          metrics: {
+            model: candidate,
+            latencyMs,
+            inputTokens: response.usageMetadata?.promptTokenCount,
+            outputTokens: response.usageMetadata?.candidatesTokenCount,
+          },
+        };
       } catch (error: any) {
         lastError = error;
-        console.warn(`[GeminiProvider.structuredOutput] Model ${candidate} failed: ${error.message}. Trying next candidate...`);
+        console.warn(`[GeminiProvider.structuredOutput] Candidate ${candidate} failed, attempting next available... Error: ${error.message}`);
       }
     }
 
-    throw new Error(`Gemini structured output failed: ${lastError?.message || 'Unknown error'}`);
-  }
-
-
-  async structuredOutputWithMetrics<T>(
-    prompt: string,
-    schema: z.ZodType<T, any, any>,
-    options?: AIGenerateOptions
-  ): Promise<StructuredAIResult<T>> {
-    const startTime = Date.now();
-    const data = await this.structuredOutput(prompt, schema, options);
-    return {
-      data,
-      metrics: {
-        model: this.modelName,
-        latencyMs: Date.now() - startTime,
-      },
-    };
+    throw new Error(`Gemini structured generation failed across all candidates: ${lastError?.message || 'Unknown'}`);
   }
 
   async embed(text: string): Promise<number[]> {
     if (!this.genAI) {
-      // Return deterministic mock 1536-dim embedding vector
-      return Array.from({ length: 1536 }, (_, i) => Math.sin(i + text.length) * 0.05);
+      throw new Error('Gemini provider is not initialized for embeddings.');
     }
 
-    try {
-      const embeddingModel = this.genAI.getGenerativeModel({ model: 'gemini-embedding-001' });
-      const result = await embeddingModel.embedContent(text);
-      const values = result.embedding.values;
-      // Pad or trim to 1536 for pgvector schema consistency
-      if (values.length < 1536) {
-        return [...values, ...new Array(1536 - values.length).fill(0)];
+    const embeddingModels = ['text-embedding-004', 'embedding-001'];
+    let lastError: any = null;
+
+    for (const modelName of embeddingModels) {
+      try {
+        const model = this.genAI.getGenerativeModel({ model: modelName });
+        const result = await model.embedContent(text);
+        return result.embedding.values;
+      } catch (error: any) {
+        lastError = error;
       }
-      return values.slice(0, 1536);
-    } catch (error: any) {
-      console.warn(`[GeminiProvider.embed error]: ${error.message}`);
-      return Array.from({ length: 1536 }, (_, i) => Math.sin(i + text.length) * 0.05);
     }
+
+    throw new Error(`Gemini embedding failed: ${lastError?.message || 'Unknown'}`);
   }
 
   async summarize(content: string, options?: { maxWords?: number }): Promise<string> {
