@@ -115,18 +115,19 @@ document.modelContext.registerTool({
           display: 'inline-flex',
           alignItems: 'center',
           gap: '8px',
-          backgroundColor: isLight ? '#FFFFFF' : 'rgba(0, 48, 81, 0.8)',
-          border: `1px solid ${tokens.accentBorder}`,
-          padding: '6px 18px',
-          borderRadius: '30px',
-          fontSize: '12.5px',
-          fontWeight: 'bold',
+          padding: '6px 14px',
+          borderRadius: '9999px',
+          backgroundColor: isLight ? '#E6F6F2' : 'rgba(0, 165, 129, 0.15)',
+          border: '1px solid rgba(0, 165, 129, 0.3)',
           color: '#00A581',
-          marginBottom: '20px',
-          boxShadow: isLight ? tokens.shadowCard : '0 0 25px rgba(0, 165, 129, 0.25)',
+          fontSize: '12px',
+          fontWeight: '700',
+          letterSpacing: '0.05em',
+          textTransform: 'uppercase',
+          width: 'fit-content',
         }}>
           <Sparkles size={14} color="#00A581" />
-          <span>The WebMCP Challenge Submission • 8 Live Registered Tools</span>
+          <span>The WebMCP Challenge Submission • 12 Live Registered Tools</span>
         </div>
 
         <h1 style={{
@@ -376,7 +377,7 @@ document.modelContext.registerTool({
             Interactive Sandbox
           </span>
           <h2 style={{ fontSize: 'clamp(24px, 4vw, 32px)', fontWeight: '900', color: tokens.textPrimary, marginTop: '4px', letterSpacing: '-0.5px' }}>
-            The 8 Registered WebMCP Tools
+            The 12 Registered WebMCP Tools
           </h2>
           <p style={{ color: tokens.textSecondary, fontSize: '15px', marginTop: '6px' }}>
             Select any tool below to inspect its schema and execute a live call against the backend.
