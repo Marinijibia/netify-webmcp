@@ -393,6 +393,7 @@ model Organization {
   aiMessages           AIMessage[]
   aiActionProposals    AIActionProposal[]
   voiceUsages          VoiceUsage[]
+  agentGrants          AgentAuthorizationGrant[] @relation("OrgAgentGrants")
 
   @@map("organizations")
 }
@@ -437,6 +438,7 @@ model User {
   aiActionProposals       AIActionProposal[]
   voiceUsages             VoiceUsage[]
   assignedCustomers       Customer[]               @relation("AssignedCustomers")
+  agentGrants             AgentAuthorizationGrant[] @relation("UserAgentGrants")
 
   @@map("users")
 }
@@ -1431,4 +1433,100 @@ model VoiceUsage {
   @@index([createdAt])
   @@map("voice_usage")
 }
+
+// =========================================================================
+// DELEGATED AI AGENT AUTHORIZATION & WEBMCP OAUTH 2.0 PKCE
+// =========================================================================
+
+enum AgentClientStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum AgentGrantStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+model AgentClient {
+  id           String            @id @default(uuid())
+  clientId     String            @unique
+  name         String
+  description  String
+  redirectUris String[]
+  isTrusted    Boolean           @default(false)
+  status       AgentClientStatus @default(ACTIVE)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  grants AgentAuthorizationGrant[]
+
+  @@map("agent_clients")
+}
+
+model AgentAuthorizationGrant {
+  id             String           @id @default(uuid())
+  clientId       String
+  userId         String
+  organizationId String
+  scopes         String[]
+  durationLabel  String           @default("24 hours")
+  status         AgentGrantStatus @default(ACTIVE)
+  issuedAt       DateTime         @default(now())
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  lastUsedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  client       AgentClient  @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user         User         @relation("UserAgentGrants", fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation("OrgAgentGrants", fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([userId, status])
+  @@index([clientId, status])
+  @@map("agent_authorization_grants")
+}
+
+model AuthorizationCode {
+  id                  String    @id @default(uuid())
+  codeHash            String    @unique
+  clientId            String
+  userId              String
+  organizationId      String
+  redirectUri         String
+  scopes              String[]
+  codeChallenge       String
+  codeChallengeMethod String    @default("S256")
+  expiresAt           DateTime
+  usedAt              DateTime?
+  createdAt           DateTime  @default(now())
+
+  @@index([clientId])
+  @@index([codeHash])
+  @@map("authorization_codes")
+}
+
+model AgentAuditLog {
+  id             String   @id @default(uuid())
+  clientId       String
+  clientName     String
+  userId         String
+  organizationId String
+  toolName       String
+  action         String
+  requiredScope  String
+  hasScope       Boolean
+  tenantIsolated Boolean  @default(true)
+  result         String   // 'SUCCESS' | 'DENIED' | 'ERROR'
+  details        Json?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([clientId, createdAt])
+  @@map("agent_audit_logs")
+}
+
 

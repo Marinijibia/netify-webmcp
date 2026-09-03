@@ -40,7 +40,8 @@ import {
   Bot,
   Copy,
   Download,
-  Upload
+  Upload,
+  ExternalLink
 } from 'lucide-react';
 import { WebBiometricService, ComputerBiometricCapabilities } from '@/lib/biometrics';
 import { useTheme } from '@/lib/theme/theme-context';
@@ -128,7 +129,48 @@ export default function SettingsPage() {
       }
     }
     loadMembers();
+    loadAgentGrants();
   }, [organization?.id]);
+
+  // Connected AI Agents State
+  const [agentGrants, setAgentGrants] = useState<any[]>([]);
+  const [isLoadingGrants, setIsLoadingGrants] = useState(false);
+  const [revokingGrantId, setRevokingGrantId] = useState<string | null>(null);
+
+  const loadAgentGrants = async () => {
+    setIsLoadingGrants(true);
+    try {
+      const res = await fetch('/api/oauth/grants');
+      const data = await res.json();
+      if (data?.grants) {
+        setAgentGrants(data.grants);
+      }
+    } catch (err) {
+      console.warn('Could not load agent grants:', err);
+    } finally {
+      setIsLoadingGrants(false);
+    }
+  };
+
+  const handleRevokeGrant = async (grantId: string) => {
+    setRevokingGrantId(grantId);
+    try {
+      const res = await fetch('/api/oauth/revoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ grantId }),
+      });
+      const data = await res.json();
+      if (data?.success) {
+        showToast('Agent access revoked immediately.');
+        setAgentGrants((prev) => prev.map((g) => (g.id === grantId ? { ...g, status: 'REVOKED' } : g)));
+      }
+    } catch (err) {
+      showToast('Failed to revoke agent grant.');
+    } finally {
+      setRevokingGrantId(null);
+    }
+  };
 
   // Save Merchant Profile
   const handleSaveProfile = async () => {
@@ -1346,6 +1388,218 @@ export default function SettingsPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* =========================================================================
+            CONNECTED AI AGENTS & DELEGATED WEBMCP ACCESS
+           ========================================================================= */}
+        <div style={{
+          padding: '24px',
+          borderRadius: '16px',
+          backgroundColor: tokens.surface,
+          border: `1px solid ${tokens.surfaceBorder}`,
+          boxShadow: isLight ? tokens.shadowCard : 'none',
+          gridColumn: '1 / -1',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                backgroundColor: '#10A37F',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#FFFFFF',
+              }}>
+                <Bot size={20} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: '800', color: tokens.textPrimary, margin: 0 }}>
+                  Connected AI Agents &amp; Delegated WebMCP Access
+                </h3>
+                <p style={{ fontSize: '12.5px', color: tokens.textSecondary, margin: '2px 0 0' }}>
+                  External autonomous agents (ChatGPT, Claude, Gemini) authorized to access workspace tools via OAuth 2.0 PKCE.
+                </p>
+              </div>
+            </div>
+
+            <a
+              href="/oauth/authorize?client_id=chatgpt-agent&redirect_uri=https://chatgpt.com/api/v1/auth/callback&response_type=code&scope=receivables:read%20customers:read%20customer_evidence:read%20business_memory:read%20collection_messages:draft"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover-lift tap-press"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
+                borderRadius: '8px',
+                backgroundColor: '#00A581',
+                color: '#FFFFFF',
+                fontSize: '12px',
+                fontWeight: '700',
+                textDecoration: 'none',
+                boxShadow: '0 2px 8px rgba(0, 165, 129, 0.3)',
+              }}
+            >
+              <Plus size={13} />
+              <span>Authorize New Agent</span>
+            </a>
+          </div>
+
+          {/* Connected Agents List */}
+          {isLoadingGrants ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', gap: '8px' }}>
+              <Loader2 size={18} className="animate-spin text-teal-500" />
+              <span style={{ fontSize: '12.5px', color: tokens.textSecondary }}>Loading authorized agents...</span>
+            </div>
+          ) : agentGrants.length === 0 ? (
+            <div style={{
+              padding: '24px',
+              borderRadius: '12px',
+              border: `1px dashed ${tokens.surfaceBorder}`,
+              textAlign: 'center',
+              backgroundColor: isLight ? '#F8FAFC' : '#001524',
+            }}>
+              <p style={{ margin: '0 0 6px', fontSize: '13px', color: tokens.textPrimary, fontWeight: '700' }}>
+                No external AI agents currently connected
+              </p>
+              <p style={{ margin: 0, fontSize: '12px', color: tokens.textSecondary }}>
+                When an AI assistant (like ChatGPT Agent) requests access, you will be asked to review and approve scopes.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {agentGrants.map((grant) => {
+                const isActive = grant.status === 'ACTIVE';
+                const isRevoking = revokingGrantId === grant.id;
+
+                return (
+                  <div
+                    key={grant.id}
+                    style={{
+                      padding: '16px',
+                      borderRadius: '12px',
+                      border: `1px solid ${tokens.surfaceBorder}`,
+                      backgroundColor: isLight ? '#FFFFFF' : '#001A2C',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '14px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 1, minWidth: '260px' }}>
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        backgroundColor: isActive
+                          ? isLight ? '#ECFDF5' : 'rgba(16, 185, 129, 0.15)'
+                          : isLight ? '#F1F5F9' : '#00111E',
+                        color: isActive ? '#10B981' : tokens.textSecondary,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                        <Bot size={18} />
+                      </div>
+
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '14px', fontWeight: '800', color: tokens.textPrimary }}>
+                            {grant.clientName || grant.clientId}
+                          </span>
+                          <span style={{
+                            fontSize: '10.5px',
+                            fontWeight: '700',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            backgroundColor: isActive
+                              ? isLight ? '#DEF7EC' : 'rgba(16, 185, 129, 0.2)'
+                              : isLight ? '#FDE8E8' : 'rgba(239, 68, 68, 0.2)',
+                            color: isActive ? '#03543F' : '#9B1C1C',
+                          }}>
+                            {grant.status}
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '11.5px', color: tokens.textSecondary, marginTop: '3px', flexWrap: 'wrap' }}>
+                          <span>Workspace: <strong style={{ color: tokens.textPrimary }}>{grant.tenantName || 'FuelOS'}</strong></span>
+                          <span>•</span>
+                          <span>Expires: {new Date(grant.expiresAt).toLocaleDateString()}</span>
+                          <span>•</span>
+                          <span>Authorized by: {grant.userName}</span>
+                        </div>
+
+                        {/* Scopes Badges */}
+                        <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '8px' }}>
+                          {(grant.scopes || []).map((scope: string) => {
+                            const isWrite = scope.includes(':write');
+                            return (
+                              <span
+                                key={scope}
+                                style={{
+                                  fontSize: '10px',
+                                  fontWeight: '700',
+                                  padding: '2px 7px',
+                                  borderRadius: '5px',
+                                  backgroundColor: isWrite
+                                    ? isLight ? '#FEF3C7' : 'rgba(245, 158, 11, 0.18)'
+                                    : isLight ? '#F1F5F9' : '#00111E',
+                                  color: isWrite
+                                    ? isLight ? '#B45309' : '#FCD34D'
+                                    : tokens.textSecondary,
+                                  border: `1px solid ${tokens.surfaceBorder}`,
+                                }}
+                              >
+                                {scope}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Revoke Action Button */}
+                    <div>
+                      {isActive ? (
+                        <button
+                          type="button"
+                          onClick={() => handleRevokeGrant(grant.id)}
+                          disabled={isRevoking}
+                          className="hover-lift tap-press"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '7px 14px',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(239, 68, 68, 0.4)',
+                            backgroundColor: isLight ? '#FEF2F2' : 'rgba(239, 68, 68, 0.15)',
+                            color: '#EF4444',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: isRevoking ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          {isRevoking ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                          <span>{isRevoking ? 'Revoking...' : 'Revoke Access'}</span>
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '12px', color: tokens.textSecondary, fontStyle: 'italic' }}>
+                          Revoked on {grant.revokedAt ? new Date(grant.revokedAt).toLocaleDateString() : 'N/A'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

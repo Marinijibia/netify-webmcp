@@ -14,6 +14,25 @@
     "email": "merchant@netify.ng",
     "password": "Password123!"
   },
+  "authorization": {
+    "type": "oauth2",
+    "standard": "RFC 7636 (PKCE) + RFC 6749",
+    "authorizationEndpoint": "https://app.netify.ng/oauth/authorize",
+    "tokenEndpoint": "https://app.netify.ng/api/oauth/token",
+    "revocationEndpoint": "https://app.netify.ng/api/oauth/revoke",
+    "supportedScopes": [
+      "receivables:read",
+      "customers:read",
+      "customer_evidence:read",
+      "customer_risk:read",
+      "business_memory:read",
+      "notifications:read",
+      "collection_messages:draft",
+      "payment_commitments:write",
+      "collection_activity:write",
+      "notifications:write"
+    ]
+  },
   "tools": [
     {
       "name": "get_collection_priority",

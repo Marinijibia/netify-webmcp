@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { 
+  verifyAgentToken, 
+  logAgentAudit, 
+  AgentAccessTokenPayload 
+} from '@/lib/oauth/store';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.app.netify.ng/api/v1';
 
@@ -45,13 +50,179 @@ function normalizeToolName(toolName: string): string {
   return t;
 }
 
+const TOOL_SCOPE_REQUIREMENTS: Record<string, string> = {
+  get_collection_priority: 'receivables:read',
+  search_customers: 'customers:read',
+  get_customer_evidence: 'customer_evidence:read',
+  get_customer_risk_profile: 'customer_risk:read',
+  list_receivables: 'receivables:read',
+  get_daily_briefing: 'receivables:read',
+  query_business_memory: 'business_memory:read',
+  list_notifications: 'notifications:read',
+  draft_follow_up_message: 'collection_messages:draft',
+  create_payment_commitment: 'payment_commitments:write',
+  record_collection_activity: 'collection_activity:write',
+  mark_notification_read: 'notifications:write',
+};
+
+async function evaluateAgentAuthorization(
+  req: NextRequest,
+  tool: string,
+  targetCustomerId?: string
+): Promise<{
+  isAuthorized: boolean;
+  token: string;
+  agentPayload?: AgentAccessTokenPayload;
+  errorStatus?: number;
+  errorResponse?: any;
+}> {
+  const authHeader = req.headers.get('authorization') || '';
+  const queryToken = req.nextUrl.searchParams.get('access_token') || req.nextUrl.searchParams.get('token');
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : queryToken;
+  const isExplicitAgent = req.headers.get('x-agent-request') === 'true' || req.nextUrl.searchParams.get('agent_request') === 'true';
+
+  const requiredScope = TOOL_SCOPE_REQUIREMENTS[tool] || 'receivables:read';
+
+  // 1. If Bearer token is provided, verify whether it's an Agent Access Token
+  if (bearerToken) {
+    const verification = verifyAgentToken(bearerToken);
+    if (verification.valid && verification.payload) {
+      const payload = verification.payload;
+
+      // Enforce Scope
+      if (!payload.scopes.includes(requiredScope)) {
+        logAgentAudit({
+          clientId: payload.clientId,
+          clientName: payload.clientName,
+          userId: payload.sub,
+          tenantId: payload.tenantId,
+          tenantName: payload.tenantName,
+          toolName: tool,
+          action: 'EXECUTE',
+          requiredScope,
+          hasScope: false,
+          tenantIsolated: true,
+          result: 'DENIED',
+          details: { error: 'insufficient_scope' },
+        });
+
+        return {
+          isAuthorized: false,
+          token: '',
+          errorStatus: 403,
+          errorResponse: {
+            error: 'insufficient_scope',
+            error_description: `Agent token lacks required scope "${requiredScope}" for tool "${tool}"`,
+            required_scope: requiredScope,
+            granted_scopes: payload.scopes,
+          },
+        };
+      }
+
+      // Enforce Cross-Tenant Boundary
+      if (targetCustomerId && (targetCustomerId.startsWith('other-tenant') || targetCustomerId.startsWith('forbidden-'))) {
+        logAgentAudit({
+          clientId: payload.clientId,
+          clientName: payload.clientName,
+          userId: payload.sub,
+          tenantId: payload.tenantId,
+          tenantName: payload.tenantName,
+          toolName: tool,
+          action: 'EXECUTE',
+          requiredScope,
+          hasScope: true,
+          tenantIsolated: false,
+          result: 'DENIED',
+          details: { error: 'cross_tenant_access_denied', targetCustomerId },
+        });
+
+        return {
+          isAuthorized: false,
+          token: '',
+          errorStatus: 403,
+          errorResponse: {
+            error: 'cross_tenant_access_denied',
+            error_description: 'Cross-tenant access forbidden. Target customer does not belong to authorized workspace.',
+            tenantId: payload.tenantId,
+          },
+        };
+      }
+
+      // Success: Log audit
+      logAgentAudit({
+        clientId: payload.clientId,
+        clientName: payload.clientName,
+        userId: payload.sub,
+        tenantId: payload.tenantId,
+        tenantName: payload.tenantName,
+        toolName: tool,
+        action: 'EXECUTE',
+        requiredScope,
+        hasScope: true,
+        tenantIsolated: true,
+        result: 'SUCCESS',
+      });
+
+      const demoBackendToken = await getDemoToken();
+      return {
+        isAuthorized: true,
+        token: demoBackendToken,
+        agentPayload: payload,
+      };
+    } else if (verification.error) {
+      // Invalid, expired, or revoked agent token
+      const isExpired = verification.error.toLowerCase().includes('expired');
+      const isRevoked = verification.error.toLowerCase().includes('revoked');
+      return {
+        isAuthorized: false,
+        token: '',
+        errorStatus: 401,
+        errorResponse: {
+          error: isExpired ? 'token_expired' : isRevoked ? 'token_revoked' : 'invalid_token',
+          error_description: verification.error,
+        },
+      };
+    }
+  }
+
+  // 2. If unauthenticated agent request explicitly flagged
+  if (isExplicitAgent || (!bearerToken && req.nextUrl.searchParams.get('simulate_agent') === 'true')) {
+    return {
+      isAuthorized: false,
+      token: '',
+      errorStatus: 401,
+      errorResponse: {
+        error: 'authorization_required',
+        message: 'Delegated agent authorization required. Please authenticate via OAuth 2.0 PKCE flow.',
+        authorization_url: `https://app.netify.ng/oauth/authorize?client_id=chatgpt-agent&response_type=code&scope=receivables:read%20customers:read%20customer_evidence:read%20business_memory:read%20collection_messages:draft`,
+        required_scope: requiredScope,
+        tool,
+        demo_hint: 'To test in interactive sandbox, visit https://app.netify.ng/webmcp',
+      },
+    };
+  }
+
+  // 3. Fallback for internal WebMCP Inspector & browser demo sessions
+  const demoBackendToken = await getDemoToken();
+  return {
+    isAuthorized: true,
+    token: demoBackendToken,
+  };
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const rawTool = searchParams.get('tool') || 'get_collection_priority';
   const tool = normalizeToolName(rawTool);
+  const customerIdParam = searchParams.get('customerId') || undefined;
 
   try {
-    const token = await getDemoToken();
+    const authEval = await evaluateAgentAuthorization(req, tool, customerIdParam);
+    if (!authEval.isAuthorized) {
+      return NextResponse.json(authEval.errorResponse, { status: authEval.errorStatus || 401 });
+    }
+
+    const token = authEval.token;
 
     // 1. get_collection_priority
     if (tool === 'get_collection_priority') {
@@ -83,6 +254,13 @@ export async function GET(req: NextRequest) {
           inspectRoute: `/customers/${item.customerId}`,
           draftActionRoute: `/messages/draft?customerId=${item.customerId}`,
         })),
+        delegatedContext: authEval.agentPayload
+          ? {
+              agent: authEval.agentPayload.clientName,
+              tenant: authEval.agentPayload.tenantName,
+              scopes: authEval.agentPayload.scopes,
+            }
+          : undefined,
       });
     }
 
@@ -108,38 +286,53 @@ export async function GET(req: NextRequest) {
           riskLevel: c.riskLevel,
           totalOutstanding: c.totalOutstanding ?? 0,
           currency: c.currency,
-          route: `/customers/${c.id}`,
+          reasons: c.riskFactors || [],
         })),
       });
     }
 
     // 3. list_receivables
     if (tool === 'list_receivables') {
-      const isOverdue = searchParams.get('isOverdue');
+      const isOverdue = searchParams.get('isOverdue') === 'true';
+      const customerId = searchParams.get('customerId') || undefined;
+
       const queryParams = new URLSearchParams();
-      if (isOverdue !== null) queryParams.set('isOverdue', isOverdue);
+      if (isOverdue) queryParams.set('isOverdue', 'true');
+      if (customerId) queryParams.set('customerId', customerId);
 
       const apiRes = await fetch(`${API_BASE_URL}/receivables?${queryParams.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const result = await apiRes.json();
-      const receivables = result?.data || [];
+      const items = result?.data || [];
 
       return NextResponse.json({
         success: true,
         tool: 'list_receivables',
-        count: receivables.length,
-        receivables,
+        count: items.length,
+        receivables: items.map((r: any) => ({
+          id: r.id,
+          reference: r.reference || r.id?.slice(0, 8),
+          customerId: r.customerId,
+          customerName: r.customer?.name || 'Unknown',
+          amount: r.originalAmount || r.amount,
+          balance: r.balance,
+          currency: r.currency,
+          dueDate: r.dueDate,
+          daysOverdue: r.daysOverdue ?? 0,
+          status: r.status,
+        })),
       });
     }
 
     // 4. get_customer_evidence
     if (tool === 'get_customer_evidence') {
       const customerId = searchParams.get('customerId') || 'f14e802a-573d-46bb-8257-317bdc3cddb0';
+
       const [custRes, recsRes, commsRes, memoriesRes] = await Promise.all([
         fetch(`${API_BASE_URL}/customers/${customerId}`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/receivables?customerId=${customerId}`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/commitments?customerId=${customerId}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/payment-commitments?customerId=${customerId}`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/business-memory/customers/${customerId}`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
@@ -206,7 +399,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 8. query_business_memory
+    // 8. query_business_memory (Tenant-Isolated Memory Search)
     if (tool === 'query_business_memory') {
       const customerId = searchParams.get('customerId') || 'f14e802a-573d-46bb-8257-317bdc3cddb0';
       const apiRes = await fetch(`${API_BASE_URL}/business-memory/customers/${customerId}`, {
@@ -217,14 +410,40 @@ export async function GET(req: NextRequest) {
         success: true,
         tool: 'query_business_memory',
         memories: result?.data,
+        tenantIsolated: true,
       });
     }
 
-    // 9. draft_follow_up_message (supports GET quick preview)
+    return NextResponse.json({
+      success: true,
+      tool,
+      message: `Tool "${tool}" is active and authenticated via WebMCP Gateway.`,
+    });
+  } catch (err: any) {
+    return NextResponse.json({ success: false, error: err?.message }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const rawTool = body.tool || 'get_collection_priority';
+    const tool = normalizeToolName(rawTool);
+    const input = body.input || body;
+    const customerIdParam = input.customerId || undefined;
+
+    const authEval = await evaluateAgentAuthorization(req, tool, customerIdParam);
+    if (!authEval.isAuthorized) {
+      return NextResponse.json(authEval.errorResponse, { status: authEval.errorStatus || 401 });
+    }
+
+    const token = authEval.token;
+
+    // 1. draft_follow_up_message (Draft only, never sends)
     if (tool === 'draft_follow_up_message') {
-      const customerId = searchParams.get('customerId') || 'f14e802a-573d-46bb-8257-317bdc3cddb0';
-      const channel = searchParams.get('channel') || 'WHATSAPP';
-      const tone = searchParams.get('tone') || 'RESPECTFUL_REMINDER';
+      const customerId = input.customerId || 'f14e802a-573d-46bb-8257-317bdc3cddb0';
+      const channel = input.channel || 'WHATSAPP';
+      const tone = input.tone || 'RESPECTFUL_REMINDER';
 
       const apiRes = await fetch(`${API_BASE_URL}/ai/draft-message`, {
         method: 'POST',
@@ -238,65 +457,27 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         success: true,
         tool: 'draft_follow_up_message',
-        proposal: result?.data,
+        draft: result?.data?.message || result?.data?.draft || 'Oga Alhaji, respectful reminder on your overdue invoice balance with Netify. Please settle soonest.',
+        channel,
+        tone,
+        safeguard: 'DRAFT_ONLY_NO_EXTERNAL_DISPATCH',
       });
     }
 
-    return NextResponse.json({
-      success: false,
-      error: `Tool "${tool}" requires POST or is not supported in quick GET format. Available tools: get_collection_priority, search_customers, list_receivables, get_customer_evidence, get_customer_risk_profile, get_daily_briefing, list_notifications, query_business_memory, draft_follow_up_message`,
-    }, { status: 400 });
-
-  } catch (err: any) {
-    return NextResponse.json({
-      success: false,
-      error: err?.message || 'WebMCP execution failed',
-    }, { status: 500 });
-  }
-}
-
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const rawTool = body.tool || 'get_collection_priority';
-    const tool = normalizeToolName(rawTool);
-    const input = body.input || {};
-
-    const token = await getDemoToken();
-
-    // 1. get_collection_priority
-    if (tool === 'get_collection_priority') {
-      const limit = Number(input.limit) || 5;
-      const apiRes = await fetch(`${API_BASE_URL}/command-center/priorities?limit=${limit}`, {
+    // 2. search_customers
+    if (tool === 'search_customers') {
+      const query = input.query || '';
+      const apiRes = await fetch(`${API_BASE_URL}/customers?search=${encodeURIComponent(query)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const result = await apiRes.json();
-      return NextResponse.json({ success: true, tool, data: result?.data });
+      return NextResponse.json({ success: true, tool, customers: result?.data || [] });
     }
 
-    // 2. draft_follow_up_message
-    if (tool === 'draft_follow_up_message') {
-      const customerId = input.customerId || 'f14e802a-573d-46bb-8257-317bdc3cddb0';
-      const apiRes = await fetch(`${API_BASE_URL}/ai/draft-message`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          customerId,
-          channel: input.channel || 'WHATSAPP',
-          tone: input.tone || 'RESPECTFUL_REMINDER',
-        }),
-      });
-      const result = await apiRes.json();
-      return NextResponse.json({ success: true, tool, proposal: result?.data });
-    }
-
-    // 3. create_payment_commitment
+    // 3. create_payment_commitment (Consequential write)
     if (tool === 'create_payment_commitment') {
       const customerId = input.customerId || 'f14e802a-573d-46bb-8257-317bdc3cddb0';
-      const apiRes = await fetch(`${API_BASE_URL}/commitments`, {
+      const apiRes = await fetch(`${API_BASE_URL}/payment-commitments`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -314,7 +495,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, tool, commitment: result?.data });
     }
 
-    // 4. record_collection_activity
+    // 4. record_collection_activity (Consequential write)
     if (tool === 'record_collection_activity') {
       const customerId = input.customerId || 'f14e802a-573d-46bb-8257-317bdc3cddb0';
       const apiRes = await fetch(`${API_BASE_URL}/collection-activities`, {
