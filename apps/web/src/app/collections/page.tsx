@@ -497,7 +497,7 @@ export default function CollectionsPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: isLight ? '#DC2626' : '#FCA5A5', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Total Delinquent Overdue
           </span>
-          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: '#EF4444', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: '#EF4444', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : formatCurrency(totalOverdueSum, currency)}
           </div>
           <span style={{ fontSize: '11.5px', color: isLight ? '#B91C1C' : '#FCA5A5' }}>
@@ -520,7 +520,7 @@ export default function CollectionsPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             High Urgency Debtors
           </span>
-          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : highUrgencyCount}
           </div>
           <span style={{ fontSize: '11.5px', color: '#00A581', fontWeight: '600' }}>
@@ -544,7 +544,7 @@ export default function CollectionsPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: isLight ? '#D97706' : '#FCD34D', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Defaulted Promises
           </span>
-          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: isLight ? '#D97706' : '#F59E0B', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: isLight ? '#D97706' : '#F59E0B', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : missedCommitmentsCount}
           </div>
           <span style={{ fontSize: '11.5px', color: isLight ? '#92400E' : '#FCD34D' }}>
@@ -878,10 +878,10 @@ export default function CollectionsPage() {
                 {/* Amount & Actions Hub */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                   <div style={{ textAlign: 'right', minWidth: '120px' }}>
-                    <div style={{ fontSize: '17px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.4px' }}>
+                    <div style={{ fontSize: '17px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.4px', fontVariantNumeric: 'tabular-nums' }}>
                       {formatCurrency(item.totalOutstanding, item.currency || currency)}
                     </div>
-                    <p style={{ fontSize: '12px', color: '#EF4444', fontWeight: '700', marginTop: '2px', margin: 0 }}>
+                    <p style={{ fontSize: '12px', color: '#EF4444', fontWeight: '700', marginTop: '2px', margin: 0, fontVariantNumeric: 'tabular-nums' }}>
                       {formatCurrency(item.totalOverdue, item.currency || currency)} overdue
                     </p>
                   </div>

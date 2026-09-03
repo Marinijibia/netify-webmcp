@@ -477,7 +477,7 @@ export default function CustomersPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Total Outstanding Receivables
           </span>
-          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : formatCurrency(totalDebtSum, currency)}
           </div>
           <span style={{ fontSize: '11.5px', color: tokens.textSecondary }}>
@@ -500,7 +500,7 @@ export default function CustomersPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: isLight ? '#DC2626' : '#FCA5A5', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Total Past-Due Balance
           </span>
-          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: '#EF4444', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: '#EF4444', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : formatCurrency(totalOverdueSum, currency)}
           </div>
           <span style={{ fontSize: '11.5px', color: isLight ? '#B91C1C' : '#FCA5A5' }}>
@@ -523,7 +523,7 @@ export default function CustomersPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: isLight ? '#D97706' : '#FCD34D', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             High Risk Accounts
           </span>
-          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: isLight ? '#D97706' : '#F59E0B', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: isLight ? '#D97706' : '#F59E0B', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : customers.filter((c) => (c.riskScore ?? 0) >= 60 || c.riskLevel === 'HIGH' || c.riskLevel === 'CRITICAL').length}
           </div>
           <span style={{ fontSize: '11.5px', color: isLight ? '#92400E' : '#FCD34D' }}>
@@ -863,11 +863,11 @@ export default function CustomersPage() {
                 {/* Amount & Actions Hub */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                   <div style={{ textAlign: 'right', minWidth: '120px' }}>
-                    <div style={{ fontSize: '17px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.4px' }}>
+                    <div style={{ fontSize: '17px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.4px', fontVariantNumeric: 'tabular-nums' }}>
                       {formatCurrency(outstanding, cust.currency || currency)}
                     </div>
                     {overdue > 0 ? (
-                      <p style={{ fontSize: '12px', color: '#EF4444', fontWeight: '700', marginTop: '2px', margin: 0 }}>
+                      <p style={{ fontSize: '12px', color: '#EF4444', fontWeight: '700', marginTop: '2px', margin: 0, fontVariantNumeric: 'tabular-nums' }}>
                         {formatCurrency(overdue, cust.currency || currency)} overdue
                       </p>
                     ) : (

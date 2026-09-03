@@ -502,7 +502,7 @@ export default function ReceivablesPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Total Open Balance
           </span>
-          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : formatCurrency(totalOpenSum, currency)}
           </div>
           <span style={{ fontSize: '11.5px', color: tokens.textSecondary }}>
@@ -525,7 +525,7 @@ export default function ReceivablesPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: isLight ? '#DC2626' : '#FCA5A5', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Past-Due Overdue Balance
           </span>
-          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: '#EF4444', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: '#EF4444', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : formatCurrency(totalOverdueSum, currency)}
           </div>
           <span style={{ fontSize: '11.5px', color: isLight ? '#B91C1C' : '#FCA5A5' }}>
@@ -548,7 +548,7 @@ export default function ReceivablesPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: '#00A581', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Total Cash Collected
           </span>
-          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: '#00A581', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(20px, 3vw, 26px)', fontWeight: '900', color: '#00A581', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : formatCurrency(totalCollectedSum, currency)}
           </div>
           <span style={{ fontSize: '11.5px', color: tokens.textSecondary }}>

@@ -489,7 +489,7 @@ export default function PaymentsPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: '#00A581', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Total Cash Recovered
           </span>
-          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: '#00A581', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: '#00A581', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : formatCurrency(totalRecoveredSum, currency)}
           </div>
           <span style={{ fontSize: '11.5px', color: tokens.textSecondary }}>
@@ -511,7 +511,7 @@ export default function PaymentsPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Today&apos;s Recoveries
           </span>
-          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : formatCurrency(todayRecoveredSum, currency)}
           </div>
           <span style={{ fontSize: '11.5px', color: tokens.textSecondary }}>
@@ -557,7 +557,7 @@ export default function PaymentsPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Avg Ticket Size
           </span>
-          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : formatCurrency(avgPaymentSize, currency)}
           </div>
           <span style={{ fontSize: '11.5px', color: tokens.textSecondary }}>

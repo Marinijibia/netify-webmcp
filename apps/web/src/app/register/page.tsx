@@ -155,7 +155,7 @@ export default function RegisterPage() {
                 <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: tokens.accentSoft, border: `1px solid ${tokens.accentBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00A581' }}>
                   <Check size={13} />
                 </div>
-                <span>8 live registered WebMCP autonomous agent tools</span>
+                <span>12 live registered WebMCP autonomous agent tools</span>
               </div>
             </div>
           </div>

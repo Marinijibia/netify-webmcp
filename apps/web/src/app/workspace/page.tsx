@@ -294,7 +294,7 @@ export default function WorkspacePage() {
           </div>
 
           <div>
-            <div style={{ fontSize: '28px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.6px' }}>
+            <div style={{ fontSize: '28px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.6px', fontVariantNumeric: 'tabular-nums' }}>
               {isLoading ? '...' : isRevenueShieldActive ? `${facts?.activeCustomersCount || 0} Assigned` : formatCurrency(facts?.totalOutstanding || 0, currency)}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: tokens.textMuted, marginTop: '4px' }}>
@@ -347,7 +347,7 @@ export default function WorkspacePage() {
           </div>
 
           <div>
-            <div style={{ fontSize: '28px', fontWeight: '900', color: '#DC2626', letterSpacing: '-0.6px' }}>
+            <div style={{ fontSize: '28px', fontWeight: '900', color: '#DC2626', letterSpacing: '-0.6px', fontVariantNumeric: 'tabular-nums' }}>
               {isLoading ? '...' : formatCurrency(facts?.totalOverdue || 0, currency)}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: isLight ? '#B91C1C' : '#FCA5A5', marginTop: '4px' }}>
@@ -399,7 +399,7 @@ export default function WorkspacePage() {
           </div>
 
           <div>
-            <div style={{ fontSize: '28px', fontWeight: '900', color: isLight ? '#D97706' : '#F59E0B', letterSpacing: '-0.6px' }}>
+            <div style={{ fontSize: '28px', fontWeight: '900', color: isLight ? '#D97706' : '#F59E0B', letterSpacing: '-0.6px', fontVariantNumeric: 'tabular-nums' }}>
               {isLoading ? '...' : facts?.missedPromisesCount || 0}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: isLight ? '#B45309' : '#FCD34D', marginTop: '4px' }}>
@@ -451,11 +451,11 @@ export default function WorkspacePage() {
           </div>
 
           <div>
-            <div style={{ fontSize: '28px', fontWeight: '900', color: isLight ? '#059669' : '#3AD0A9', letterSpacing: '-0.6px' }}>
+            <div style={{ fontSize: '28px', fontWeight: '900', color: isLight ? '#059669' : '#3AD0A9', letterSpacing: '-0.6px', fontVariantNumeric: 'tabular-nums' }}>
               {isLoading ? '...' : facts?.promisesDueTodayCount || 0}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: isLight ? '#047857' : '#A8F0DB', marginTop: '4px' }}>
-              <span>Expected Cash Inflow: <strong style={{ color: isLight ? '#059669' : '#FFFFFF' }}>{formatCurrency(facts?.promisesDueTodayAmount || 0, currency)}</strong></span>
+              <span>Expected Cash Inflow: <strong style={{ color: isLight ? '#059669' : '#FFFFFF', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(facts?.promisesDueTodayAmount || 0, currency)}</strong></span>
             </div>
           </div>
         </div>

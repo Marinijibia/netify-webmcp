@@ -699,7 +699,7 @@ export default function CustomerDetailPage() {
               <span style={{ fontSize: '11.5px', color: tokens.textMuted, fontWeight: '700', textTransform: 'uppercase' }}>
                 Total Outstanding
               </span>
-              <div style={{ fontSize: '24px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
                 {formatCurrency(outstanding, currency)}
               </div>
             </div>
@@ -708,7 +708,7 @@ export default function CustomerDetailPage() {
               <span style={{ fontSize: '11.5px', color: '#DC2626', fontWeight: '700', textTransform: 'uppercase' }}>
                 Past Due Overdue
               </span>
-              <div style={{ fontSize: '24px', fontWeight: '900', color: '#EF4444', letterSpacing: '-0.5px' }}>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: '#EF4444', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
                 {formatCurrency(overdue, currency)}
               </div>
             </div>

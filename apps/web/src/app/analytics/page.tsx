@@ -473,7 +473,7 @@ export default function AnalyticsPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: '#00A581', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Collection Efficiency (CEI)
           </span>
-          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: '#00A581', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: '#00A581', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : `${cei}%`}
           </div>
           <span style={{ fontSize: '11.5px', color: tokens.textSecondary }}>
@@ -495,7 +495,7 @@ export default function AnalyticsPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Days Sales Out (DSO)
           </span>
-          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : `${dsoDays} Days`}
           </div>
           <span style={{ fontSize: '11.5px', color: tokens.textSecondary }}>
@@ -518,7 +518,7 @@ export default function AnalyticsPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: '#DC2626', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Overdue Exposure Ratio
           </span>
-          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: '#EF4444', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: '#EF4444', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : `${overdueRatio}%`}
           </div>
           <span style={{ fontSize: '11.5px', color: isLight ? '#991B1B' : '#FCA5A5' }}>
@@ -540,7 +540,7 @@ export default function AnalyticsPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Promise Honoring Rate
           </span>
-          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: '#00A581', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: '#00A581', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : `${promiseFulfillmentRate}%`}
           </div>
           <span style={{ fontSize: '11.5px', color: tokens.textSecondary }}>

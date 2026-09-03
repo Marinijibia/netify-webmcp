@@ -333,7 +333,7 @@ export default function NotificationsPage() {
               {kpi.icon}
             </div>
             <div>
-              <div style={{ fontSize: '22px', fontWeight: '800', color: tokens.textPrimary, lineHeight: 1 }}>{kpi.value}</div>
+              <div style={{ fontSize: '22px', fontWeight: '800', color: tokens.textPrimary, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{kpi.value}</div>
               <div style={{ fontSize: '11px', color: tokens.textMuted, marginTop: '2px' }}>{kpi.label}</div>
             </div>
           </div>

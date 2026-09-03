@@ -703,7 +703,7 @@ export default function CommitmentsPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: isLight ? '#DC2626' : '#FCA5A5', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Broken Promises ({missedCommitments.length})
           </span>
-          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: '#EF4444', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: '#EF4444', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : formatCurrency(missedSum, currency)}
           </div>
           <span style={{ fontSize: '11.5px', color: isLight ? '#B91C1C' : '#FCA5A5' }}>
@@ -726,7 +726,7 @@ export default function CommitmentsPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: isLight ? '#D97706' : '#FCD34D', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Due Today ({todayCommitments.length})
           </span>
-          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: isLight ? '#D97706' : '#F59E0B', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: isLight ? '#D97706' : '#F59E0B', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : formatCurrency(todaySum, currency)}
           </div>
           <span style={{ fontSize: '11.5px', color: isLight ? '#92400E' : '#FCD34D' }}>
@@ -748,7 +748,7 @@ export default function CommitmentsPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: tokens.textMuted, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Pending Pipeline ({pendingCommitments.length})
           </span>
-          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : formatCurrency(pendingSum, currency)}
           </div>
           <span style={{ fontSize: '11.5px', color: tokens.textSecondary }}>
@@ -771,7 +771,7 @@ export default function CommitmentsPage() {
           <span style={{ fontSize: '11px', fontWeight: '700', color: '#00A581', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Honored Revenue ({fulfillmentRate}%)
           </span>
-          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: '#00A581', letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: 'clamp(18px, 2.5vw, 24px)', fontWeight: '900', color: '#00A581', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
             {isLoading ? '...' : formatCurrency(fulfilledSum, currency)}
           </div>
           <span style={{ fontSize: '11.5px', color: tokens.textSecondary }}>

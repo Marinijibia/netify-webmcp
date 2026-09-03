@@ -512,7 +512,7 @@ export default function ReceivableDetailPage() {
               <span style={{ fontSize: '11px', color: tokens.textMuted, fontWeight: '700', textTransform: 'uppercase' }}>
                 Invoice Total
               </span>
-              <div style={{ fontSize: '24px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px' }}>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: tokens.textPrimary, letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
                 {formatCurrency(origAmount, currency)}
               </div>
             </div>
@@ -521,7 +521,7 @@ export default function ReceivableDetailPage() {
               <span style={{ fontSize: '11px', color: balance > 0 ? (isOverdue ? '#DC2626' : tokens.textSecondary) : '#16A34A', fontWeight: '700', textTransform: 'uppercase' }}>
                 Remaining Balance Due
               </span>
-              <div style={{ fontSize: '24px', fontWeight: '900', color: balance > 0 ? (isOverdue ? '#EF4444' : tokens.textPrimary) : '#16A34A', letterSpacing: '-0.5px' }}>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: balance > 0 ? (isOverdue ? '#EF4444' : tokens.textPrimary) : '#16A34A', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>
                 {formatCurrency(balance, currency)}
               </div>
             </div>
@@ -534,7 +534,7 @@ export default function ReceivableDetailPage() {
             <span style={{ color: tokens.textSecondary }}>
               Settlement Progress: {percentPaid}% Recovered
             </span>
-            <span style={{ color: '#00A581' }}>
+            <span style={{ color: '#00A581', fontVariantNumeric: 'tabular-nums' }}>
               {formatCurrency(paidAmount, currency)} paid of {formatCurrency(origAmount, currency)}
             </span>
           </div>
