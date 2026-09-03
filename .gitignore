@@ -17,6 +17,11 @@ DevCacheYarn/
 
 # Turborepo
 .turbo/
+Clips/
+*.mp4
+*.webm
+*.mov
+
 
 # Build & Compilation Outputs
 dist/

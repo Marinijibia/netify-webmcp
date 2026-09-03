@@ -15,3 +15,8 @@ dist/
 *.log
 DevCacheYarn/
 DevCachenpm/
+Clips/
+*.mp4
+*.webm
+*.mov
+
