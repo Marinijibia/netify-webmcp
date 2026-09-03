@@ -105,10 +105,10 @@ export function WebMCPInspector() {
       {isOpen && (
         <div style={{
           position: 'fixed',
-          bottom: '70px',
-          right: '24px',
-          width: '760px',
-          maxHeight: '560px',
+          bottom: 'clamp(60px, 8vh, 70px)',
+          right: 'clamp(12px, 3vw, 24px)',
+          width: 'min(760px, calc(100vw - 24px))',
+          maxHeight: 'min(560px, 80vh)',
           backgroundColor: tokens.surface,
           border: `1px solid ${tokens.surfaceBorder}`,
           borderRadius: '16px',

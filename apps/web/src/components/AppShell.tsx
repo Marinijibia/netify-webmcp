@@ -44,6 +44,8 @@ const PROTECTED_ROUTES = [
   '/commitments',
   '/customers',
   '/collections',
+  '/payments',
+  '/analytics',
   '/chat',
   '/messages',
   '/notifications',
