@@ -26,6 +26,9 @@ export interface WebMCPExecutionLog {
   durationMs: number;
   status: 'SUCCESS' | 'ERROR';
   error?: string;
+  signatureHash?: string;
+  consequenceLevel?: 'READ_ONLY' | 'CONSEQUENTIAL_WRITE';
+  sanitized?: boolean;
 }
 
 // Global browser modelContext augmentation

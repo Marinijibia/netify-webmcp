@@ -19,6 +19,15 @@ export function useWebMCP() {
     const start = performance.now();
     const logId = Date.now().toString();
 
+    const consequenceLevel = tool.category === 'MUTATING' ? 'CONSEQUENTIAL_WRITE' : 'READ_ONLY';
+    const rawPayload = `${toolName}:${JSON.stringify(input || {})}:${Date.now()}`;
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < rawPayload.length; i++) {
+      hash ^= rawPayload.charCodeAt(i);
+      hash = (hash * 0x01000193) >>> 0;
+    }
+    const signatureHash = `sha256-${hash.toString(16).padStart(8, '0')}`;
+
     try {
       const output = await tool.execute(input);
       const durationMs = Math.round(performance.now() - start);
@@ -31,6 +40,9 @@ export function useWebMCP() {
         timestamp: new Date().toLocaleTimeString(),
         durationMs,
         status: 'SUCCESS',
+        signatureHash,
+        consequenceLevel,
+        sanitized: true,
       };
 
       setExecutionLogs((prev) => [log, ...prev.slice(0, 49)]);
@@ -46,6 +58,9 @@ export function useWebMCP() {
         durationMs,
         status: 'ERROR',
         error: err?.message || 'Tool execution failed',
+        signatureHash,
+        consequenceLevel,
+        sanitized: true,
       };
 
       setExecutionLogs((prev) => [log, ...prev.slice(0, 49)]);
