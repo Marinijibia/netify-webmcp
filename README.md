@@ -89,20 +89,24 @@ Netify connects autonomous browser agents directly to live merchant ledgers usin
 
 ---
 
-## 🛠️ The 8 Registered WebMCP Tools
+## 🛠️ The 12 Registered WebMCP Tools
 
-Netify exposes 8 production-grade tools on `document.modelContext.registerTool`:
+Netify exposes 12 production-grade browser agent tools on `document.modelContext.registerTool`:
 
-| Tool Name | Category | Description | Primary Inputs |
-| :--- | :--- | :--- | :--- |
-| **`get_collection_priority`** | `READ_ONLY` | Retrieves debtor accounts ranked by urgency, aging days, and missed commitments. | `limit?: number`, `currency?: string` |
-| **`search_customers`** | `READ_ONLY` | Searches customer accounts by business name or location with live ledger balances. | `query: string` |
-| **`get_customer_evidence`** | `READ_ONLY` | Fetches active invoices, historical payments, WhatsApp promises, and activity logs. | `customerId: string` |
-| **`get_customer_risk_profile`**| `READ_ONLY` | Returns AI-grounded risk explanation, behavioral patterns, and recovery recommendations. | `customerId: string` |
-| **`list_receivables`** | `READ_ONLY` | Queries live receivables filtered by status (`OPEN`, `OVERDUE`, `PAID`) or customer ID. | `customerId?: string`, `isOverdue?: boolean` |
-| **`draft_follow_up_message`** | `PROPOSAL` | Generates a culturally nuanced WhatsApp reminder draft in 6 commerce languages. | `customerId: string`, `tone?: string`, `channel?: string` |
-| **`create_payment_commitment`**| `MUTATING` | Records a customer's promised payment date and amount into the database. | `customerId: string`, `amount: number`, `promisedFor: string` |
-| **`record_collection_activity`**| `MUTATING` | Persists verified call, WhatsApp, or promissory visit logs to the customer timeline. | `customerId: string`, `channel: string`, `outcome: string` |
+| # | Tool Name | Category | Description | Primary Inputs |
+| :-: | :--- | :---: | :--- | :--- |
+| **1** | **`get_collection_priority`** | `READ_ONLY` | Retrieves debtor accounts ranked by urgency, aging days, and missed commitments. | `limit?: number`, `currency?: string` |
+| **2** | **`search_customers`** | `READ_ONLY` | Searches customer accounts by business name or location with live ledger balances. | `query: string` |
+| **3** | **`get_customer_evidence`** | `READ_ONLY` | Fetches active invoices, historical payments, WhatsApp promises, and activity logs. | `customerId: string` |
+| **4** | **`get_customer_risk_profile`**| `READ_ONLY` | Returns AI-grounded risk explanation, behavioral patterns, and recovery recommendations. | `customerId: string` |
+| **5** | **`list_receivables`** | `READ_ONLY` | Queries live receivables filtered by status (`OPEN`, `OVERDUE`, `PAID`) or customer ID. | `customerId?: string`, `isOverdue?: boolean` |
+| **6** | **`get_daily_briefing`** | `READ_ONLY` | Fetches executive morning collection briefing (total overdue, today promises, top accounts). | `currency?: string` |
+| **7** | **`query_business_memory`** | `READ_ONLY` | Queries long-term behavioral memory records, commitment fulfillment rates, and debt notes. | `customerId: string` |
+| **8** | **`list_notifications`** | `READ_ONLY` | Lists actionable alerts and real-time SSE payment notifications. | `unreadOnly?: boolean`, `pageSize?: number` |
+| **9** | **`draft_follow_up_message`** | `PROPOSAL` | Generates a culturally nuanced WhatsApp reminder draft in 6 commerce languages. | `customerId: string`, `tone?: string`, `channel?: string` |
+| **10** | **`create_payment_commitment`**| `MUTATING` | Records a customer's promised payment date and amount into the database. | `customerId: string`, `amount: number`, `promisedFor: string` |
+| **11** | **`record_collection_activity`**| `MUTATING` | Persists verified call, WhatsApp, or promissory visit logs to the customer timeline. | `customerId: string`, `channel: string`, `outcome: string` |
+| **12** | **`mark_notification_read`** | `MUTATING` | Dismisses or acknowledges an actionable notification by ID. | `notificationId: string` |
 
 ---
 
@@ -151,7 +155,6 @@ netify/
 │   └── gcp/            # Google Cloud Run, Cloud Build, and Cloud SQL configs
 │
 └── docs/
-    ├── HACKATHON_DEMO_VIDEO_SCRIPT.md  # 2.5-minute video recording walkthrough
     └── HOSTING_AND_HACKATHON_GUIDE.md  # Production hosting and judge instructions
 ```
 
