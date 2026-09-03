@@ -125,11 +125,35 @@ Netify exposes 12 production-grade browser agent tools on `document.modelContext
    document.modelContext.getTools();
    ```
 
-### 3. ChatGPT In-App Browser & API Bridge
-Ask ChatGPT:
-> *"Browse to https://app.netify.ng/api/webmcp/execute?tool=get_collection_priority&limit=3. Using the live WebMCP tool execution, tell me which customer should be followed up with first and why."*
+### 3. ChatGPT In-App Browser & Autonomous Agent Testing Prompt
+Copy and paste this prompt into ChatGPT (with Web Browsing enabled) or any autonomous browser agent:
 
-ChatGPT parses the live ledger and correctly highlights **ABC Stores** (₦850K overdue, 21 days late, broken promise) as the top priority.
+```text
+Please navigate to Netify's web application and test the WebMCP Integration:
+Open https://app.netify.ng/login
+Sign in with:
+• Email: merchant@netify.ng
+• Password: Password123!
+Once logged in, navigate to https://app.netify.ng/webmcp to view the live WebMCP Browser Agent Tools inspector.
+Verify that the following tools are registered on the browser model context:
+get_collection_priority
+search_customers
+get_customer_evidence
+get_customer_risk_profile
+list_receivables
+get_daily_briefing
+query_business_memory
+list_notifications
+draft_follow_up_message
+create_payment_commitment
+record_collection_activity
+mark_notification_read
+Test executing the "get_collection_priority" tool and report the top overdue accounts.
+Please execute the following simulated workflow:
+Call get_collection_priority to retrieve the top overdue debtors.
+Call get_customer_evidence for the highest-ranked debtor (ABC Stores).
+Call draft_follow_up_message to generate a respectful WhatsApp collection draft.
+```
 
 ---
 

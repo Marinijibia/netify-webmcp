@@ -21,9 +21,35 @@ import {
   Zap,
   Check,
   ArrowRight,
-  Lock
+  Lock,
+  Copy
 } from 'lucide-react';
 import { useTheme } from '@/lib/theme/theme-context';
+
+const CHATGPT_JUDGE_PROMPT = `Please navigate to Netify's web application and test the WebMCP Integration:
+Open https://app.netify.ng/login
+Sign in with:
+• Email: merchant@netify.ng
+• Password: Password123!
+Once logged in, navigate to https://app.netify.ng/webmcp to view the live WebMCP Browser Agent Tools inspector.
+Verify that the following tools are registered on the browser model context:
+get_collection_priority
+search_customers
+get_customer_evidence
+get_customer_risk_profile
+list_receivables
+get_daily_briefing
+query_business_memory
+list_notifications
+draft_follow_up_message
+create_payment_commitment
+record_collection_activity
+mark_notification_read
+Test executing the "get_collection_priority" tool and report the top overdue accounts.
+Please execute the following simulated workflow:
+Call get_collection_priority to retrieve the top overdue debtors.
+Call get_customer_evidence for the highest-ranked debtor (ABC Stores).
+Call draft_follow_up_message to generate a respectful WhatsApp collection draft.`;
 
 const SAMPLE_INPUTS: Record<string, any> = {
   get_collection_priority: { limit: 5 },
@@ -72,6 +98,7 @@ export function WebMCPInspector() {
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>(INITIAL_WORKFLOW_STEPS);
   const [isRunningWorkflow, setIsRunningWorkflow] = useState(false);
   const [workflowResult, setWorkflowResult] = useState<any>(null);
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
 
   const updateStepStatus = (id: number, status: 'idle' | 'running' | 'done' | 'error', latencyMs?: number, summary?: string) => {
     setWorkflowSteps((prev) =>
@@ -362,30 +389,59 @@ export function WebMCPInspector() {
                     </p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={runAutonomousWorkflow}
-                    disabled={isRunningWorkflow}
-                    className="hover-lift tap-press"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      backgroundColor: '#00A581',
-                      color: '#FFFFFF',
-                      border: 'none',
-                      padding: '10px 20px',
-                      borderRadius: '8px',
-                      fontSize: '12.5px',
-                      fontWeight: '800',
-                      cursor: isRunningWorkflow ? 'not-allowed' : 'pointer',
-                      boxShadow: '0 4px 14px rgba(0, 165, 129, 0.4)',
-                      opacity: isRunningWorkflow ? 0.7 : 1,
-                    }}
-                  >
-                    {isRunningWorkflow ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} fill="#FFFFFF" />}
-                    <span>{isRunningWorkflow ? 'Executing Agent Loop...' : 'Run Autonomous Workflow (1-Click)'}</span>
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(CHATGPT_JUDGE_PROMPT);
+                        setCopiedPrompt(true);
+                        setTimeout(() => setCopiedPrompt(false), 2000);
+                      }}
+                      className="hover-lift tap-press"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                        border: `1px solid ${tokens.surfaceBorder}`,
+                        color: tokens.textPrimary,
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                      }}
+                    >
+                      {copiedPrompt ? <Check size={14} color="#00A581" /> : <Copy size={14} />}
+                      <span>{copiedPrompt ? 'Prompt Copied!' : 'Copy ChatGPT Agent Prompt'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={runAutonomousWorkflow}
+                      disabled={isRunningWorkflow}
+                      className="hover-lift tap-press"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        backgroundColor: '#00A581',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        padding: '10px 20px',
+                        borderRadius: '8px',
+                        fontSize: '12.5px',
+                        fontWeight: '800',
+                        cursor: isRunningWorkflow ? 'not-allowed' : 'pointer',
+                        boxShadow: '0 4px 14px rgba(0, 165, 129, 0.4)',
+                        opacity: isRunningWorkflow ? 0.7 : 1,
+                      }}
+                    >
+                      {isRunningWorkflow ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} fill="#FFFFFF" />}
+                      <span>{isRunningWorkflow ? 'Executing Agent Loop...' : 'Run Autonomous Workflow (1-Click)'}</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* 5-Step Process Timeline */}

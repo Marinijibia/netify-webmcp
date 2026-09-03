@@ -42,6 +42,31 @@ const SAMPLE_INPUTS: Record<string, any> = {
   mark_notification_read: { notificationId: 'notif-uuid' },
 };
 
+const CHATGPT_AGENT_PROMPT = `Please navigate to Netify's web application and test the WebMCP Integration:
+Open https://app.netify.ng/login
+Sign in with:
+• Email: merchant@netify.ng
+• Password: Password123!
+Once logged in, navigate to https://app.netify.ng/webmcp to view the live WebMCP Browser Agent Tools inspector.
+Verify that the following tools are registered on the browser model context:
+get_collection_priority
+search_customers
+get_customer_evidence
+get_customer_risk_profile
+list_receivables
+get_daily_briefing
+query_business_memory
+list_notifications
+draft_follow_up_message
+create_payment_commitment
+record_collection_activity
+mark_notification_read
+Test executing the "get_collection_priority" tool and report the top overdue accounts.
+Please execute the following simulated workflow:
+Call get_collection_priority to retrieve the top overdue debtors.
+Call get_customer_evidence for the highest-ranked debtor (ABC Stores).
+Call draft_follow_up_message to generate a respectful WhatsApp collection draft.`;
+
 export default function WebMCPPage() {
   const { isAuthenticated } = useAuth();
   const { tokens, isLight } = useTheme();
@@ -296,10 +321,10 @@ document.modelContext.registerTool({
             </div>
             <div>
               <h3 style={{ fontSize: '17px', fontWeight: '800', color: tokens.textPrimary, margin: 0 }}>
-                1-Click ChatGPT Evaluation Test
+                1-Click Judge & ChatGPT Evaluation Prompt
               </h3>
-              <p style={{ fontSize: '12px', color: tokens.textSecondary, margin: '2px 0 0' }}>
-                Ask ChatGPT to query our live WebMCP execution endpoint and reason about overdue debtor rankings in real time.
+              <p style={{ fontSize: '12.5px', color: tokens.textSecondary, margin: '3px 0 0', maxWidth: '560px' }}>
+                Pre-configured test prompt guiding ChatGPT in-app browser or autonomous browser agents to sign in, verify the 12 WebMCP tools, and run the collection triage workflow.
               </p>
             </div>
           </div>
@@ -308,33 +333,35 @@ document.modelContext.registerTool({
             <button
               type="button"
               onClick={() => {
-                const prompt = "Browse to https://app.netify.ng/api/webmcp/execute?tool=get_collection_priority&limit=3 and https://app.netify.ng/api/webmcp. Using the live execution results from the get_collection_priority WebMCP tool, report my top 3 overdue debtor accounts, their outstanding balances, and why each customer is flagged for follow-up.";
-                navigator.clipboard.writeText(prompt);
+                navigator.clipboard.writeText(CHATGPT_AGENT_PROMPT);
                 setCopiedChatGptPrompt(true);
                 setTimeout(() => setCopiedChatGptPrompt(false), 2000);
               }}
+              className="hover-lift tap-press"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
                 backgroundColor: '#00A581',
                 color: '#FFFFFF',
-                padding: '9px 16px',
+                padding: '9px 18px',
                 borderRadius: '8px',
                 fontSize: '12.5px',
                 fontWeight: '700',
                 border: 'none',
                 cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(0, 165, 129, 0.35)',
               }}
             >
               {copiedChatGptPrompt ? <Check size={14} /> : <Copy size={14} />}
-              <span>{copiedChatGptPrompt ? 'Prompt Copied!' : 'Copy ChatGPT Prompt'}</span>
+              <span>{copiedChatGptPrompt ? 'Prompt Copied!' : 'Copy Evaluation Prompt'}</span>
             </button>
 
             <a
               href="https://chatgpt.com"
               target="_blank"
               rel="noopener noreferrer"
+              className="hover-lift tap-press"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -358,15 +385,17 @@ document.modelContext.registerTool({
         <div style={{
           backgroundColor: isLight ? '#FFFFFF' : '#001524',
           border: `1px solid ${tokens.surfaceBorder}`,
-          borderRadius: '10px',
-          padding: '14px 18px',
-          fontSize: '13px',
-          fontFamily: 'monospace',
-          color: tokens.textSecondary,
-          lineHeight: '1.5',
-          overflowX: 'auto',
+          borderRadius: '12px',
+          padding: '16px 20px',
+          fontSize: '12.5px',
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+          color: tokens.textPrimary,
+          lineHeight: '1.6',
+          whiteSpace: 'pre-wrap',
+          maxHeight: '260px',
+          overflowY: 'auto',
         }}>
-          "Browse to <strong style={{ color: '#00A581' }}>https://app.netify.ng/api/webmcp/execute?tool=get_collection_priority&limit=3</strong>. Using the live execution results from the get_collection_priority WebMCP tool, report my top 3 overdue debtor accounts, their outstanding balances, and why each customer is flagged for follow-up."
+          {CHATGPT_AGENT_PROMPT}
         </div>
       </div>
 
