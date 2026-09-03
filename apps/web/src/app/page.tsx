@@ -121,7 +121,7 @@ export default function HomePage() {
           <span>The WebMCP Challenge Submission</span>
           <span style={{ color: tokens.textMuted, margin: '0 2px' }}>•</span>
           <span style={{ color: tokens.textPrimary, display: 'flex', alignItems: 'center', gap: '3px' }}>
-            <span>8 Live Agent Tools</span>
+            <span>12 Live Agent Tools</span>
             <ChevronRight size={13} color="#00A581" />
           </span>
         </Link>
@@ -230,7 +230,7 @@ export default function HomePage() {
             }}
           >
             <Terminal size={17} color="#00A581" />
-            <span>Inspect 8 WebMCP Tools</span>
+            <span>Inspect 12 WebMCP Tools</span>
           </Link>
         </div>
 
@@ -379,22 +379,22 @@ export default function HomePage() {
                 <div className="responsive-grid-4">
                   <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#001D31', padding: 'clamp(14px, 2vw, 18px)', borderRadius: '14px', border: `1px solid ${tokens.surfaceBorder}`, minWidth: 0 }}>
                     <span style={{ fontSize: '11px', color: tokens.textMuted, fontWeight: '500' }}>Total Trade Receivables</span>
-                    <div style={{ fontSize: 'clamp(17px, 2.5vw, 24px)', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px' }}>₦28,450,000</div>
+                    <div style={{ fontSize: 'clamp(17px, 2.5vw, 24px)', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '6px', fontVariantNumeric: 'tabular-nums' }}>₦28,450,000</div>
                     <div style={{ fontSize: '11px', color: '#00A581', marginTop: '4px' }}>84 merchant accounts</div>
                   </div>
                   <div style={{ backgroundColor: isLight ? '#FEF2F2' : '#001D31', padding: 'clamp(14px, 2vw, 18px)', borderRadius: '14px', border: `1px solid ${isLight ? '#FCA5A5' : 'rgba(239,68,68,0.3)'}`, minWidth: 0 }}>
                     <span style={{ fontSize: '11px', color: isLight ? '#DC2626' : '#FCA5A5', fontWeight: '500' }}>Past Payment Terms</span>
-                    <div style={{ fontSize: 'clamp(17px, 2.5vw, 24px)', fontWeight: 'bold', color: '#DC2626', marginTop: '6px' }}>₦7,820,000</div>
+                    <div style={{ fontSize: 'clamp(17px, 2.5vw, 24px)', fontWeight: 'bold', color: '#DC2626', marginTop: '6px', fontVariantNumeric: 'tabular-nums' }}>₦7,820,000</div>
                     <div style={{ fontSize: '11px', color: isLight ? '#B91C1C' : '#FCA5A5', marginTop: '4px' }}>19 invoices overdue</div>
                   </div>
                   <div style={{ backgroundColor: isLight ? '#FFFBEB' : '#001D31', padding: 'clamp(14px, 2vw, 18px)', borderRadius: '14px', border: `1px solid ${isLight ? '#FCD34D' : 'rgba(245,158,11,0.3)'}`, minWidth: 0 }}>
                     <span style={{ fontSize: '11px', color: isLight ? '#D97706' : '#FCD34D', fontWeight: '500' }}>Defaulted Promises</span>
-                    <div style={{ fontSize: 'clamp(17px, 2.5vw, 24px)', fontWeight: 'bold', color: isLight ? '#D97706' : '#F59E0B', marginTop: '6px' }}>12 Broken</div>
+                    <div style={{ fontSize: 'clamp(17px, 2.5vw, 24px)', fontWeight: 'bold', color: isLight ? '#D97706' : '#F59E0B', marginTop: '6px', fontVariantNumeric: 'tabular-nums' }}>12 Broken</div>
                     <div style={{ fontSize: '11px', color: isLight ? '#B45309' : '#FCD34D', marginTop: '4px' }}>WhatsApp commitments</div>
                   </div>
                   <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#001D31', padding: 'clamp(14px, 2vw, 18px)', borderRadius: '14px', border: `1px solid ${tokens.surfaceBorder}`, minWidth: 0 }}>
                     <span style={{ fontSize: '11px', color: tokens.textMuted, fontWeight: '500' }}>Expected Today</span>
-                    <div style={{ fontSize: 'clamp(17px, 2.5vw, 24px)', fontWeight: 'bold', color: '#00A581', marginTop: '6px' }}>₦2,150,000</div>
+                    <div style={{ fontSize: 'clamp(17px, 2.5vw, 24px)', fontWeight: 'bold', color: '#00A581', marginTop: '6px', fontVariantNumeric: 'tabular-nums' }}>₦2,150,000</div>
                     <div style={{ fontSize: '11px', color: isLight ? '#047857' : '#93C5FD', marginTop: '4px' }}>6 commitments due</div>
                   </div>
                 </div>
@@ -670,7 +670,7 @@ export default function HomePage() {
                     Zero API Keys. Safe In-Browser Agent Execution.
                   </h3>
                   <p style={{ color: tokens.textSecondary, fontSize: '13.5px', lineHeight: '1.6', marginTop: '12px' }}>
-                    Netify registers 8 client-side tools directly into <code style={{ color: '#00A581' }}>document.modelContext</code>. AI assistants like Chrome built-in Gemini Nano or ChatGPT in-app browser can autonomously discover your collections queue and propose actions inside your active session.
+                    Netify registers 12 client-side tools directly into <code style={{ color: '#00A581' }}>document.modelContext</code>. AI assistants like Chrome built-in Gemini Nano or ChatGPT in-app browser can autonomously discover your collections queue and propose actions inside your active session.
                   </p>
                   <div style={{ marginTop: '20px' }}>
                     <Link
@@ -688,7 +688,7 @@ export default function HomePage() {
                         textDecoration: 'none',
                       }}
                     >
-                      <span>Test All 8 Tools Live</span>
+                      <span>Test All 12 Tools Live</span>
                       <ArrowRight size={14} />
                     </Link>
                   </div>
@@ -1076,7 +1076,7 @@ export default function HomePage() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: tokens.accentSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-                  ðŸŒ¾
+                  🌾
                 </div>
                 <div>
                   <h4 style={{ fontSize: '17px', fontWeight: 'bold', color: tokens.textPrimary }}>Alhaji Musa</h4>
@@ -1088,7 +1088,7 @@ export default function HomePage() {
               </p>
             </div>
             <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: `1px solid ${tokens.surfaceBorder}`, display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: tokens.textMuted }}>
-              <span>Credit Volume: ₦45M/mo</span>
+              <span style={{ fontVariantNumeric: 'tabular-nums' }}>Credit Volume: ₦45M/mo</span>
               <span style={{ color: '#00A581', fontWeight: 'bold' }}>0 Broken Disputes</span>
             </div>
           </div>
@@ -1108,7 +1108,7 @@ export default function HomePage() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: isLight ? '#EFF6FF' : 'rgba(59, 130, 246, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-                  ðŸ‘—
+                  👗
                 </div>
                 <div>
                   <h4 style={{ fontSize: '17px', fontWeight: 'bold', color: tokens.textPrimary }}>Grace Wanjiku</h4>
@@ -1120,7 +1120,7 @@ export default function HomePage() {
               </p>
             </div>
             <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: `1px solid ${tokens.surfaceBorder}`, display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: tokens.textMuted }}>
-              <span>Credit Volume: KSh 3.8M/mo</span>
+              <span style={{ fontVariantNumeric: 'tabular-nums' }}>Credit Volume: KSh 3.8M/mo</span>
               <span style={{ color: '#2563EB', fontWeight: 'bold' }}>16 Days DSO Drop</span>
             </div>
           </div>
@@ -1140,7 +1140,7 @@ export default function HomePage() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: isLight ? '#FEF3C7' : 'rgba(245, 158, 11, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-                  ðŸ“¦
+                  📦
                 </div>
                 <div>
                   <h4 style={{ fontSize: '17px', fontWeight: 'bold', color: tokens.textPrimary }}>Kwame Mensah</h4>
@@ -1152,7 +1152,7 @@ export default function HomePage() {
               </p>
             </div>
             <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: `1px solid ${tokens.surfaceBorder}`, display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: tokens.textMuted }}>
-              <span>Credit Volume: GH₵ 680k/mo</span>
+              <span style={{ fontVariantNumeric: 'tabular-nums' }}>Credit Volume: GH₵ 680k/mo</span>
               <span style={{ color: '#D97706', fontWeight: 'bold' }}>100% Audit Record</span>
             </div>
           </div>

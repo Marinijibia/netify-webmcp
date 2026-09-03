@@ -190,7 +190,7 @@ document.modelContext.registerTool({
             </div>
             <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#00A581' }}>document.modelContext</div>
             <div style={{ fontSize: '12px', color: tokens.textSecondary, marginTop: '4px' }}>
-              8 live registered tools with verified JSON schemas
+              12 live registered tools with verified JSON schemas
             </div>
           </div>
 

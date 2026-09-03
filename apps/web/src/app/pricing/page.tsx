@@ -184,7 +184,7 @@ export default function PricingPage() {
             <p style={{ color: tokens.textMuted, fontSize: '13.5px', marginTop: '6px' }}>For single retail shops and new merchants.</p>
             
             <div style={{ margin: '24px 0', display: 'flex', alignItems: 'baseline', gap: '4px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 'clamp(32px, 5vw, 42px)', fontWeight: '900', color: tokens.textPrimary }}>
+              <span style={{ fontSize: 'clamp(32px, 5vw, 42px)', fontWeight: '900', color: tokens.textPrimary, fontVariantNumeric: 'tabular-nums' }}>
                 {currentPrices.symbol}{currentPrices.starter}
               </span>
               <span style={{ color: tokens.textMuted, fontSize: '13.5px' }}>/ forever free</span>
@@ -266,7 +266,7 @@ export default function PricingPage() {
             <p style={{ color: tokens.textMuted, fontSize: '13.5px', marginTop: '6px' }}>For active wholesalers and regional distributors.</p>
             
             <div style={{ margin: '24px 0', display: 'flex', alignItems: 'baseline', gap: '4px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 'clamp(32px, 5vw, 42px)', fontWeight: '900', color: '#00A581' }}>
+              <span style={{ fontSize: 'clamp(32px, 5vw, 42px)', fontWeight: '900', color: '#00A581', fontVariantNumeric: 'tabular-nums' }}>
                 {currentPrices.symbol}{currentPrices.pro}
               </span>
               <span style={{ color: tokens.textMuted, fontSize: '13.5px' }}>/ month</span>
@@ -291,7 +291,7 @@ export default function PricingPage() {
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Check size={16} color="#00A581" style={{ flexShrink: 0 }} />
-                <span>All 8 WebMCP agent tools active</span>
+                <span>All 12 WebMCP agent tools active</span>
               </li>
             </ul>
           </div>
@@ -334,7 +334,7 @@ export default function PricingPage() {
             <p style={{ color: tokens.textMuted, fontSize: '13.5px', marginTop: '6px' }}>For multi-branch & regional supply chains.</p>
             
             <div style={{ margin: '24px 0', display: 'flex', alignItems: 'baseline', gap: '4px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 'clamp(32px, 5vw, 42px)', fontWeight: '900', color: tokens.textPrimary }}>
+              <span style={{ fontSize: 'clamp(32px, 5vw, 42px)', fontWeight: '900', color: tokens.textPrimary, fontVariantNumeric: 'tabular-nums' }}>
                 {currentPrices.symbol}{currentPrices.enterprise}
               </span>
               <span style={{ color: tokens.textMuted, fontSize: '13.5px' }}>/ month</span>
