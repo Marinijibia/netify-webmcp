@@ -332,8 +332,29 @@ function AuthorizeConsentContent() {
                 borderRadius: '6px',
                 fontSize: '11.5px',
                 color: isLight ? '#B45309' : '#FCD34D',
+                flexWrap: 'wrap',
+                gap: '8px',
               }}>
                 <span>💡 Demo Judge Account: merchant@netify.ng / Password123!</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginEmail('merchant@netify.ng');
+                    setLoginPassword('Password123!');
+                  }}
+                  style={{
+                    backgroundColor: '#00A581',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '3px 8px',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Fill Demo Credentials
+                </button>
               </div>
 
               <button

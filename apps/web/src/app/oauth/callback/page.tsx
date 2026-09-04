@@ -202,6 +202,22 @@ function OAuthCallbackContent() {
                 View Connected Agents
               </Link>
               <Link
+                href="/promises"
+                style={{
+                  flex: 1,
+                  textAlign: 'center',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  backgroundColor: '#2563EB',
+                  color: '#FFFFFF',
+                  fontSize: '12.5px',
+                  fontWeight: '700',
+                  textDecoration: 'none',
+                }}
+              >
+                Check Today's Promises
+              </Link>
+              <Link
                 href="/webmcp"
                 style={{
                   flex: 1,
