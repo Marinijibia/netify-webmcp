@@ -27,29 +27,43 @@ import {
 import { useTheme } from '@/lib/theme/theme-context';
 
 const CHATGPT_JUDGE_PROMPT = `Please navigate to Netify's web application and test the WebMCP Integration:
-Open https://app.netify.ng/login
-Sign in with:
-• Email: merchant@netify.ng
-• Password: Password123!
-Once logged in, navigate to https://app.netify.ng/webmcp to view the live WebMCP Browser Agent Tools inspector.
-Verify that the following tools are registered on the browser model context:
-get_collection_priority
-search_customers
-get_customer_evidence
-get_customer_risk_profile
-list_receivables
-get_daily_briefing
-query_business_memory
-list_notifications
-draft_follow_up_message
-create_payment_commitment
-record_collection_activity
-mark_notification_read
-Test executing the "get_collection_priority" tool and report the top overdue accounts.
-Please execute the following simulated workflow:
-Call get_collection_priority to retrieve the top overdue debtors.
-Call get_customer_evidence for the highest-ranked debtor (ABC Stores).
-Call draft_follow_up_message to generate a respectful WhatsApp collection draft.`;
+
+[STEP 1: AUTHENTICATION REQUIRED]
+External AI agents must authenticate before accessing the merchant's workspace.
+Method A (Direct Browser Agent In-App Login):
+1. Open https://app.netify.ng/login
+2. Sign in with demo judge credentials:
+   • Email: merchant@netify.ng
+   • Password: Password123!
+3. Once logged in, navigate to https://app.netify.ng/webmcp to view the live WebMCP Browser Agent Tools inspector.
+
+Method B (Delegated Agent Authorization via RFC 7636 OAuth 2.0 PKCE):
+External agents can request delegated access directly via:
+https://app.netify.ng/oauth/authorize?client_id=chatgpt-agent&response_type=code&scope=receivables:read%20customers:read%20customer_evidence:read%20business_memory:read%20collection_messages:draft
+
+[STEP 2: VERIFY 12 REGISTERED WEBMCP TOOLS]
+Verify that the following 12 tools are registered on the browser model context (document.modelContext):
+1. get_collection_priority
+2. search_customers
+3. get_customer_evidence
+4. get_customer_risk_profile
+5. list_receivables
+6. get_daily_briefing
+7. query_business_memory
+8. list_notifications
+9. draft_follow_up_message
+10. create_payment_commitment
+11. record_collection_activity
+12. mark_notification_read
+
+[STEP 3: EXECUTE AUTONOMOUS TRIAGE WORKFLOW]
+Execute the following 3-step debt recovery triage:
+1. Call "get_collection_priority" to retrieve the top overdue debtor accounts.
+2. Call "get_customer_evidence" for the highest-ranked debtor (ABC Stores, customerId: "f14e802a-573d-46bb-8257-317bdc3cddb0").
+3. Call "draft_follow_up_message" with channel "WHATSAPP" and tone "RESPECTFUL_REMINDER" to generate a tailored WhatsApp reminder.
+
+[STEP 4: HUMAN-IN-THE-LOOP SAFEGUARD]
+Verify that financial write tools (create_payment_commitment, record_collection_activity) require explicit human confirmation safeguards before committing changes to the live ledger.`;
 
 const SAMPLE_INPUTS: Record<string, any> = {
   get_collection_priority: { limit: 5 },

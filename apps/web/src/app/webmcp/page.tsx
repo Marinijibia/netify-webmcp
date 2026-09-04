@@ -43,29 +43,45 @@ const SAMPLE_INPUTS: Record<string, any> = {
 };
 
 const CHATGPT_AGENT_PROMPT = `Please navigate to Netify's web application and test the WebMCP Integration:
-Open https://app.netify.ng/login
-Sign in with:
-• Email: merchant@netify.ng
-• Password: Password123!
-Once logged in, navigate to https://app.netify.ng/webmcp to view the live WebMCP Browser Agent Tools inspector.
-Verify that the following tools are registered on the browser model context:
-get_collection_priority
-search_customers
-get_customer_evidence
-get_customer_risk_profile
-list_receivables
-get_daily_briefing
-query_business_memory
-list_notifications
-draft_follow_up_message
-create_payment_commitment
-record_collection_activity
-mark_notification_read
-Test executing the "get_collection_priority" tool and report the top overdue accounts.
-Please execute the following simulated workflow:
-Call get_collection_priority to retrieve the top overdue debtors.
-Call get_customer_evidence for the highest-ranked debtor (ABC Stores).
-Call draft_follow_up_message to generate a respectful WhatsApp collection draft.`;
+
+[STEP 1: AUTHENTICATION REQUIRED]
+External AI agents must authenticate before accessing the merchant's workspace.
+Method A (Direct Browser Agent In-App Login):
+1. Open https://app.netify.ng/login
+2. Sign in with demo judge credentials:
+   • Email: merchant@netify.ng
+   • Password: Password123!
+3. Once logged in, navigate to https://app.netify.ng/webmcp to view the live WebMCP Browser Agent Tools inspector.
+
+Method B (Delegated Agent Authorization via RFC 7636 OAuth 2.0 PKCE):
+External agents can request delegated access directly via:
+https://app.netify.ng/oauth/authorize?client_id=chatgpt-agent&response_type=code&scope=receivables:read%20customers:read%20customer_evidence:read%20business_memory:read%20collection_messages:draft
+
+[STEP 2: VERIFY 12 REGISTERED WEBMCP TOOLS]
+Verify that the following 12 tools are registered on the browser model context (document.modelContext):
+1. get_collection_priority
+2. search_customers
+3. get_customer_evidence
+4. get_customer_risk_profile
+5. list_receivables
+6. get_daily_briefing
+7. query_business_memory
+8. list_notifications
+9. draft_follow_up_message
+10. create_payment_commitment
+11. record_collection_activity
+12. mark_notification_read
+
+[STEP 3: EXECUTE AUTONOMOUS TRIAGE WORKFLOW]
+Execute the following 3-step debt recovery triage:
+1. Call "get_collection_priority" to retrieve the top overdue debtor accounts.
+2. Call "get_customer_evidence" for the highest-ranked debtor (ABC Stores, customerId: "f14e802a-573d-46bb-8257-317bdc3cddb0").
+3. Call "draft_follow_up_message" with channel "WHATSAPP" and tone "RESPECTFUL_REMINDER" to generate a tailored WhatsApp reminder.
+
+[STEP 4: HUMAN-IN-THE-LOOP SAFEGUARD]
+Verify that financial write tools (create_payment_commitment, record_collection_activity) require explicit human confirmation safeguards before committing changes to the live ledger.`;
+
+const OAUTH_AUTHORIZE_URL = 'https://app.netify.ng/oauth/authorize?client_id=chatgpt-agent&redirect_uri=https://chatgpt.com/api/v1/auth/callback&response_type=code&scope=receivables:read%20customers:read%20customer_evidence:read%20business_memory:read%20collection_messages:draft';
 
 export default function WebMCPPage() {
   const { isAuthenticated } = useAuth();
@@ -76,6 +92,7 @@ export default function WebMCPPage() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedChatGptPrompt, setCopiedChatGptPrompt] = useState(false);
+  const [copiedOauthUrl, setCopiedOauthUrl] = useState(false);
 
   const handleSelectTool = (tool: WebMCPToolDefinition) => {
     setSelectedTool(tool);
@@ -332,12 +349,12 @@ document.modelContext.registerTool({
                 1-Click Judge & ChatGPT Evaluation Prompt
               </h3>
               <p style={{ fontSize: '12.5px', color: tokens.textSecondary, margin: '3px 0 0', maxWidth: '560px' }}>
-                Pre-configured test prompt guiding ChatGPT in-app browser or autonomous browser agents to sign in, verify the 12 WebMCP tools, and run the collection triage workflow.
+                Pre-configured test prompt guiding external AI agents (ChatGPT, Claude, Gemini Nano) to authenticate, verify all 12 WebMCP tools, and run the collection triage workflow.
               </p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button
               type="button"
               onClick={() => {
@@ -352,7 +369,7 @@ document.modelContext.registerTool({
                 gap: '6px',
                 backgroundColor: '#00A581',
                 color: '#FFFFFF',
-                padding: '9px 18px',
+                padding: '9px 16px',
                 borderRadius: '8px',
                 fontSize: '12.5px',
                 fontWeight: '700',
@@ -364,6 +381,55 @@ document.modelContext.registerTool({
               {copiedChatGptPrompt ? <Check size={14} /> : <Copy size={14} />}
               <span>{copiedChatGptPrompt ? 'Prompt Copied!' : 'Copy Evaluation Prompt'}</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(OAUTH_AUTHORIZE_URL);
+                setCopiedOauthUrl(true);
+                setTimeout(() => setCopiedOauthUrl(false), 2000);
+              }}
+              className="hover-lift tap-press"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: isLight ? '#FFFFFF' : '#001A2C',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                color: tokens.textPrimary,
+                padding: '9px 14px',
+                borderRadius: '8px',
+                fontSize: '12.5px',
+                fontWeight: '600',
+                cursor: 'pointer',
+              }}
+            >
+              {copiedOauthUrl ? <Check size={14} color="#00A581" /> : <Lock size={13} color="#00A581" />}
+              <span>{copiedOauthUrl ? 'OAuth URL Copied!' : 'Copy OAuth URL'}</span>
+            </button>
+
+            <a
+              href="/oauth/authorize"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover-lift tap-press"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: isLight ? '#EFF6FF' : 'rgba(59, 130, 246, 0.15)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                color: '#2563EB',
+                padding: '9px 14px',
+                borderRadius: '8px',
+                fontSize: '12.5px',
+                fontWeight: '600',
+                textDecoration: 'none',
+              }}
+            >
+              <span>Consent Screen</span>
+              <ExternalLink size={13} />
+            </a>
 
             <a
               href="https://chatgpt.com"
@@ -377,7 +443,7 @@ document.modelContext.registerTool({
                 backgroundColor: isLight ? '#FFFFFF' : '#001A2C',
                 border: `1px solid ${tokens.surfaceBorder}`,
                 color: tokens.textPrimary,
-                padding: '9px 16px',
+                padding: '9px 14px',
                 borderRadius: '8px',
                 fontSize: '12.5px',
                 fontWeight: '600',
@@ -407,7 +473,7 @@ document.modelContext.registerTool({
         </div>
       </div>
 
-      {/* Interactive 8-Tool Schema Explorer & Live Runner */}
+      {/* Interactive 12-Tool Schema Explorer & Live Runner */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', position: 'relative', zIndex: 1 }}>
         <div>
           <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase', letterSpacing: '1px' }}>

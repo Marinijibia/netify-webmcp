@@ -82,7 +82,8 @@ export function PublicFooter() {
           </h4>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <li><Link href="/webmcp" style={{ color: '#00A581', fontWeight: '600', textDecoration: 'none' }}>WebMCP Judge Showcase</Link></li>
-            <li><Link href="/webmcp#tools" style={{ color: tokens.textSecondary, textDecoration: 'none' }}>8 Registered WebMCP Tools</Link></li>
+            <li><Link href="/webmcp#tools" style={{ color: tokens.textSecondary, textDecoration: 'none' }}>12 Registered WebMCP Tools</Link></li>
+            <li><Link href="/oauth/authorize" style={{ color: tokens.textSecondary, textDecoration: 'none' }}>Delegated Agent OAuth Consent</Link></li>
             <li><Link href="/chat" style={{ color: tokens.textSecondary, textDecoration: 'none' }}>AI Copilot & Business Memory</Link></li>
             <li>
               <a href="https://webmcp.devpost.com/" target="_blank" rel="noreferrer" style={{ color: tokens.textSecondary, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>

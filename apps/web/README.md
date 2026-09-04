@@ -21,15 +21,23 @@ Built for **[The WebMCP Challenge](https://webmcp.devpost.com/)**, this web appl
 ---
 
 ## 🛠 Registered WebMCP Tools
-The application registers 8 browser-native tools:
+The application registers 12 browser-native tools:
 1. `get_collection_priority` (Read-Only) — Retrieves ranked priority debtors from the live queue.
-2. `search_customers` (Read-Only) — Searches live customer accounts by name and location.
-3. `get_customer_evidence` (Read-Only) — Fetches invoices, payment history, and WhatsApp promise logs for a customer ID.
-4. `get_customer_risk_profile` (Read-Only) — Retrieves AI risk explanation and recommended recovery strategy.
-5. `list_receivables` (Read-Only) — Queries live invoices filtered by status (`OPEN`, `OVERDUE`, `PAID`) or customer.
-6. `draft_follow_up_message` (Proposal) — Generates tailored payment reminder proposal without side effects.
-7. `create_payment_commitment` (Mutating / Confirmed) — Records customer promise-to-pay date and amount into the database.
-8. `record_collection_activity` (Mutating / Confirmed) — Persists confirmed collection activity into the customer timeline after human review.
+2. `search_customers` (Read-Only) — Searches live customer accounts by name, phone, or location.
+3. `get_customer_evidence` (Read-Only) — Fetches invoices, delivery receipts, payment history, and WhatsApp promise logs for a customer ID.
+4. `get_customer_risk_profile` (Read-Only) — Retrieves AI risk explanation, behavioral patterns, and recommended recovery strategy.
+5. `list_receivables` (Read-Only) — Queries live invoices filtered by status (`OPEN`, `OVERDUE`, `PAID`) or customer ID.
+6. `get_daily_briefing` (Read-Only) — Returns daily executive collections briefing (total overdue, promises due today, urgent actions).
+7. `query_business_memory` (Read-Only) — Queries relational memory records, debtor trust metrics, and past dispute context.
+8. `list_notifications` (Read-Only) — Retrieves real-time alerts, payment confirmations, and broken promise notices.
+9. `draft_follow_up_message` (Proposal) — Generates tailored payment reminder proposals in 6 African commerce languages without side effects.
+10. `create_payment_commitment` (Mutating / Confirmed) — Records customer promise-to-pay date and amount into the database with human confirmation safeguard.
+11. `record_collection_activity` (Mutating / Confirmed) — Persists confirmed collection activity into the customer timeline after human review.
+12. `mark_notification_read` (Mutating) — Dismisses or acknowledges an actionable notification by ID.
+
+### 🔐 Delegated AI Agent Authorization (OAuth 2.0 PKCE)
+External AI agents (ChatGPT Agent, Claude, Gemini Nano) can securely request access to the merchant's workspace without API key sharing via RFC 7636 OAuth 2.0 PKCE consent screen at `/oauth/authorize`. Mutating actions require explicit merchant confirmation safeguards.
+
 
 ---
 

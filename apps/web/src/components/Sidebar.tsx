@@ -67,7 +67,7 @@ export function Sidebar({ isMobileOpen, onCloseMobile }: SidebarProps = {}) {
     {
       label: 'WebMCP Agent Engine',
       items: [
-        { name: 'WebMCP Inspector', href: '/webmcp', icon: Terminal, badge: '8 Tools' },
+        { name: 'WebMCP Inspector', href: '/webmcp', icon: Terminal, badge: '12 Tools' },
         { name: 'REST Tools Manifest', href: '/api/webmcp', icon: Code, badge: 'JSON' },
       ],
     },
