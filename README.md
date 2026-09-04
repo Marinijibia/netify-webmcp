@@ -16,6 +16,7 @@
 | Resource | Live Link / Value | Description |
 | :--- | :--- | :--- |
 | **Live Web App** | **[https://app.netify.ng](https://app.netify.ng)** | Live production web application (Google Cloud Run + Cloudflare) |
+| **Agent Gateway & Promises** | **[https://app.netify.ng/agent](https://app.netify.ng/agent)** | Live Cloud SQL agent portal, today's promises & priority debtors |
 | **Interactive WebMCP Sandbox** | **[https://app.netify.ng/webmcp](https://app.netify.ng/webmcp)** | On-screen WebMCP tool simulator & execution inspector |
 | **WebMCP Standard Manifest** | **[https://app.netify.ng/api/webmcp](https://app.netify.ng/api/webmcp)** | REST discovery and live execution bridge |
 | **Auto-Discovery Root** | **[https://app.netify.ng/.well-known/webmcp.json](https://app.netify.ng/.well-known/webmcp.json)** | Standard RFC WebMCP agent discovery descriptor |
@@ -140,9 +141,10 @@ Method A (Direct Browser Agent In-App Login):
    • Password: Password123!
 3. Once logged in, navigate to https://app.netify.ng/webmcp to view the live WebMCP Browser Agent Tools inspector.
 
-Method B (Delegated Agent Authorization via RFC 7636 OAuth 2.0 PKCE):
+Method B (Delegated Agent Authorization via RFC 7636 OAuth 2.0 PKCE / Agent Gateway):
 External agents can request delegated access directly via:
-https://app.netify.ng/oauth/authorize?client_id=chatgpt-agent&response_type=code&scope=receivables:read%20customers:read%20customer_evidence:read%20business_memory:read%20collection_messages:draft
+• Fast-track Agent Gateway: https://app.netify.ng/agent
+• Standard OAuth Consent: https://app.netify.ng/oauth/authorize?client_id=chatgpt-agent&response_type=code&scope=receivables:read%20customers:read%20customer_evidence:read%20business_memory:read%20collection_messages:draft
 
 [STEP 2: VERIFY 12 REGISTERED WEBMCP TOOLS]
 Verify that the following 12 tools are registered on the browser model context (document.modelContext):
