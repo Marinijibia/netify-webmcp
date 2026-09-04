@@ -56,11 +56,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const expiresInSec = Math.max(
+      60,
+      Math.floor((new Date(result.grant.expiresAt).getTime() - Date.now()) / 1000)
+    );
+
     return NextResponse.json(
       {
         access_token: result.token,
         token_type: 'Bearer',
-        expires_in: 86400, // 24 hours standard
+        expires_in: expiresInSec,
         scope: result.grant.scopes.join(' '),
         grant_id: result.grant.id,
         tenant: {

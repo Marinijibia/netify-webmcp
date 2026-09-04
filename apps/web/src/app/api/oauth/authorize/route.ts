@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
       tenantId,
       redirectUri,
       scopes,
+      duration = '24 hours',
       codeChallenge,
       codeChallengeMethod = 'S256',
     } = body;
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
       tenantId: resolvedTenantId,
       redirectUri,
       scopes: validScopes,
+      durationLabel: duration,
       codeChallenge,
       codeChallengeMethod: codeChallengeMethod === 'plain' ? 'plain' : 'S256',
     });

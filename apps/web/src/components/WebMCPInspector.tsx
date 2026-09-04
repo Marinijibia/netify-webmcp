@@ -281,6 +281,28 @@ export function WebMCPInspector() {
                   }}>
                     {isSupported ? 'document.modelContext Live' : 'Sandbox Fallback'}
                   </span>
+                  <a
+                    href="/oauth/authorize?client_id=chatgpt-agent&redirect_uri=https://chatgpt.com/api/v1/auth/callback&response_type=code&scope=receivables:read%20customers:read%20customer_evidence:read%20business_memory:read%20collection_messages:draft"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Test Delegated AI Agent OAuth 2.0 Consent Screen"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      backgroundColor: isLight ? '#ECFDF5' : 'rgba(16, 185, 129, 0.15)',
+                      color: '#10B981',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      fontSize: '10.5px',
+                      padding: '2px 7px',
+                      borderRadius: '4px',
+                      fontWeight: '700',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <Lock size={10} />
+                    <span>OAuth 2.0 PKCE</span>
+                  </a>
                 </div>
               </div>
             </div>

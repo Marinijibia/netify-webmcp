@@ -41,7 +41,11 @@ import {
   Copy,
   Download,
   Upload,
-  ExternalLink
+  ExternalLink,
+  Eye,
+  Activity,
+  Clock,
+  X
 } from 'lucide-react';
 import { WebBiometricService, ComputerBiometricCapabilities } from '@/lib/biometrics';
 import { useTheme } from '@/lib/theme/theme-context';
@@ -130,12 +134,16 @@ export default function SettingsPage() {
     }
     loadMembers();
     loadAgentGrants();
+    loadAgentAudits();
   }, [organization?.id]);
 
-  // Connected AI Agents State
+  // Connected AI Agents & Audits State
   const [agentGrants, setAgentGrants] = useState<any[]>([]);
   const [isLoadingGrants, setIsLoadingGrants] = useState(false);
   const [revokingGrantId, setRevokingGrantId] = useState<string | null>(null);
+  const [viewingGrant, setViewingGrant] = useState<any | null>(null);
+  const [agentAudits, setAgentAudits] = useState<any[]>([]);
+  const [isLoadingAudits, setIsLoadingAudits] = useState(false);
 
   const loadAgentGrants = async () => {
     setIsLoadingGrants(true);
@@ -152,6 +160,21 @@ export default function SettingsPage() {
     }
   };
 
+  const loadAgentAudits = async () => {
+    setIsLoadingAudits(true);
+    try {
+      const res = await fetch('/api/oauth/audits?limit=25');
+      const data = await res.json();
+      if (data?.audits) {
+        setAgentAudits(data.audits);
+      }
+    } catch (err) {
+      console.warn('Could not load agent audits:', err);
+    } finally {
+      setIsLoadingAudits(false);
+    }
+  };
+
   const handleRevokeGrant = async (grantId: string) => {
     setRevokingGrantId(grantId);
     try {
@@ -164,6 +187,9 @@ export default function SettingsPage() {
       if (data?.success) {
         showToast('Agent access revoked immediately.');
         setAgentGrants((prev) => prev.map((g) => (g.id === grantId ? { ...g, status: 'REVOKED' } : g)));
+        if (viewingGrant?.id === grantId) {
+          setViewingGrant((prev: any) => prev ? { ...prev, status: 'REVOKED' } : null);
+        }
       }
     } catch (err) {
       showToast('Failed to revoke agent grant.');
@@ -1564,8 +1590,30 @@ export default function SettingsPage() {
                       </div>
                     </div>
 
-                    {/* Revoke Action Button */}
-                    <div>
+                    {/* Actions: View Access & Revoke */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setViewingGrant(grant)}
+                        className="hover-lift tap-press"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '7px 12px',
+                          borderRadius: '8px',
+                          border: `1px solid ${tokens.surfaceBorder}`,
+                          backgroundColor: isLight ? '#F8FAFC' : '#001524',
+                          color: tokens.textPrimary,
+                          fontSize: '12px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <Eye size={13} />
+                        <span>View Access</span>
+                      </button>
+
                       {isActive ? (
                         <button
                           type="button"
@@ -1587,7 +1635,7 @@ export default function SettingsPage() {
                           }}
                         >
                           {isRevoking ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                          <span>{isRevoking ? 'Revoking...' : 'Revoke Access'}</span>
+                          <span>{isRevoking ? 'Revoking...' : 'Revoke'}</span>
                         </button>
                       ) : (
                         <span style={{ fontSize: '12px', color: tokens.textSecondary, fontStyle: 'italic' }}>
@@ -1600,6 +1648,105 @@ export default function SettingsPage() {
               })}
             </div>
           )}
+
+          {/* Agent Audit Trail Section */}
+          <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: `1px solid ${tokens.surfaceBorder}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Activity size={16} color="#00A581" />
+                <h4 style={{ fontSize: '13.5px', fontWeight: '800', color: tokens.textPrimary, margin: 0 }}>
+                  Live Delegated Agent Audit Trail
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={loadAgentAudits}
+                disabled={isLoadingAudits}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: 'none',
+                  border: 'none',
+                  color: '#00A581',
+                  fontSize: '11.5px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                }}
+              >
+                {isLoadingAudits ? <Loader2 size={12} className="animate-spin" /> : null}
+                <span>Refresh Logs</span>
+              </button>
+            </div>
+
+            {agentAudits.length === 0 ? (
+              <div style={{
+                padding: '16px',
+                borderRadius: '8px',
+                backgroundColor: isLight ? '#F8FAFC' : '#001524',
+                textAlign: 'center',
+                fontSize: '12px',
+                color: tokens.textSecondary,
+              }}>
+                No agent tool invocations recorded yet. Invocations from ChatGPT, Claude, or WebMCP agents will be logged here.
+              </div>
+            ) : (
+              <div style={{
+                overflowX: 'auto',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                borderRadius: '10px',
+              }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: isLight ? '#F1F5F9' : '#001A2C', textAlign: 'left' }}>
+                      <th style={{ padding: '8px 12px', fontWeight: '700', color: tokens.textSecondary }}>Time</th>
+                      <th style={{ padding: '8px 12px', fontWeight: '700', color: tokens.textSecondary }}>Agent</th>
+                      <th style={{ padding: '8px 12px', fontWeight: '700', color: tokens.textSecondary }}>Tool Invoked</th>
+                      <th style={{ padding: '8px 12px', fontWeight: '700', color: tokens.textSecondary }}>Required Scope</th>
+                      <th style={{ padding: '8px 12px', fontWeight: '700', color: tokens.textSecondary }}>Tenant Isolation</th>
+                      <th style={{ padding: '8px 12px', fontWeight: '700', color: tokens.textSecondary }}>Result</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {agentAudits.map((audit) => {
+                      const isSuccess = audit.result === 'SUCCESS';
+                      return (
+                        <tr key={audit.id} style={{ borderTop: `1px solid ${tokens.surfaceBorder}` }}>
+                          <td style={{ padding: '8px 12px', color: tokens.textSecondary, whiteSpace: 'nowrap' }}>
+                            {new Date(audit.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          </td>
+                          <td style={{ padding: '8px 12px', fontWeight: '700', color: tokens.textPrimary }}>
+                            {audit.clientName}
+                          </td>
+                          <td style={{ padding: '8px 12px', fontFamily: 'monospace', color: tokens.textPrimary }}>
+                            {audit.toolName}
+                          </td>
+                          <td style={{ padding: '8px 12px', color: tokens.textSecondary }}>
+                            {audit.requiredScope}
+                          </td>
+                          <td style={{ padding: '8px 12px', color: '#10B981', fontWeight: '700' }}>
+                            🔒 {audit.tenantName || 'FuelOS'}
+                          </td>
+                          <td style={{ padding: '8px 12px' }}>
+                            <span style={{
+                              fontSize: '10px',
+                              fontWeight: '800',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              backgroundColor: isSuccess ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                              color: isSuccess ? '#10B981' : '#EF4444',
+                            }}>
+                              {audit.result}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1752,6 +1899,206 @@ export default function SettingsPage() {
           onSuccess={handleFaceEnrollSuccess}
           title="Enroll Computer Camera Face Recognition"
         />
+      )}
+
+      {/* View Access Modal for Delegated AI Agents */}
+      {viewingGrant && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 14, 26, 0.8)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 999999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}
+          onClick={() => setViewingGrant(null)}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '520px',
+              backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+              borderRadius: '20px',
+              border: `1px solid ${tokens.surfaceBorder}`,
+              padding: '24px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  backgroundColor: '#10A37F',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <Bot size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: tokens.textPrimary }}>
+                    {viewingGrant.clientName || viewingGrant.clientId}
+                  </h3>
+                  <span style={{ fontSize: '11.5px', color: tokens.textSecondary }}>
+                    Delegated OAuth 2.0 WebMCP Access Details
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingGrant(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: tokens.textSecondary,
+                  cursor: 'pointer',
+                  padding: '4px',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '10px',
+              padding: '12px',
+              borderRadius: '10px',
+              backgroundColor: isLight ? '#F8FAFC' : '#001524',
+              fontSize: '12px',
+            }}>
+              <div>
+                <span style={{ color: tokens.textSecondary, display: 'block', fontSize: '10.5px', fontWeight: '700' }}>WORKSPACE</span>
+                <strong style={{ color: tokens.textPrimary }}>{viewingGrant.tenantName || 'FuelOS'}</strong>
+              </div>
+              <div>
+                <span style={{ color: tokens.textSecondary, display: 'block', fontSize: '10.5px', fontWeight: '700' }}>STATUS</span>
+                <strong style={{ color: viewingGrant.status === 'ACTIVE' ? '#10B981' : '#EF4444' }}>
+                  {viewingGrant.status}
+                </strong>
+              </div>
+              <div>
+                <span style={{ color: tokens.textSecondary, display: 'block', fontSize: '10.5px', fontWeight: '700' }}>DURATION</span>
+                <strong style={{ color: tokens.textPrimary }}>{viewingGrant.durationLabel || '24 hours'}</strong>
+              </div>
+              <div>
+                <span style={{ color: tokens.textSecondary, display: 'block', fontSize: '10.5px', fontWeight: '700' }}>EXPIRES AT</span>
+                <strong style={{ color: tokens.textPrimary }}>{new Date(viewingGrant.expiresAt).toLocaleDateString()}</strong>
+              </div>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '12px', fontWeight: '800', color: tokens.textPrimary, display: 'block', marginBottom: '8px' }}>
+                GRANTED CAPABILITIES ({viewingGrant.scopes?.length || 0})
+              </span>
+              <div style={{
+                maxHeight: '180px',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                borderRadius: '8px',
+                padding: '8px',
+              }}>
+                {(viewingGrant.scopes || []).map((s: string) => {
+                  const isWrite = s.includes(':write');
+                  return (
+                    <div key={s} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '6px 8px',
+                      borderRadius: '6px',
+                      backgroundColor: isLight ? '#F1F5F9' : '#001A2C',
+                      fontSize: '11.5px',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Check size={12} color="#10B981" />
+                        <span style={{ fontWeight: '600', color: tokens.textPrimary }}>{s}</span>
+                      </div>
+                      <span style={{
+                        fontSize: '9.5px',
+                        fontWeight: '700',
+                        padding: '1px 5px',
+                        borderRadius: '4px',
+                        backgroundColor: isWrite ? 'rgba(245, 158, 11, 0.15)' : 'rgba(56, 189, 248, 0.15)',
+                        color: isWrite ? '#B45309' : '#0284C7',
+                      }}>
+                        {isWrite ? 'WRITE (HUMAN CONFIRMATION)' : 'READ'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div style={{
+              padding: '10px 12px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              fontSize: '11.5px',
+              color: '#10B981',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}>
+              <ShieldCheck size={16} />
+              <span>Protected by Netify Multi-Tenant Isolation &amp; PKCE S256 Cryptography</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
+              <button
+                type="button"
+                onClick={() => setViewingGrant(null)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  border: `1px solid ${tokens.surfaceBorder}`,
+                  backgroundColor: 'transparent',
+                  color: tokens.textPrimary,
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+              {viewingGrant.status === 'ACTIVE' && (
+                <button
+                  type="button"
+                  onClick={() => handleRevokeGrant(viewingGrant.id)}
+                  disabled={revokingGrantId === viewingGrant.id}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: '#EF4444',
+                    color: '#FFFFFF',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: revokingGrantId === viewingGrant.id ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {revokingGrantId === viewingGrant.id ? 'Revoking...' : 'Revoke Access Immediately'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -414,6 +414,31 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // 9. draft_follow_up_message (Safe draft generation via GET)
+    if (tool === 'draft_follow_up_message') {
+      const customerId = searchParams.get('customerId') || 'f14e802a-573d-46bb-8257-317bdc3cddb0';
+      const channel = searchParams.get('channel') || 'WHATSAPP';
+      const tone = searchParams.get('tone') || 'RESPECTFUL_REMINDER';
+
+      const apiRes = await fetch(`${API_BASE_URL}/ai/draft-message`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ customerId, channel, tone }),
+      });
+      const result = await apiRes.json();
+      return NextResponse.json({
+        success: true,
+        tool: 'draft_follow_up_message',
+        draft: result?.data?.message || result?.data?.draft || 'Oga Alhaji, respectful reminder on your overdue invoice balance with Netify. Please settle soonest.',
+        channel,
+        tone,
+        safeguard: 'DRAFT_ONLY_NO_EXTERNAL_DISPATCH',
+      });
+    }
+
     return NextResponse.json({
       success: true,
       tool,
@@ -474,9 +499,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, tool, customers: result?.data || [] });
     }
 
-    // 3. create_payment_commitment (Consequential write)
+    // 3. create_payment_commitment (Consequential write with Human-in-the-loop Safeguard)
     if (tool === 'create_payment_commitment') {
       const customerId = input.customerId || 'f14e802a-573d-46bb-8257-317bdc3cddb0';
+      const amount = Number(input.amount) || 100000;
+      const currency = input.currency || 'NGN';
+      const promisedFor = input.promisedFor || new Date(Date.now() + 3 * 86400000).toISOString();
+      const notes = input.notes || 'Payment commitment recorded via WebMCP autonomous agent.';
+
+      // Enforce Human-in-the-Loop Safeguard for delegated agents
+      if (authEval.agentPayload && input.humanConfirmed !== true) {
+        return NextResponse.json({
+          success: true,
+          requiresHumanApproval: true,
+          status: 'AWAITING_HUMAN_CONFIRMATION',
+          tool: 'create_payment_commitment',
+          consequenceLevel: 'HIGH_RISK_FINANCIAL_ACTION',
+          proposal: {
+            proposalId: `prop_${Date.now()}`,
+            agentName: authEval.agentPayload.clientName,
+            summary: `${authEval.agentPayload.clientName} proposed recording a ₦${amount.toLocaleString()} payment commitment for customer ${customerId} promised for ${promisedFor}.`,
+            details: { customerId, amount, currency, promisedFor, notes },
+            humanConfirmationNotice: 'Consequential financial write paused. Resubmit with humanConfirmed: true after explicit merchant approval.',
+          },
+        });
+      }
+
       const apiRes = await fetch(`${API_BASE_URL}/payment-commitments`, {
         method: 'POST',
         headers: {
@@ -485,19 +533,46 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           customerId,
-          amount: Number(input.amount) || 100000,
-          currency: input.currency || 'NGN',
-          promisedFor: input.promisedFor || new Date(Date.now() + 3 * 86400000).toISOString(),
-          notes: input.notes || 'Payment commitment recorded via WebMCP autonomous agent.',
+          amount,
+          currency,
+          promisedFor,
+          notes,
         }),
       });
       const result = await apiRes.json();
-      return NextResponse.json({ success: true, tool, commitment: result?.data });
+      return NextResponse.json({ 
+        success: true, 
+        tool, 
+        commitment: result?.data,
+        humanConfirmed: true,
+      });
     }
 
-    // 4. record_collection_activity (Consequential write)
+    // 4. record_collection_activity (Consequential write with Human-in-the-loop Safeguard)
     if (tool === 'record_collection_activity') {
       const customerId = input.customerId || 'f14e802a-573d-46bb-8257-317bdc3cddb0';
+      const type = input.type || 'PAYMENT_REMINDER';
+      const channel = input.channel || 'WHATSAPP';
+      const outcome = input.outcome || 'PROMISED_PAYMENT';
+      const notes = input.notes || 'Collection follow-up logged via WebMCP agent.';
+
+      if (authEval.agentPayload && input.humanConfirmed !== true) {
+        return NextResponse.json({
+          success: true,
+          requiresHumanApproval: true,
+          status: 'AWAITING_HUMAN_CONFIRMATION',
+          tool: 'record_collection_activity',
+          consequenceLevel: 'CONSEQUENTIAL_COLLECTION_WRITE',
+          proposal: {
+            proposalId: `act_prop_${Date.now()}`,
+            agentName: authEval.agentPayload.clientName,
+            summary: `${authEval.agentPayload.clientName} proposed recording collection activity (${type}) via ${channel}.`,
+            details: { customerId, type, channel, outcome, notes },
+            humanConfirmationNotice: 'Collection activity log paused. Resubmit with humanConfirmed: true after merchant approval.',
+          },
+        });
+      }
+
       const apiRes = await fetch(`${API_BASE_URL}/collection-activities`, {
         method: 'POST',
         headers: {
@@ -506,14 +581,19 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           customerId,
-          type: input.type || 'PAYMENT_REMINDER',
-          channel: input.channel || 'WHATSAPP',
-          outcome: input.outcome || 'PROMISED_PAYMENT',
-          notes: input.notes || 'Collection follow-up logged via WebMCP agent.',
+          type,
+          channel,
+          outcome,
+          notes,
         }),
       });
       const result = await apiRes.json();
-      return NextResponse.json({ success: true, tool, activity: result?.data });
+      return NextResponse.json({ 
+        success: true, 
+        tool, 
+        activity: result?.data,
+        humanConfirmed: true,
+      });
     }
 
     // 5. mark_notification_read

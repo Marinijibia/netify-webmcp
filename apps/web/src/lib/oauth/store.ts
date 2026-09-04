@@ -160,6 +160,7 @@ export interface AuthorizationCode {
   tenantId: string;
   redirectUri: string;
   scopes: string[];
+  durationLabel?: string;
   codeChallenge: string;
   codeChallengeMethod: 'S256' | 'plain';
   expiresAt: number; // Unix epoch ms
@@ -349,6 +350,7 @@ export function createAuthorizationCode(params: {
   tenantId: string;
   redirectUri: string;
   scopes: string[];
+  durationLabel?: string;
   codeChallenge: string;
   codeChallengeMethod: 'S256' | 'plain';
 }): string {
@@ -361,6 +363,7 @@ export function createAuthorizationCode(params: {
     tenantId: params.tenantId,
     redirectUri: params.redirectUri,
     scopes: params.scopes,
+    durationLabel: params.durationLabel || '24 hours',
     codeChallenge: params.codeChallenge,
     codeChallengeMethod: params.codeChallengeMethod,
     expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes valid
@@ -418,7 +421,31 @@ export function exchangeAuthorizationCode(params: {
 
   const grantId = `grant_${crypto.randomUUID()}`;
   const now = new Date();
-  const expiresDate = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours standard
+
+  // Calculate grant expiration from user selected duration
+  const durationLabel = record.durationLabel || '24 hours';
+  let durationMs = 24 * 60 * 60 * 1000; // default 24h
+
+  if (durationLabel === 'This session' || durationLabel === 'session') {
+    durationMs = 2 * 60 * 60 * 1000; // 2 hours for session
+  } else if (durationLabel === '1 hour') {
+    durationMs = 1 * 60 * 60 * 1000;
+  } else if (durationLabel === '24 hours') {
+    durationMs = 24 * 60 * 60 * 1000;
+  } else if (durationLabel === '7 days') {
+    durationMs = 7 * 24 * 60 * 60 * 1000;
+  } else if (durationLabel === '30 days') {
+    durationMs = 30 * 24 * 60 * 60 * 1000;
+  }
+
+  // Section 10 safeguard: "For high-risk scopes, consider shorter expiration regardless of the requested duration."
+  const hasWriteScope = record.scopes.some((s) => s.includes(':write'));
+  if (hasWriteScope && durationMs > 7 * 24 * 60 * 60 * 1000) {
+    // Cap write scopes to max 7 days for enhanced security
+    durationMs = 7 * 24 * 60 * 60 * 1000;
+  }
+
+  const expiresDate = new Date(Date.now() + durationMs);
 
   const grant: AgentAuthorizationGrant = {
     id: grantId,
@@ -430,7 +457,7 @@ export function exchangeAuthorizationCode(params: {
     tenantId: record.tenantId,
     tenantName: record.tenantId === 'demo-org-fuelos' ? 'FuelOS' : 'Active Workspace',
     scopes: record.scopes,
-    durationLabel: '24 hours',
+    durationLabel,
     issuedAt: now.toISOString(),
     expiresAt: expiresDate.toISOString(),
     revokedAt: null,

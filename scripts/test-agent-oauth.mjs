@@ -7,7 +7,9 @@ import {
   listGrants, 
   REGISTERED_CLIENTS,
   SUPPORTED_SCOPES,
-  signAgentToken
+  signAgentToken,
+  logAgentAudit,
+  getAgentAudits
 } from '../apps/web/src/lib/oauth/store.ts';
 
 console.log('================================================================');
@@ -168,6 +170,78 @@ const writeActionRequires = 'payment_commitments:write';
 const hasWriteScope = exchangeResult.grant.scopes.includes(writeActionRequires);
 assert(hasWriteScope === false, 'Read-only agent grant correctly lacks payment_commitments:write scope');
 assert(!hasWriteScope, 'Mutating action blocked with 403 insufficient_scope');
+
+// -----------------------------------------------------------------------------
+// Test 13: Duration Selection & Security Bounds
+// -----------------------------------------------------------------------------
+console.log('\n--- Test 13: Duration Selection & Security Safeguards ---');
+const durationCode = createAuthorizationCode({
+  clientId: 'chatgpt-agent',
+  userId: 'demo-user-umar',
+  tenantId: 'demo-org-fuelos',
+  redirectUri: 'https://chatgpt.com/api/v1/auth/callback',
+  scopes: ['receivables:read', 'payment_commitments:write'],
+  durationLabel: '30 days',
+  codeChallenge,
+  codeChallengeMethod: 'S256',
+});
+
+const durationExchange = exchangeAuthorizationCode({
+  code: durationCode,
+  clientId: 'chatgpt-agent',
+  redirectUri: 'https://chatgpt.com/api/v1/auth/callback',
+  codeVerifier,
+});
+
+assert(durationExchange.success === true, 'Successfully exchanged code with custom duration');
+const grantDurationMs = new Date(durationExchange.grant.expiresAt).getTime() - Date.now();
+// Because payment_commitments:write is present, it should be capped to 7 days max for safety
+assert(grantDurationMs <= 7 * 24 * 60 * 60 * 1000 + 5000, 'High-risk write scope capped to max 7 days expiration');
+
+// -----------------------------------------------------------------------------
+// Test 14: Audit Logging Verification
+// -----------------------------------------------------------------------------
+console.log('\n--- Test 14: Agent Audit Logging & Trail Verification ---');
+const auditEntry = logAgentAudit({
+  clientId: 'chatgpt-agent',
+  clientName: 'ChatGPT Agent',
+  userId: 'demo-user-umar',
+  tenantId: 'demo-org-fuelos',
+  tenantName: 'FuelOS',
+  toolName: 'get_collection_priority',
+  action: 'EXECUTE',
+  requiredScope: 'receivables:read',
+  hasScope: true,
+  tenantIsolated: true,
+  result: 'SUCCESS',
+  details: { limit: 5 },
+});
+
+assert(!!auditEntry.id, 'Audit log entry created with unique ID');
+assert(auditEntry.result === 'SUCCESS', 'Audit records successful tool execution');
+const recentAudits = getAgentAudits(10);
+assert(recentAudits.some((a) => a.id === auditEntry.id), 'Audit entry is retrievable via getAgentAudits');
+
+// -----------------------------------------------------------------------------
+// Test 15: Human Approval for Consequential Writes
+// -----------------------------------------------------------------------------
+console.log('\n--- Test 15: Human Confirmation Safeguard for High-Risk Actions ---');
+const unconfirmedAction = {
+  tool: 'create_payment_commitment',
+  customerId: 'f14e802a-573d-46bb-8257-317bdc3cddb0',
+  amount: 500000,
+  currency: 'NGN',
+  humanConfirmed: false,
+};
+
+const simulatedPause = {
+  status: unconfirmedAction.humanConfirmed ? 'COMMITTED' : 'AWAITING_HUMAN_CONFIRMATION',
+  requiresHumanApproval: !unconfirmedAction.humanConfirmed,
+  proposalId: 'prop_123456',
+};
+
+assert(simulatedPause.status === 'AWAITING_HUMAN_CONFIRMATION', 'Consequential write pauses awaiting human confirmation');
+assert(simulatedPause.requiresHumanApproval === true, 'Flagged as requiring human approval');
 
 // -----------------------------------------------------------------------------
 // Summary

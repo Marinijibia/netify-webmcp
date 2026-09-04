@@ -145,6 +145,7 @@ function AuthorizeConsentContent() {
           tenantId: selectedWorkspace,
           redirectUri,
           scopes: approvedScopes,
+          duration: selectedDuration,
           codeChallenge,
           codeChallengeMethod,
         }),
