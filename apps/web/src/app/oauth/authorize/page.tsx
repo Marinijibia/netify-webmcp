@@ -62,6 +62,9 @@ function AuthorizeConsentContent() {
   const [isAuthorizing, setIsAuthorizing] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [authorizedSessionId, setAuthorizedSessionId] = useState<string | null>(null);
+  const [authorizedToken, setAuthorizedToken] = useState<string | null>(null);
+  const [authorizedRedirectUrl, setAuthorizedRedirectUrl] = useState<string | null>(null);
+  const [copiedPrompt, setCopiedPrompt] = useState<boolean>(false);
 
   // In-place login state for unauthenticated users / judges
   const [loginEmail, setLoginEmail] = useState('merchant@netify.ng');
@@ -172,18 +175,31 @@ function AuthorizeConsentContent() {
         throw new Error(data.error_description || 'Authorization failed');
       }
 
-      if (sessionId || data.sessionId) {
-        setAuthorizedSessionId(data.sessionId || sessionId);
-        setIsAuthorizing(false);
-        return;
+      const finalSessionId = data.sessionId || sessionId;
+      const finalToken = data.sessionToken;
+
+      // Construct authorized destination URL for seamless agent gateway continuity
+      let destUrl = redirectUri || 'https://app.netify.ng/agent';
+      try {
+        const u = new URL(destUrl, window.location.origin);
+        if (finalSessionId) u.searchParams.set('session', finalSessionId);
+        if (finalToken) u.searchParams.set('token', finalToken);
+        if (data.code) u.searchParams.set('code', data.code);
+        if (state) u.searchParams.set('state', state);
+        destUrl = u.toString();
+      } catch {
+        destUrl = `/agent?session=${encodeURIComponent(finalSessionId || '')}&token=${encodeURIComponent(finalToken || '')}`;
       }
 
-      // Redirect back to agent callback with code and state
-      const callbackUrl = new URL(redirectUri);
-      callbackUrl.searchParams.set('code', data.code);
-      if (state) callbackUrl.searchParams.set('state', state);
+      setAuthorizedSessionId(finalSessionId || 'authorized');
+      setAuthorizedToken(finalToken || null);
+      setAuthorizedRedirectUrl(destUrl);
+      setIsAuthorizing(false);
 
-      window.location.href = callbackUrl.toString();
+      // Auto-navigate back to agent gateway after brief confirmation
+      setTimeout(() => {
+        window.location.href = destUrl;
+      }, 1500);
     } catch (err: any) {
       setErrorMsg(err?.message || 'Failed to complete authorization');
       setIsAuthorizing(false);
@@ -265,8 +281,8 @@ function AuthorizeConsentContent() {
         {authorizedSessionId && (
           <div style={{ padding: '32px 28px', textAlign: 'center' }}>
             <div style={{
-              width: '60px',
-              height: '60px',
+              width: '64px',
+              height: '64px',
               borderRadius: '50%',
               backgroundColor: isLight ? '#ECFDF5' : 'rgba(16, 185, 129, 0.15)',
               color: '#10B981',
@@ -274,55 +290,96 @@ function AuthorizeConsentContent() {
               alignItems: 'center',
               justifyContent: 'center',
               marginBottom: '16px',
+              animation: 'pulse 2s infinite',
             }}>
-              <CheckCircle2 size={36} />
+              <CheckCircle2 size={40} />
             </div>
 
-            <h2 style={{ fontSize: '20px', fontWeight: '800', margin: '0 0 8px', color: tokens.textPrimary }}>
+            <h2 style={{ fontSize: '21px', fontWeight: '800', margin: '0 0 8px', color: tokens.textPrimary }}>
               Agent Authorization Granted!
             </h2>
-            <p style={{ fontSize: '13.5px', color: tokens.textSecondary, marginBottom: '24px', lineHeight: '1.6' }}>
+            <p style={{ fontSize: '13.5px', color: tokens.textSecondary, marginBottom: '20px', lineHeight: '1.6' }}>
               <strong>{client.name}</strong> is now authorized to access <strong>{workspaceName}</strong> via WebMCP.
             </p>
+
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 16px',
+              borderRadius: '20px',
+              backgroundColor: 'rgba(0, 165, 129, 0.15)',
+              color: '#3AD0A9',
+              fontSize: '12.5px',
+              fontWeight: '700',
+              marginBottom: '22px',
+            }}>
+              <Loader2 size={14} className="animate-spin" />
+              <span>Auto-navigating to live Agent Gateway...</span>
+            </div>
 
             <div style={{
               backgroundColor: isLight ? '#F0FDF4' : 'rgba(0, 37, 27, 0.6)',
               border: '1.5px solid #00A581',
               borderRadius: '14px',
               padding: '18px 20px',
-              marginBottom: '24px',
+              marginBottom: '22px',
               textAlign: 'left',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <Sparkles size={16} color="#00A581" />
                 <span style={{ fontSize: '13px', fontWeight: '800', color: tokens.textPrimary }}>
-                  Next Step: Continue Your Conversation
+                  Next Step: Continue in ChatGPT / Claude
                 </span>
               </div>
-              <p style={{ margin: 0, fontSize: '12.5px', color: tokens.textSecondary, lineHeight: '1.6' }}>
-                Return to your <strong>ChatGPT / Claude</strong> tab and simply type:
+              <p style={{ margin: '0 0 10px', fontSize: '12.5px', color: tokens.textSecondary, lineHeight: '1.6' }}>
+                If ChatGPT is waiting in your chat tab, tell it <em>&quot;Check today&apos;s promises&quot;</em> or paste this direct link:
               </p>
               <div style={{
                 backgroundColor: isLight ? '#FFFFFF' : '#00111E',
                 border: `1px solid ${tokens.surfaceBorder}`,
                 borderRadius: '8px',
-                padding: '10px 14px',
+                padding: '10px 12px',
                 fontFamily: 'monospace',
-                fontSize: '13px',
-                color: '#3AD0A9',
-                fontWeight: '700',
-                margin: '10px 0',
+                fontSize: '11.5px',
+                color: '#38BDF8',
+                wordBreak: 'break-all',
+                marginBottom: '10px',
               }}>
-                "Continue" or "Check today's promises"
+                {authorizedRedirectUrl || `https://app.netify.ng/agent?session=${authorizedSessionId}`}
               </div>
-              <span style={{ fontSize: '11.5px', color: tokens.textSecondary }}>
-                Your agent will immediately retrieve your live promises and debtor records from the database.
-              </span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const copyText = `Check ${authorizedRedirectUrl || `https://app.netify.ng/agent?session=${authorizedSessionId}`} and report today's promises`;
+                  navigator.clipboard.writeText(copyText);
+                  setCopiedPrompt(true);
+                  setTimeout(() => setCopiedPrompt(false), 2500);
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: copiedPrompt ? '#10B981' : 'rgba(0, 165, 129, 0.2)',
+                  color: copiedPrompt ? '#FFFFFF' : '#3AD0A9',
+                  border: '1px solid #00A581',
+                  borderRadius: '8px',
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {copiedPrompt ? <Check size={13} /> : <ExternalLink size={13} />}
+                <span>{copiedPrompt ? 'Copied Prompt to Clipboard!' : 'Copy Prompt for ChatGPT'}</span>
+              </button>
             </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>
-              <Link
-                href={`/agent?session=${encodeURIComponent(authorizedSessionId)}`}
+              <a
+                href={authorizedRedirectUrl || `/agent?session=${encodeURIComponent(authorizedSessionId)}`}
                 style={{
                   flex: 1,
                   display: 'inline-flex',
@@ -338,9 +395,9 @@ function AuthorizeConsentContent() {
                   textDecoration: 'none',
                 }}
               >
-                <span>Open Netify Agent Gateway</span>
+                <span>Go to Agent Gateway Now</span>
                 <ArrowRight size={15} />
-              </Link>
+              </a>
             </div>
           </div>
         )}

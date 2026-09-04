@@ -1,6 +1,4 @@
-import React from 'react';
-import Link from 'next/link';
-import { verifyAgentToken, getAgentSession, createAgentSession } from '@/lib/oauth/store';
+import { verifyAgentToken, getAgentSession, createAgentSession, authorizeAgentSession } from '@/lib/oauth/store';
 import { fetchLiveWorkspaceData, formatCurrency } from '@/lib/agent-live-data';
 import AgentTesterWidget from './AgentTesterWidget';
 
@@ -26,7 +24,7 @@ export default async function AgentGatewayPage({ searchParams }: PageProps) {
   let activeSessionId = sessionParam || '';
   let activeToken = tokenParam || '';
 
-  // 1. Check direct token
+  // 1. Check direct token (stateless verification across any container)
   if (tokenParam) {
     const val = verifyAgentToken(tokenParam);
     if (val.valid && val.payload) {
@@ -35,6 +33,20 @@ export default async function AgentGatewayPage({ searchParams }: PageProps) {
       workspaceName = val.payload.tenantName || 'FuelOS';
       tenantId = val.payload.tenantId || 'demo-org-fuelos';
       activeToken = tokenParam;
+
+      // Also cache in local session store for subsequent requests on this container
+      if (sessionParam) {
+        authorizeAgentSession(sessionParam, {
+          tenantId,
+          tenantName: workspaceName,
+          userId: val.payload.sub || 'demo-user-umar',
+          userName: val.payload.userName || 'Umar Abdullahi',
+          userEmail: val.payload.userEmail || 'merchant@netify.ng',
+          scopes: val.payload.scopes || [],
+          token: tokenParam,
+          grantId: val.payload.grantId,
+        });
+      }
     }
   }
 
@@ -250,6 +262,43 @@ export default async function AgentGatewayPage({ searchParams }: PageProps) {
           }}>
             <span>✓ Authorized (Live Database Connected)</span>
           </div>
+        </div>
+
+        {/* Agent Ready Notification Banner */}
+        <div style={{
+          backgroundColor: 'rgba(0, 165, 129, 0.12)',
+          border: '1.5px solid #00A581',
+          borderRadius: '14px',
+          padding: '16px 20px',
+          marginBottom: '26px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+        }}>
+          <div>
+            <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#3AD0A9' }}>
+              ✓ ChatGPT Agent Session Active: <code>{activeSessionId || 'delegated-access'}</code>
+            </div>
+            <div style={{ fontSize: '12.5px', color: '#CBD5E1', marginTop: '4px' }}>
+              Your agent can now read today&apos;s promises and trade ledger records directly from the database.
+              If ChatGPT is waiting in your chat tab, tell it: <em>&quot;Check today&apos;s promises&quot;</em>.
+            </div>
+          </div>
+          {activeToken && (
+            <div style={{
+              fontSize: '11px',
+              color: '#3AD0A9',
+              backgroundColor: 'rgba(0, 165, 129, 0.2)',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              fontWeight: '700',
+              fontFamily: 'monospace',
+            }}>
+              HMAC Verified
+            </div>
+          )}
         </div>
 
         {/* Live Executive KPI Metric Cards */}

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { verifyAgentToken, getAgentSession, createAgentSession } from '@/lib/oauth/store';
+import { verifyAgentToken, getAgentSession, createAgentSession, authorizeAgentSession } from '@/lib/oauth/store';
 import { fetchLiveWorkspaceData } from '@/lib/agent-live-data';
 import { handleCorsPreflight, jsonWithCors } from '@/lib/cors';
 
@@ -43,6 +43,20 @@ export async function GET(req: NextRequest) {
       agentName = val.payload.clientName || 'ChatGPT Agent';
       workspaceName = val.payload.tenantName || 'FuelOS';
       tenantId = val.payload.tenantId || 'demo-org-fuelos';
+
+      // Cache session in memory
+      if (sessionParam) {
+        authorizeAgentSession(sessionParam, {
+          tenantId,
+          tenantName: workspaceName,
+          userId: val.payload.sub || 'demo-user-umar',
+          userName: val.payload.userName || 'Umar Abdullahi',
+          userEmail: val.payload.userEmail || 'merchant@netify.ng',
+          scopes: val.payload.scopes || [],
+          token: rawToken,
+          grantId: val.payload.grantId,
+        });
+      }
     }
   }
 

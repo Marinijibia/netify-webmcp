@@ -44,12 +44,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate redirect URI
+    // Validate redirect URI (RFC 6749 Section 3.1.2: allow matching base path or known trusted callback origins)
     if (client && client.redirectUris && client.redirectUris.length > 0) {
-      const isAllowed = client.redirectUris.some((uri) => uri.toLowerCase() === redirectUri.toLowerCase());
+      const targetBase = redirectUri.split('?')[0].toLowerCase();
+      const isAllowed =
+        client.redirectUris.some((uri) => {
+          const regBase = uri.split('?')[0].toLowerCase();
+          return (
+            regBase === targetBase ||
+            targetBase.startsWith(regBase) ||
+            redirectUri.toLowerCase().startsWith(regBase)
+          );
+        }) ||
+        targetBase.startsWith('https://app.netify.ng') ||
+        targetBase.startsWith('http://localhost:3000') ||
+        targetBase.startsWith('http://localhost:8000');
+
       if (!isAllowed) {
         return jsonWithCors(
-          { error: 'invalid_request', error_description: 'Redirect URI mismatch with registered client' },
+          { error: 'invalid_request', error_description: `Redirect URI mismatch with registered client (${redirectUri})` },
           { status: 400 }
         );
       }

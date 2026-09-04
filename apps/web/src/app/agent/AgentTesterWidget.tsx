@@ -39,7 +39,9 @@ export default function AgentTesterWidget({
   const [toolResult, setToolResult] = useState<any>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
 
-  const promptToCopy = sessionId
+  const promptToCopy = sessionId && token
+    ? `Navigate to https://app.netify.ng/agent?session=${sessionId}&token=${encodeURIComponent(token)} and report today's promises and high-urgency debtor accounts.`
+    : sessionId
     ? `Navigate to https://app.netify.ng/agent?session=${sessionId} and report today's promises and high-urgency debtor accounts.`
     : `Navigate to https://app.netify.ng/agent and report today's promises and high-urgency debtor accounts.`;
 
@@ -55,6 +57,7 @@ export default function AgentTesterWidget({
     try {
       let url = `/api/webmcp/execute?tool=${selectedTool}`;
       if (sessionId) url += `&session=${encodeURIComponent(sessionId)}`;
+      if (token) url += `&token=${encodeURIComponent(token)}`;
       if (selectedTool.includes('customer')) {
         url += '&customerId=f14e802a-573d-46bb-8257-317bdc3cddb0';
       }
