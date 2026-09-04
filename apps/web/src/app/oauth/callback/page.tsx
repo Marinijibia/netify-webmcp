@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense, useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useTheme } from '@/lib/theme/theme-context';
 import { 
   CheckCircle2, 
@@ -15,7 +15,8 @@ import {
   Lock,
   Sparkles,
   Building2,
-  Calendar
+  Calendar,
+  Clock
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -36,6 +37,7 @@ const ALL_12_TOOLS = [
 
 function OAuthCallbackContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { tokens, isLight } = useTheme();
 
   const code = searchParams.get('code');
@@ -51,6 +53,10 @@ function OAuthCallbackContent() {
   const [isExchanging, setIsExchanging] = useState(false);
   const [exchangeError, setExchangeError] = useState<string | null>(null);
   const [grantData, setGrantData] = useState<any>(null);
+
+  // Auto-Redirect State
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [autoRedirectPaused, setAutoRedirectPaused] = useState(false);
 
   // WebMCP Interactive Tester State
   const [selectedTool, setSelectedTool] = useState('get_collection_priority');
@@ -77,6 +83,7 @@ function OAuthCallbackContent() {
           if (data.access_token) {
             setAccessToken(data.access_token);
             setGrantData(data);
+            setCountdown(3);
             try {
               localStorage.setItem('netify_agent_access_token', data.access_token);
             } catch {}
@@ -92,6 +99,22 @@ function OAuthCallbackContent() {
         });
     }
   }, [code, accessToken, isExchanging, error]);
+
+  // Auto-navigate to today's promises with the issued token after countdown
+  useEffect(() => {
+    if (!accessToken || autoRedirectPaused || countdown === null) return;
+
+    if (countdown <= 0) {
+      router.push(`/promises?token=${encodeURIComponent(accessToken)}`);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setCountdown((prev) => (prev !== null ? prev - 1 : null));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [accessToken, countdown, autoRedirectPaused, router]);
 
   // Execute selected WebMCP tool with the newly issued agent token
   const handleTestTool = async () => {
@@ -288,11 +311,47 @@ function OAuthCallbackContent() {
               <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: '700', color: tokens.textPrimary }}>
                 Ready to Access Netify Promises & Debtors
               </h3>
-              <p style={{ margin: '0 0 16px', fontSize: '13px', color: tokens.textSecondary }}>
+              <p style={{ margin: '0 0 14px', fontSize: '13px', color: tokens.textSecondary }}>
                 Click below to view today&apos;s real payment promises and debtor queue using your authorized agent token:
               </p>
-              <Link
-                href={`/promises${accessToken ? `?token=${encodeURIComponent(accessToken)}` : ''}`}
+
+              {countdown !== null && !autoRedirectPaused && countdown > 0 && (
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: 'rgba(58, 208, 169, 0.15)',
+                  border: '1px solid rgba(58, 208, 169, 0.3)',
+                  borderRadius: '20px',
+                  padding: '5px 14px',
+                  fontSize: '12px',
+                  color: '#3AD0A9',
+                  fontWeight: '600',
+                  marginBottom: '14px',
+                }}>
+                  <Clock size={13} />
+                  <span>Auto-redirecting to Today&apos;s Promises in {countdown}s...</span>
+                  <button
+                    type="button"
+                    onClick={() => setAutoRedirectPaused(true)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: tokens.textSecondary,
+                      textDecoration: 'underline',
+                      cursor: 'pointer',
+                      fontSize: '11.5px',
+                      marginLeft: '6px',
+                    }}
+                  >
+                    Pause auto-redirect
+                  </button>
+                </div>
+              )}
+
+              <div>
+                <Link
+                  href={`/promises${accessToken ? `?token=${encodeURIComponent(accessToken)}` : ''}`}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -310,6 +369,7 @@ function OAuthCallbackContent() {
                 <span>👉 View Today&apos;s Promises with Authorized Token</span>
                 <ArrowRight size={16} />
               </Link>
+              </div>
             </div>
 
             {/* Interactive WebMCP Tool Runner */}
