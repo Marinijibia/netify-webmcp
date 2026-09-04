@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { useTheme } from '@/lib/theme/theme-context';
 import { 
@@ -42,6 +43,7 @@ function AuthorizeConsentContent() {
   const state = searchParams.get('state') || '';
   const codeChallenge = searchParams.get('code_challenge') || 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM';
   const codeChallengeMethod = (searchParams.get('code_challenge_method') || 'S256') as 'S256' | 'plain';
+  const sessionId = searchParams.get('session') || searchParams.get('sessionId') || '';
 
   // Client Details
   const client = REGISTERED_CLIENTS[clientId] || {
@@ -59,6 +61,7 @@ function AuthorizeConsentContent() {
   const [selectedDuration, setSelectedDuration] = useState<string>('24 hours');
   const [isAuthorizing, setIsAuthorizing] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [authorizedSessionId, setAuthorizedSessionId] = useState<string | null>(null);
 
   // In-place login state for unauthenticated users / judges
   const [loginEmail, setLoginEmail] = useState('merchant@netify.ng');
@@ -148,12 +151,19 @@ function AuthorizeConsentContent() {
           duration: selectedDuration,
           codeChallenge,
           codeChallengeMethod,
+          sessionId: sessionId || undefined,
         }),
       });
 
       const data = await res.json();
       if (!res.ok || !data.code) {
         throw new Error(data.error_description || 'Authorization failed');
+      }
+
+      if (sessionId || data.sessionId) {
+        setAuthorizedSessionId(data.sessionId || sessionId);
+        setIsAuthorizing(false);
+        return;
       }
 
       // Redirect back to agent callback with code and state
@@ -239,8 +249,92 @@ function AuthorizeConsentContent() {
           </div>
         </div>
 
+        {/* Session Authorized Success View */}
+        {authorizedSessionId && (
+          <div style={{ padding: '32px 28px', textAlign: 'center' }}>
+            <div style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              backgroundColor: isLight ? '#ECFDF5' : 'rgba(16, 185, 129, 0.15)',
+              color: '#10B981',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px',
+            }}>
+              <CheckCircle2 size={36} />
+            </div>
+
+            <h2 style={{ fontSize: '20px', fontWeight: '800', margin: '0 0 8px', color: tokens.textPrimary }}>
+              Agent Authorization Granted!
+            </h2>
+            <p style={{ fontSize: '13.5px', color: tokens.textSecondary, marginBottom: '24px', lineHeight: '1.6' }}>
+              <strong>{client.name}</strong> is now authorized to access <strong>{workspaceName}</strong> via WebMCP.
+            </p>
+
+            <div style={{
+              backgroundColor: isLight ? '#F0FDF4' : 'rgba(0, 37, 27, 0.6)',
+              border: '1.5px solid #00A581',
+              borderRadius: '14px',
+              padding: '18px 20px',
+              marginBottom: '24px',
+              textAlign: 'left',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <Sparkles size={16} color="#00A581" />
+                <span style={{ fontSize: '13px', fontWeight: '800', color: tokens.textPrimary }}>
+                  Next Step: Continue Your Conversation
+                </span>
+              </div>
+              <p style={{ margin: 0, fontSize: '12.5px', color: tokens.textSecondary, lineHeight: '1.6' }}>
+                Return to your <strong>ChatGPT / Claude</strong> tab and simply type:
+              </p>
+              <div style={{
+                backgroundColor: isLight ? '#FFFFFF' : '#00111E',
+                border: `1px solid ${tokens.surfaceBorder}`,
+                borderRadius: '8px',
+                padding: '10px 14px',
+                fontFamily: 'monospace',
+                fontSize: '13px',
+                color: '#3AD0A9',
+                fontWeight: '700',
+                margin: '10px 0',
+              }}>
+                "Continue" or "Check today's promises"
+              </div>
+              <span style={{ fontSize: '11.5px', color: tokens.textSecondary }}>
+                Your agent will immediately retrieve your live promises and debtor records from the database.
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <Link
+                href={`/agent?session=${encodeURIComponent(authorizedSessionId)}`}
+                style={{
+                  flex: 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  backgroundColor: '#00A581',
+                  color: '#FFFFFF',
+                  padding: '12px',
+                  borderRadius: '10px',
+                  fontWeight: '700',
+                  fontSize: '13.5px',
+                  textDecoration: 'none',
+                }}
+              >
+                <span>Open Netify Agent Gateway</span>
+                <ArrowRight size={15} />
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Unauthenticated View: In-place login */}
-        {!isAuthenticated && (
+        {!authorizedSessionId && !isAuthenticated && (
           <div style={{ padding: '28px' }}>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
               <div style={{
@@ -386,7 +480,7 @@ function AuthorizeConsentContent() {
         )}
 
         {/* Authenticated Consent View */}
-        {isAuthenticated && (
+        {!authorizedSessionId && isAuthenticated && (
           <div style={{ padding: '24px 28px' }}>
             {/* Requesting Agent Hero */}
             <div style={{

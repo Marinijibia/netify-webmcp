@@ -33,10 +33,12 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. Always allow OAuth consent screen, callbacks, auth APIs, and discovery endpoints
+  // 2. Always allow OAuth consent screen, callbacks, auth APIs, agent gateway, and discovery endpoints
   if (
     pathname.startsWith('/oauth') ||
     pathname.startsWith('/api/oauth') ||
+    pathname.startsWith('/agent') ||
+    pathname.startsWith('/api/agent') ||
     pathname.startsWith('/login') ||
     pathname.startsWith('/register') ||
     pathname.startsWith('/.well-known') ||
@@ -55,6 +57,13 @@ export function middleware(req: NextRequest) {
   const isAgentHeader = req.headers.get('x-netify-agent') === 'true';
 
   const isExternalAgent = isAIBot || isAgentQuery || isAgentHeader;
+
+  // 3b. If an external AI agent hits root '/' or '/promises', route seamlessly to /agent
+  if (isExternalAgent && (pathname === '/' || pathname === '/promises')) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/agent';
+    return NextResponse.rewrite(url);
+  }
 
   // 4. Check for Bearer token in headers or query params
   const authHeader = req.headers.get('authorization');

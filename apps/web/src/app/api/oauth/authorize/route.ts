@@ -1,8 +1,11 @@
+import crypto from 'crypto';
 import { NextRequest } from 'next/server';
 import {
   REGISTERED_CLIENTS,
   SUPPORTED_SCOPES,
   createAuthorizationCode,
+  signAgentToken,
+  authorizeAgentSession,
 } from '@/lib/oauth/store';
 import { handleCorsPreflight, jsonWithCors } from '@/lib/cors';
 
@@ -22,6 +25,8 @@ export async function POST(req: NextRequest) {
       duration = '24 hours',
       codeChallenge,
       codeChallengeMethod = 'S256',
+      sessionId,
+      session,
     } = body;
 
     if (!clientId || !redirectUri || !codeChallenge) {
@@ -72,9 +77,45 @@ export async function POST(req: NextRequest) {
       codeChallengeMethod: codeChallengeMethod === 'plain' ? 'plain' : 'S256',
     });
 
+    const targetSessionId = sessionId || session;
+    let sessionToken: string | undefined;
+
+    if (targetSessionId) {
+      const now = Math.floor(Date.now() / 1000);
+      const expiresDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const grantId = `grant_${crypto.randomUUID()}`;
+
+      sessionToken = signAgentToken({
+        sub: resolvedUserId,
+        userName: resolvedUserId === 'demo-user-umar' ? 'Umar Abdullahi' : 'Merchant Admin',
+        userEmail: 'merchant@netify.ng',
+        tenantId: resolvedTenantId,
+        tenantName: resolvedTenantId === 'demo-org-fuelos' ? 'FuelOS' : 'Active Workspace',
+        clientId,
+        clientName: client?.name || 'ChatGPT Agent',
+        scopes: validScopes,
+        grantId,
+        iat: now,
+        exp: Math.floor(expiresDate.getTime() / 1000),
+      });
+
+      authorizeAgentSession(targetSessionId, {
+        tenantId: resolvedTenantId,
+        tenantName: resolvedTenantId === 'demo-org-fuelos' ? 'FuelOS' : 'Active Workspace',
+        userId: resolvedUserId,
+        userName: resolvedUserId === 'demo-user-umar' ? 'Umar Abdullahi' : 'Merchant Admin',
+        userEmail: 'merchant@netify.ng',
+        scopes: validScopes,
+        token: sessionToken,
+        grantId,
+      });
+    }
+
     return jsonWithCors({
       success: true,
       code,
+      sessionId: targetSessionId || undefined,
+      sessionToken: sessionToken || undefined,
       redirectUri,
       expiresIn: 300, // 5 minutes
     });

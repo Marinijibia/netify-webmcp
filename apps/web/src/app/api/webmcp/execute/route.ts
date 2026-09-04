@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { 
   verifyAgentToken, 
+  getAgentSession,
   logAgentAudit, 
   AgentAccessTokenPayload 
 } from '@/lib/oauth/store';
@@ -79,7 +80,8 @@ const TOOL_SCOPE_REQUIREMENTS: Record<string, string> = {
 async function evaluateAgentAuthorization(
   req: NextRequest,
   tool: string,
-  targetCustomerId?: string
+  targetCustomerId?: string,
+  bodySession?: string
 ): Promise<{
   isAuthorized: boolean;
   token: string;
@@ -89,7 +91,16 @@ async function evaluateAgentAuthorization(
 }> {
   const authHeader = req.headers.get('authorization') || '';
   const queryToken = req.nextUrl.searchParams.get('access_token') || req.nextUrl.searchParams.get('token');
-  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : queryToken;
+  const sessionParam = req.nextUrl.searchParams.get('session') || req.nextUrl.searchParams.get('s') || bodySession;
+  let bearerToken = authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : queryToken;
+
+  if (!bearerToken && sessionParam) {
+    const session = getAgentSession(sessionParam);
+    if (session && session.status === 'AUTHORIZED' && session.token) {
+      bearerToken = session.token;
+    }
+  }
+
   const isExplicitAgent = req.headers.get('x-agent-request') === 'true' || req.nextUrl.searchParams.get('agent_request') === 'true';
 
   const requiredScope = TOOL_SCOPE_REQUIREMENTS[tool] || 'receivables:read';
@@ -657,7 +668,8 @@ export async function POST(req: NextRequest) {
     const input = body.input || body;
     const customerIdParam = input.customerId || undefined;
 
-    const authEval = await evaluateAgentAuthorization(req, tool, customerIdParam);
+    const sessionFromPayload = body.session || input.session;
+    const authEval = await evaluateAgentAuthorization(req, tool, customerIdParam, sessionFromPayload);
     if (!authEval.isAuthorized) {
       return jsonResponse(authEval.errorResponse, { status: authEval.errorStatus || 401 });
     }

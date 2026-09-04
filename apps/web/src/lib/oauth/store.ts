@@ -217,6 +217,24 @@ export interface AgentAuditLogEntry {
   details?: Record<string, any>;
 }
 
+export interface AgentSession {
+  sessionId: string;
+  clientId: string;
+  clientName: string;
+  status: 'PENDING' | 'AUTHORIZED' | 'REVOKED' | 'EXPIRED';
+  tenantId?: string;
+  tenantName?: string;
+  userId?: string;
+  userName?: string;
+  userEmail?: string;
+  scopes: string[];
+  token?: string;
+  grantId?: string;
+  createdAt: number;
+  expiresAt: number;
+  lastUsedAt?: string;
+}
+
 // In-memory persistent stores with globalThis survival across Next.js reloads
 declare global {
   // eslint-disable-next-line no-var
@@ -227,10 +245,15 @@ declare global {
   var __netify_oauth_revocations: Set<string> | undefined;
   // eslint-disable-next-line no-var
   var __netify_oauth_audits: AgentAuditLogEntry[] | undefined;
+  // eslint-disable-next-line no-var
+  var __netify_oauth_sessions: Map<string, AgentSession> | undefined;
 }
 
 const codesStore = globalThis.__netify_oauth_codes ?? new Map<string, AuthorizationCode>();
 globalThis.__netify_oauth_codes = codesStore;
+
+const sessionsStore = globalThis.__netify_oauth_sessions ?? new Map<string, AgentSession>();
+globalThis.__netify_oauth_sessions = sessionsStore;
 
 const grantsStore = globalThis.__netify_oauth_grants ?? new Map<string, AgentAuthorizationGrant>();
 globalThis.__netify_oauth_grants = grantsStore;
@@ -528,3 +551,113 @@ export function logAgentAudit(entry: Omit<AgentAuditLogEntry, 'id' | 'timestamp'
 export function getAgentAudits(limit = 50): AgentAuditLogEntry[] {
   return auditsStore.slice(0, limit);
 }
+
+// -----------------------------------------------------------------------------
+// Agent Session Pairing & Management (WebMCP Conversation Continuity)
+// -----------------------------------------------------------------------------
+
+export function createAgentSession(params?: {
+  clientId?: string;
+  preferredId?: string;
+}): AgentSession {
+  const clientId = params?.clientId || 'chatgpt-agent';
+  const client = REGISTERED_CLIENTS[clientId] || {
+    name: 'ChatGPT Agent',
+    clientId,
+  };
+
+  const sessionId = params?.preferredId?.trim() || `net-${crypto.randomBytes(3).toString('hex')}`;
+
+  // If session exists and is still valid, return it
+  const existing = sessionsStore.get(sessionId);
+  if (existing && existing.status === 'AUTHORIZED' && existing.expiresAt > Date.now()) {
+    return existing;
+  }
+
+  const session: AgentSession = {
+    sessionId,
+    clientId,
+    clientName: client.name,
+    status: 'PENDING',
+    scopes: [
+      'receivables:read',
+      'customers:read',
+      'customer_evidence:read',
+      'business_memory:read',
+      'collection_messages:draft',
+    ],
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+  };
+
+  sessionsStore.set(sessionId, session);
+  return session;
+}
+
+export function getAgentSession(sessionId: string): AgentSession | undefined {
+  if (!sessionId) return undefined;
+  const session = sessionsStore.get(sessionId);
+  if (!session) return undefined;
+
+  // Check expiration
+  if (Date.now() > session.expiresAt) {
+    session.status = 'EXPIRED';
+    sessionsStore.set(sessionId, session);
+  }
+
+  return session;
+}
+
+export function authorizeAgentSession(
+  sessionId: string,
+  params: {
+    tenantId: string;
+    tenantName: string;
+    userId: string;
+    userName: string;
+    userEmail: string;
+    scopes: string[];
+    token: string;
+    grantId?: string;
+  }
+): boolean {
+  let session = sessionsStore.get(sessionId);
+  if (!session) {
+    session = {
+      sessionId,
+      clientId: 'chatgpt-agent',
+      clientName: 'ChatGPT Agent',
+      status: 'PENDING',
+      scopes: params.scopes,
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+    };
+  }
+
+  session.status = 'AUTHORIZED';
+  session.tenantId = params.tenantId;
+  session.tenantName = params.tenantName;
+  session.userId = params.userId;
+  session.userName = params.userName;
+  session.userEmail = params.userEmail;
+  session.scopes = params.scopes;
+  session.token = params.token;
+  session.grantId = params.grantId;
+  session.lastUsedAt = new Date().toISOString();
+  session.expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+
+  sessionsStore.set(sessionId, session);
+  return true;
+}
+
+export function revokeAgentSession(sessionId: string): boolean {
+  const session = sessionsStore.get(sessionId);
+  if (!session) return false;
+  session.status = 'REVOKED';
+  sessionsStore.set(sessionId, session);
+  if (session.token) {
+    revocationsStore.add(session.token);
+  }
+  return true;
+}
+
