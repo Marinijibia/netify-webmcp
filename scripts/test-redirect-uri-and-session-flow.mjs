@@ -8,6 +8,7 @@ import {
   getAgentSession
 } from '../apps/web/src/lib/oauth/store.ts';
 import { fetchLiveWorkspaceData } from '../apps/web/src/lib/agent-live-data.ts';
+import { persistAgentSessionToDb, getAuthorizedSessionFromDb } from '../apps/web/src/lib/agent-session-db.ts';
 
 let passed = 0;
 let failed = 0;
@@ -112,6 +113,22 @@ async function run() {
   assert(liveData.summary.highPriorityDebtorsCount > 0, `Retrieved ${liveData.summary.highPriorityDebtorsCount} high-urgency debtor accounts`);
   assert(Array.isArray(liveData.promisesDueToday), 'promisesDueToday is returned as an array');
   assert(liveData.urgentDebtorAccounts.length > 0, `Top priority account: ${liveData.urgentDebtorAccounts[0].customerName} (${liveData.urgentDebtorAccounts[0].formattedBalance})`);
+
+  // TEST 8: Cloud SQL Multi-Container Persistence & Cross-Container Retrieval
+  console.log('\n--- TEST 8: Cloud SQL Multi-Container Persistence ---');
+  const persistentSessionId = 'net-cloudrun-' + crypto.randomBytes(3).toString('hex');
+  const persisted = await persistAgentSessionToDb(persistentSessionId, sessionToken);
+  assert(persisted === true, `Session ${persistentSessionId} persisted to Cloud SQL database`);
+
+  // Exact sessionId lookup from fresh context
+  const retrievedFromDb = await getAuthorizedSessionFromDb(persistentSessionId);
+  assert(retrievedFromDb.authorized === true, 'getAuthorizedSessionFromDb finds session by ID in Cloud SQL');
+  assert(retrievedFromDb.token === sessionToken, 'Retrieved token matches original sessionToken');
+
+  // Empty sessionId lookup (simulating ChatGPT browsing to /agent with no query params)
+  const emptyParamLookup = await getAuthorizedSessionFromDb(undefined);
+  assert(emptyParamLookup.authorized === true, 'getAuthorizedSessionFromDb finds recent active authorization without query params');
+  assert(!!emptyParamLookup.token, 'Recent active authorization provides valid token');
 
   console.log('\n' + '='.repeat(70));
   console.log(`TEST SUMMARY: ${passed} PASSED, ${failed} FAILED`);

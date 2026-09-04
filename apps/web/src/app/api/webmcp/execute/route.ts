@@ -5,6 +5,7 @@ import {
   logAgentAudit, 
   AgentAccessTokenPayload 
 } from '@/lib/oauth/store';
+import { getAuthorizedSessionFromDb } from '@/lib/agent-session-db';
 import { handleCorsPreflight, CORS_HEADERS } from '@/lib/cors';
 
 export async function OPTIONS() {
@@ -98,6 +99,19 @@ async function evaluateAgentAuthorization(
     const session = getAgentSession(sessionParam);
     if (session && session.status === 'AUTHORIZED' && session.token) {
       bearerToken = session.token;
+    } else {
+      const dbSession = await getAuthorizedSessionFromDb(sessionParam);
+      if (dbSession.authorized && dbSession.token) {
+        bearerToken = dbSession.token;
+      }
+    }
+  }
+
+  // Fallback: Check recent active Cloud SQL session
+  if (!bearerToken && !sessionParam) {
+    const dbSession = await getAuthorizedSessionFromDb();
+    if (dbSession.authorized && dbSession.token) {
+      bearerToken = dbSession.token;
     }
   }
 

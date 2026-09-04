@@ -7,6 +7,7 @@ import {
   signAgentToken,
   authorizeAgentSession,
 } from '@/lib/oauth/store';
+import { persistAgentSessionToDb } from '@/lib/agent-session-db';
 import { handleCorsPreflight, jsonWithCors } from '@/lib/cors';
 
 export async function OPTIONS() {
@@ -122,6 +123,9 @@ export async function POST(req: NextRequest) {
         token: sessionToken,
         grantId,
       });
+
+      // Persist to Cloud SQL PostgreSQL database so ALL Cloud Run containers recognize it immediately
+      await persistAgentSessionToDb(targetSessionId, sessionToken);
     }
 
     return jsonWithCors({

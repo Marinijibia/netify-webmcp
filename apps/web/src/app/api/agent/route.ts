@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { verifyAgentToken, getAgentSession, createAgentSession, authorizeAgentSession } from '@/lib/oauth/store';
+import { getAuthorizedSessionFromDb } from '@/lib/agent-session-db';
 import { fetchLiveWorkspaceData } from '@/lib/agent-live-data';
 import { handleCorsPreflight, jsonWithCors } from '@/lib/cors';
 
@@ -60,7 +61,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Check session
+  // 2. Check session in local memory
   if (!isAuthorized && sessionParam) {
     const session = getAgentSession(sessionParam);
     if (session && session.status === 'AUTHORIZED') {
@@ -69,6 +70,35 @@ export async function GET(req: NextRequest) {
       workspaceName = session.tenantName || 'FuelOS';
       tenantId = session.tenantId || 'demo-org-fuelos';
       activeSessionId = session.sessionId;
+    }
+  }
+
+  // 3. Check Cloud SQL database (Survives multi-container Cloud Run & handles empty query params)
+  if (!isAuthorized) {
+    const dbSession = await getAuthorizedSessionFromDb(sessionParam || undefined);
+    if (dbSession.authorized && dbSession.token) {
+      const val = verifyAgentToken(dbSession.token);
+      if (val.valid && val.payload) {
+        isAuthorized = true;
+        agentName = val.payload.clientName || 'ChatGPT Agent';
+        workspaceName = val.payload.tenantName || 'FuelOS';
+        tenantId = val.payload.tenantId || 'demo-org-fuelos';
+        activeSessionId = dbSession.sessionId || sessionParam || '';
+
+        // Cache in memory for this container
+        if (activeSessionId) {
+          authorizeAgentSession(activeSessionId, {
+            tenantId,
+            tenantName: workspaceName,
+            userId: val.payload.sub || 'demo-user-umar',
+            userName: val.payload.userName || 'Umar Abdullahi',
+            userEmail: val.payload.userEmail || 'merchant@netify.ng',
+            scopes: val.payload.scopes || [],
+            token: dbSession.token,
+            grantId: val.payload.grantId,
+          });
+        }
+      }
     }
   }
 
