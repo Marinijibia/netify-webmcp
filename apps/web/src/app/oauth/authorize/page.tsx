@@ -102,7 +102,19 @@ function AuthorizeConsentContent() {
     setIsLoggingIn(true);
     setLoginError(null);
     try {
-      await login({ email: loginEmail, password: loginPassword });
+      await login({ email: loginEmail, password: loginPassword, redirectUrl: null });
+    } catch (err: any) {
+      setLoginError(err?.message || 'Login failed. Please check credentials.');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleQuickDemoLogin = async () => {
+    setIsLoggingIn(true);
+    setLoginError(null);
+    try {
+      await login({ email: 'merchant@netify.ng', password: 'Password123!', redirectUrl: null });
     } catch (err: any) {
       setLoginError(err?.message || 'Login failed. Please check credentials.');
     } finally {
@@ -430,25 +442,44 @@ function AuthorizeConsentContent() {
                 gap: '8px',
               }}>
                 <span>💡 Demo Judge Account: merchant@netify.ng / Password123!</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoginEmail('merchant@netify.ng');
-                    setLoginPassword('Password123!');
-                  }}
-                  style={{
-                    backgroundColor: '#00A581',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '3px 8px',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Fill Demo Credentials
-                </button>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginEmail('merchant@netify.ng');
+                      setLoginPassword('Password123!');
+                    }}
+                    style={{
+                      backgroundColor: 'transparent',
+                      color: tokens.textSecondary,
+                      border: `1px solid ${tokens.surfaceBorder}`,
+                      borderRadius: '4px',
+                      padding: '3px 8px',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Fill Fields
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleQuickDemoLogin}
+                    disabled={isLoggingIn}
+                    style={{
+                      backgroundColor: '#00A581',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '3px 8px',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      cursor: isLoggingIn ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    ⚡ Instant 1-Click Sign In
+                  </button>
+                </div>
               </div>
 
               <button

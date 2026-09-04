@@ -151,7 +151,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (profile?.id) {
         initOneSignal(profile.id).catch(() => {});
       }
-      if (profile && !profile.onboardingCompleted) {
+      if (payload.redirectUrl === null) {
+        // Explicitly stay on current page (e.g. OAuth consent screen)
+      } else if (payload.redirectUrl) {
+        router.push(payload.redirectUrl);
+      } else if (profile && !profile.onboardingCompleted) {
         router.push('/onboarding');
       } else {
         router.push('/workspace');

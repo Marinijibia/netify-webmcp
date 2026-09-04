@@ -86,7 +86,9 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      await login({ email, password });
+      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const redirectUrl = urlParams?.get('redirect') || urlParams?.get('return_to') || urlParams?.get('callbackUrl') || undefined;
+      await login({ email, password, redirectUrl });
     } catch (err: any) {
       if (err?.message?.includes('EMAIL_NOT_VERIFIED') || err?.message?.includes('verify your email')) {
         router.push(`/verify-email?email=${encodeURIComponent(email)}`);

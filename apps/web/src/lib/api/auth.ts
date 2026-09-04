@@ -37,6 +37,7 @@ export interface LoginPayload {
   deviceId?: string;
   deviceName?: string;
   platform?: string;
+  redirectUrl?: string | null;
 }
 
 export interface AuthTokens {
