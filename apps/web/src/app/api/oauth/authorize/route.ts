@@ -1,9 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import {
   REGISTERED_CLIENTS,
   SUPPORTED_SCOPES,
   createAuthorizationCode,
 } from '@/lib/oauth/store';
+import { handleCorsPreflight, jsonWithCors } from '@/lib/cors';
+
+export async function OPTIONS() {
+  return handleCorsPreflight();
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,7 +25,7 @@ export async function POST(req: NextRequest) {
     } = body;
 
     if (!clientId || !redirectUri || !codeChallenge) {
-      return NextResponse.json(
+      return jsonWithCors(
         { error: 'invalid_request', error_description: 'Missing clientId, redirectUri, or codeChallenge' },
         { status: 400 }
       );
@@ -28,7 +33,7 @@ export async function POST(req: NextRequest) {
 
     const client = REGISTERED_CLIENTS[clientId];
     if (!client && !clientId.includes('agent')) {
-      return NextResponse.json(
+      return jsonWithCors(
         { error: 'unauthorized_client', error_description: `Unrecognized client_id: ${clientId}` },
         { status: 400 }
       );
@@ -38,7 +43,7 @@ export async function POST(req: NextRequest) {
     if (client && client.redirectUris && client.redirectUris.length > 0) {
       const isAllowed = client.redirectUris.some((uri) => uri.toLowerCase() === redirectUri.toLowerCase());
       if (!isAllowed) {
-        return NextResponse.json(
+        return jsonWithCors(
           { error: 'invalid_request', error_description: 'Redirect URI mismatch with registered client' },
           { status: 400 }
         );
@@ -67,14 +72,14 @@ export async function POST(req: NextRequest) {
       codeChallengeMethod: codeChallengeMethod === 'plain' ? 'plain' : 'S256',
     });
 
-    return NextResponse.json({
+    return jsonWithCors({
       success: true,
       code,
       redirectUri,
       expiresIn: 300, // 5 minutes
     });
   } catch (err: any) {
-    return NextResponse.json(
+    return jsonWithCors(
       { error: 'server_error', error_description: err?.message || 'Failed to issue authorization code' },
       { status: 500 }
     );

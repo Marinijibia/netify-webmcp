@@ -1,5 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { exchangeAuthorizationCode } from '@/lib/oauth/store';
+import { handleCorsPreflight, jsonWithCors } from '@/lib/cors';
+
+export async function OPTIONS() {
+  return handleCorsPreflight();
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,14 +34,14 @@ export async function POST(req: NextRequest) {
     }
 
     if (grantType !== 'authorization_code') {
-      return NextResponse.json(
+      return jsonWithCors(
         { error: 'unsupported_grant_type', error_description: 'Only grant_type=authorization_code is supported' },
         { status: 400 }
       );
     }
 
     if (!code || !clientId || !redirectUri || !codeVerifier) {
-      return NextResponse.json(
+      return jsonWithCors(
         { error: 'invalid_request', error_description: 'Missing code, client_id, redirect_uri, or code_verifier' },
         { status: 400 }
       );
@@ -50,7 +55,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!result.success || !result.token || !result.grant) {
-      return NextResponse.json(
+      return jsonWithCors(
         { error: 'invalid_grant', error_description: result.error || 'Failed to exchange authorization code' },
         { status: 400 }
       );
@@ -61,7 +66,7 @@ export async function POST(req: NextRequest) {
       Math.floor((new Date(result.grant.expiresAt).getTime() - Date.now()) / 1000)
     );
 
-    return NextResponse.json(
+    return jsonWithCors(
       {
         access_token: result.token,
         token_type: 'Bearer',
@@ -86,7 +91,7 @@ export async function POST(req: NextRequest) {
       }
     );
   } catch (err: any) {
-    return NextResponse.json(
+    return jsonWithCors(
       { error: 'server_error', error_description: err?.message || 'Token exchange failed' },
       { status: 500 }
     );

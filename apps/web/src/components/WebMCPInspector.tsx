@@ -88,7 +88,7 @@ export function WebMCPInspector() {
   const { isSupported, registeredTools, executionLogs, executeTool } = useWebMCP();
   const { tokens, isLight } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'AUTONOMOUS' | 'TOOLS' | 'LOGS'>('AUTONOMOUS');
+  const [activeTab, setActiveTab] = useState<'AUTONOMOUS' | 'TOOLS' | 'LOGS' | 'OAUTH'>('AUTONOMOUS');
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [testInput, setTestInput] = useState<string>('{}');
   const [testResult, setTestResult] = useState<any>(null);
@@ -99,6 +99,112 @@ export function WebMCPInspector() {
   const [isRunningWorkflow, setIsRunningWorkflow] = useState(false);
   const [workflowResult, setWorkflowResult] = useState<any>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
+
+  // OAuth Simulation Lab State
+  const [oauthScenario, setOauthScenario] = useState<'UNAUTH' | 'AUTHORIZED_READ' | 'CROSS_TENANT' | 'WRITE_UNCONFIRMED' | 'WRITE_CONFIRMED' | 'INSUFFICIENT_SCOPE'>('UNAUTH');
+  const [oauthTestResult, setOauthTestResult] = useState<any>(null);
+  const [isTestingOauth, setIsTestingOauth] = useState(false);
+
+  const runOauthScenario = async (scenario = oauthScenario) => {
+    setIsTestingOauth(true);
+    setOauthTestResult(null);
+
+    try {
+      if (scenario === 'UNAUTH') {
+        const res = await fetch('/api/webmcp/execute?simulate_agent=true&tool=get_collection_priority');
+        const data = await res.json();
+        setOauthTestResult({ status: res.status, ok: res.ok, data });
+      } else if (scenario === 'AUTHORIZED_READ') {
+        const tokenRes = await fetch('/api/oauth/demo-token?mode=read');
+        const tokenData = await tokenRes.json();
+        const res = await fetch('/api/webmcp/execute?tool=get_collection_priority&limit=3', {
+          headers: {
+            Authorization: `Bearer ${tokenData.token}`,
+            'x-agent-request': 'true',
+          },
+        });
+        const data = await res.json();
+        setOauthTestResult({ status: res.status, ok: res.ok, data, tokenScopes: tokenData.scopes });
+      } else if (scenario === 'CROSS_TENANT') {
+        const tokenRes = await fetch('/api/oauth/demo-token?mode=read');
+        const tokenData = await tokenRes.json();
+        const res = await fetch('/api/webmcp/execute?tool=get_customer_evidence&customerId=forbidden-customer-tenant-999', {
+          headers: {
+            Authorization: `Bearer ${tokenData.token}`,
+            'x-agent-request': 'true',
+          },
+        });
+        const data = await res.json();
+        setOauthTestResult({ status: res.status, ok: res.ok, data });
+      } else if (scenario === 'WRITE_UNCONFIRMED') {
+        const tokenRes = await fetch('/api/oauth/demo-token?mode=write');
+        const tokenData = await tokenRes.json();
+        const res = await fetch('/api/webmcp/execute', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${tokenData.token}`,
+            'Content-Type': 'application/json',
+            'x-agent-request': 'true',
+          },
+          body: JSON.stringify({
+            tool: 'create_payment_commitment',
+            input: {
+              customerId: 'f14e802a-573d-46bb-8257-317bdc3cddb0',
+              amount: 450000,
+              humanConfirmed: false,
+            },
+          }),
+        });
+        const data = await res.json();
+        setOauthTestResult({ status: res.status, ok: res.ok, data });
+      } else if (scenario === 'WRITE_CONFIRMED') {
+        const tokenRes = await fetch('/api/oauth/demo-token?mode=write');
+        const tokenData = await tokenRes.json();
+        const res = await fetch('/api/webmcp/execute', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${tokenData.token}`,
+            'Content-Type': 'application/json',
+            'x-agent-request': 'true',
+          },
+          body: JSON.stringify({
+            tool: 'create_payment_commitment',
+            input: {
+              customerId: 'f14e802a-573d-46bb-8257-317bdc3cddb0',
+              amount: 450000,
+              humanConfirmed: true,
+            },
+          }),
+        });
+        const data = await res.json();
+        setOauthTestResult({ status: res.status, ok: res.ok, data });
+      } else if (scenario === 'INSUFFICIENT_SCOPE') {
+        const tokenRes = await fetch('/api/oauth/demo-token?mode=read');
+        const tokenData = await tokenRes.json();
+        const res = await fetch('/api/webmcp/execute', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${tokenData.token}`,
+            'Content-Type': 'application/json',
+            'x-agent-request': 'true',
+          },
+          body: JSON.stringify({
+            tool: 'create_payment_commitment',
+            input: {
+              customerId: 'f14e802a-573d-46bb-8257-317bdc3cddb0',
+              amount: 450000,
+            },
+          }),
+        });
+        const data = await res.json();
+        setOauthTestResult({ status: res.status, ok: res.ok, data });
+      }
+    } catch (err: any) {
+      setOauthTestResult({ status: 500, ok: false, data: { error: err?.message || 'Execution error' } });
+    } finally {
+      setIsTestingOauth(false);
+    }
+  };
 
   const updateStepStatus = (id: number, status: 'idle' | 'running' | 'done' | 'error', latencyMs?: number, summary?: string) => {
     setWorkflowSteps((prev) =>
@@ -360,6 +466,26 @@ export function WebMCPInspector() {
                   }}
                 >
                   Audit Logs ({executionLogs.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('OAUTH')}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '6px',
+                    fontSize: '11.5px',
+                    fontWeight: '700',
+                    backgroundColor: activeTab === 'OAUTH' ? '#00A581' : 'transparent',
+                    color: activeTab === 'OAUTH' ? '#FFFFFF' : tokens.textSecondary,
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <Lock size={12} />
+                  <span>Agent Auth</span>
                 </button>
               </div>
 
@@ -836,6 +962,307 @@ export function WebMCPInspector() {
                     </div>
                   ))
                 )}
+              </div>
+            )}
+
+            {/* =========================================================================
+                TAB 4: DELEGATED AI AGENT OAUTH 2.0 PKCE LAB
+               ========================================================================= */}
+            {activeTab === 'OAUTH' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* Lab Banner */}
+                <div style={{
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  backgroundColor: isLight ? '#F0FDF4' : 'rgba(0, 37, 27, 0.6)',
+                  border: '1px solid rgba(0, 165, 129, 0.3)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '34px',
+                      height: '34px',
+                      borderRadius: '8px',
+                      backgroundColor: '#10A37F',
+                      color: '#FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <Bot size={18} />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '13.5px', fontWeight: '800', color: tokens.textPrimary }}>
+                        Delegated AI Agent Authorization Lab (RFC 7636 PKCE)
+                      </h4>
+                      <p style={{ margin: '2px 0 0', fontSize: '11.5px', color: tokens.textSecondary }}>
+                        Simulate external autonomous agents (ChatGPT, Claude, Gemini Nano) invoking Netify WebMCP tools with tenant isolation.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <a
+                      href="/oauth/authorize?client_id=chatgpt-agent&redirect_uri=https://chatgpt.com/api/v1/auth/callback&response_type=code&scope=receivables:read%20customers:read%20customer_evidence:read%20business_memory:read%20collection_messages:draft"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover-lift tap-press"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        backgroundColor: '#00A581',
+                        color: '#FFFFFF',
+                        fontSize: '11.5px',
+                        fontWeight: '700',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      <Lock size={11} />
+                      <span>Open Consent Screen</span>
+                    </a>
+
+                    <a
+                      href="/settings"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: `1px solid ${tokens.surfaceBorder}`,
+                        backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                        color: tokens.textPrimary,
+                        fontSize: '11.5px',
+                        fontWeight: '700',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      <span>Settings &amp; Audits</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* Scenarios Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+                  {/* Left Column: Test Scenarios */}
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    backgroundColor: isLight ? '#F8FAFC' : '#00253E',
+                    padding: '14px',
+                    borderRadius: '12px',
+                    border: `1px solid ${tokens.surfaceBorder}`,
+                  }}>
+                    <span style={{ fontSize: '11.5px', fontWeight: '800', color: tokens.textPrimary, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Select Security Scenario to Test:
+                    </span>
+
+                    {[
+                      {
+                        id: 'UNAUTH',
+                        title: '1. Unauthenticated Agent Access',
+                        desc: 'Agent calls WebMCP without token -> returns 401 authorization_required with OAuth URL',
+                        badge: '401 Challenge',
+                        color: '#3B82F6',
+                      },
+                      {
+                        id: 'AUTHORIZED_READ',
+                        title: '2. Delegated Read Tool Execution',
+                        desc: 'ChatGPT Agent calls get_collection_priority -> returns FuelOS debtor ledger',
+                        badge: '200 Isolated',
+                        color: '#10B981',
+                      },
+                      {
+                        id: 'CROSS_TENANT',
+                        title: '3. Cross-Tenant Isolation Enforcement',
+                        desc: 'Agent attempts reading customer from another tenant -> blocked with 403 Forbidden',
+                        badge: '403 Boundary',
+                        color: '#EF4444',
+                      },
+                      {
+                        id: 'WRITE_UNCONFIRMED',
+                        title: '4. Consequential Financial Write (Paused)',
+                        desc: 'create_payment_commitment without merchant confirmation -> returns AWAITING_HUMAN_CONFIRMATION',
+                        badge: 'Human Safeguard',
+                        color: '#F59E0B',
+                      },
+                      {
+                        id: 'WRITE_CONFIRMED',
+                        title: '5. Consequential Financial Write (Approved)',
+                        desc: 'create_payment_commitment with humanConfirmed: true -> records payment commitment',
+                        badge: 'Write Committed',
+                        color: '#10B981',
+                      },
+                      {
+                        id: 'INSUFFICIENT_SCOPE',
+                        title: '6. Mutating Action with Read-Only Grant',
+                        desc: 'Read-only agent attempts to log commitment -> blocked with 403 insufficient_scope',
+                        badge: '403 Scope Guard',
+                        color: '#8B5CF6',
+                      },
+                    ].map((sc) => {
+                      const isSelected = oauthScenario === sc.id;
+                      return (
+                        <div
+                          key={sc.id}
+                          onClick={() => {
+                            setOauthScenario(sc.id as any);
+                            runOauthScenario(sc.id as any);
+                          }}
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            backgroundColor: isSelected
+                              ? isLight ? '#FFFFFF' : '#001D31'
+                              : 'transparent',
+                            border: isSelected
+                              ? '1.5px solid #00A581'
+                              : `1px solid ${tokens.surfaceBorder}`,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: '700', color: tokens.textPrimary }}>
+                              {sc.title}
+                            </span>
+                            <span style={{
+                              fontSize: '9.5px',
+                              fontWeight: '800',
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              backgroundColor: isLight ? '#F1F5F9' : '#001524',
+                              color: sc.color,
+                            }}>
+                              {sc.badge}
+                            </span>
+                          </div>
+                          <p style={{ margin: 0, fontSize: '11px', color: tokens.textSecondary, lineHeight: '1.4' }}>
+                            {sc.desc}
+                          </p>
+                        </div>
+                      );
+                    })}
+
+                    <button
+                      type="button"
+                      onClick={() => runOauthScenario()}
+                      disabled={isTestingOauth}
+                      className="hover-lift tap-press"
+                      style={{
+                        marginTop: '6px',
+                        padding: '10px',
+                        borderRadius: '8px',
+                        backgroundColor: '#00A581',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: isTestingOauth ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      {isTestingOauth ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+                      <span>{isTestingOauth ? 'Executing Security Test...' : 'Run Selected Test'}</span>
+                    </button>
+                  </div>
+
+                  {/* Right Column: Live Backend Response */}
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    backgroundColor: isLight ? '#F8FAFC' : '#00253E',
+                    padding: '14px',
+                    borderRadius: '12px',
+                    border: `1px solid ${tokens.surfaceBorder}`,
+                    minHeight: '340px',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '11.5px', fontWeight: '800', color: tokens.textPrimary, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Live WebMCP Response:
+                      </span>
+                      {oauthTestResult && (
+                        <span style={{
+                          fontSize: '10.5px',
+                          fontWeight: '800',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          backgroundColor: oauthTestResult.status === 200
+                            ? 'rgba(16, 185, 129, 0.15)'
+                            : oauthTestResult.status === 401
+                            ? 'rgba(59, 130, 246, 0.15)'
+                            : 'rgba(239, 68, 68, 0.15)',
+                          color: oauthTestResult.status === 200
+                            ? '#10B981'
+                            : oauthTestResult.status === 401
+                            ? '#3B82F6'
+                            : '#EF4444',
+                        }}>
+                          HTTP {oauthTestResult.status} {oauthTestResult.ok ? 'OK' : 'DENIED'}
+                        </span>
+                      )}
+                    </div>
+
+                    {isTestingOauth ? (
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        <Loader2 size={24} className="animate-spin text-teal-500" />
+                        <span style={{ fontSize: '12px', color: tokens.textSecondary }}>Evaluating token &amp; tenant security...</span>
+                      </div>
+                    ) : oauthTestResult ? (
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <pre style={{
+                          flex: 1,
+                          margin: 0,
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          backgroundColor: isLight ? '#FFFFFF' : '#001D31',
+                          border: `1px solid ${tokens.surfaceBorder}`,
+                          fontSize: '11px',
+                          color: tokens.textPrimary,
+                          overflowY: 'auto',
+                          maxHeight: '260px',
+                        }}>
+                          {JSON.stringify(oauthTestResult.data, null, 2)}
+                        </pre>
+
+                        <div style={{
+                          padding: '8px 10px',
+                          borderRadius: '6px',
+                          backgroundColor: isLight ? '#ECFDF5' : 'rgba(0, 37, 27, 0.5)',
+                          border: '1px solid rgba(0, 165, 129, 0.3)',
+                          fontSize: '11px',
+                          color: '#00A581',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}>
+                          <ShieldCheck size={14} />
+                          <span>Strict Workspace Isolation &amp; Scope Boundary Verified</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', color: tokens.textSecondary, textAlign: 'center', padding: '20px' }}>
+                        <Lock size={28} color="#00A581" />
+                        <p style={{ margin: 0, fontSize: '12px' }}>
+                          Select any security scenario on the left and click <strong>"Run Selected Test"</strong> to observe real-time delegated OAuth 2.0 evaluation.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>

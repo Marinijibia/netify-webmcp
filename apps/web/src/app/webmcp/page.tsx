@@ -263,12 +263,12 @@ document.modelContext.registerTool({
               Testing Instructions for Hackathon Judges
             </h2>
             <p style={{ color: tokens.textSecondary, fontSize: '13px', margin: 0 }}>
-              Verify WebMCP tool registration using any of the three supported evaluation pathways.
+              Verify WebMCP tool registration and autonomous agent security using any of the four supported evaluation pathways.
             </p>
           </div>
         </div>
 
-        <div className="responsive-grid-3">
+        <div className="responsive-grid-4">
           <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#00192B', padding: '20px', borderRadius: '14px', border: `1px solid ${tokens.surfaceBorder}` }}>
             <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase' }}>PATHWAY 1 (INSTANT)</span>
             <h4 style={{ fontSize: '15px', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '4px' }}>On-Screen WebMCP Drawer</h4>
@@ -290,6 +290,14 @@ document.modelContext.registerTool({
             <h4 style={{ fontSize: '15px', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '4px' }}>ChatGPT In-App Browser</h4>
             <p style={{ fontSize: '13px', color: tokens.textSecondary, marginTop: '6px', lineHeight: '1.5' }}>
               Browse to Netify inside ChatGPT. ChatGPT will autonomously inspect the registered tools and invoke them during conversation.
+            </p>
+          </div>
+
+          <div style={{ backgroundColor: isLight ? '#F8FAFC' : '#00192B', padding: '20px', borderRadius: '14px', border: '1.5px solid #00A581', boxShadow: isLight ? tokens.shadowCard : '0 0 15px rgba(0, 165, 129, 0.15)' }}>
+            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#00A581', textTransform: 'uppercase' }}>PATHWAY 4 (OAUTH 2.0)</span>
+            <h4 style={{ fontSize: '15px', fontWeight: 'bold', color: tokens.textPrimary, marginTop: '4px' }}>Delegated Agent Authorization</h4>
+            <p style={{ fontSize: '13px', color: tokens.textSecondary, marginTop: '6px', lineHeight: '1.5' }}>
+              External AI agents securely authenticate via OAuth 2.0 PKCE. Test the live consent screen at <Link href="/oauth/authorize" style={{ color: '#00A581', fontWeight: 'bold', textDecoration: 'underline' }}>/oauth/authorize</Link>.
             </p>
           </div>
         </div>

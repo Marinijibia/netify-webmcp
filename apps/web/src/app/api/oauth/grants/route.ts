@@ -1,5 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { listGrants } from '@/lib/oauth/store';
+import { handleCorsPreflight, jsonWithCors } from '@/lib/cors';
+
+export async function OPTIONS() {
+  return handleCorsPreflight();
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -9,13 +14,13 @@ export async function GET(req: NextRequest) {
 
     const grants = listGrants({ tenantId, userId });
 
-    return NextResponse.json({
+    return jsonWithCors({
       success: true,
       count: grants.length,
       grants,
     });
   } catch (err: any) {
-    return NextResponse.json(
+    return jsonWithCors(
       { error: 'server_error', error_description: err?.message || 'Failed to list agent grants' },
       { status: 500 }
     );

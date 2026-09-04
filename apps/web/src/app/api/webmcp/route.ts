@@ -1,8 +1,12 @@
-import { NextResponse } from 'next/server';
 import { webMCPTools } from '@/lib/webmcp/tools';
+import { handleCorsPreflight, jsonWithCors } from '@/lib/cors';
+
+export async function OPTIONS() {
+  return handleCorsPreflight();
+}
 
 export async function GET() {
-  return NextResponse.json({
+  return jsonWithCors({
     protocol: 'WebMCP',
     standard: 'document.modelContext.registerTool',
     version: '1.0.0',

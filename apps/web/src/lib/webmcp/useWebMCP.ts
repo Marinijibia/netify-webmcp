@@ -92,6 +92,24 @@ export function useWebMCP() {
           if (!t) throw new Error(`Tool "${name}" not registered in document.modelContext`);
           return t.execute(input);
         },
+        authorization: {
+          type: 'oauth2',
+          standard: 'RFC 7636 (PKCE) + RFC 6749',
+          authorizationUrl: 'https://app.netify.ng/oauth/authorize',
+          tokenUrl: 'https://app.netify.ng/api/oauth/token',
+          supportedScopes: [
+            'receivables:read',
+            'customers:read',
+            'customer_evidence:read',
+            'customer_risk:read',
+            'business_memory:read',
+            'notifications:read',
+            'collection_messages:draft',
+            'payment_commitments:write',
+            'collection_activity:write',
+            'notifications:write',
+          ],
+        },
       };
 
       (document as any).modelContext = polyfill;

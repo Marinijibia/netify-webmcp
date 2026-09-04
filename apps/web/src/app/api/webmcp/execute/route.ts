@@ -4,6 +4,17 @@ import {
   logAgentAudit, 
   AgentAccessTokenPayload 
 } from '@/lib/oauth/store';
+import { handleCorsPreflight, CORS_HEADERS } from '@/lib/cors';
+
+export async function OPTIONS() {
+  return handleCorsPreflight();
+}
+
+function jsonResponse(data: any, init?: ResponseInit) {
+  const headers = new Headers(init?.headers);
+  Object.entries(CORS_HEADERS).forEach(([k, v]) => headers.set(k, v));
+  return NextResponse.json(data, { ...init, headers });
+}
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.app.netify.ng/api/v1';
 
@@ -219,7 +230,7 @@ export async function GET(req: NextRequest) {
   try {
     const authEval = await evaluateAgentAuthorization(req, tool, customerIdParam);
     if (!authEval.isAuthorized) {
-      return NextResponse.json(authEval.errorResponse, { status: authEval.errorStatus || 401 });
+      return jsonResponse(authEval.errorResponse, { status: authEval.errorStatus || 401 });
     }
 
     const token = authEval.token;
@@ -238,7 +249,7 @@ export async function GET(req: NextRequest) {
       const result = await apiRes.json();
       const items = result?.data?.items || [];
 
-      return NextResponse.json({
+      return jsonResponse({
         success: true,
         tool: 'get_collection_priority',
         count: items.length,
@@ -273,7 +284,7 @@ export async function GET(req: NextRequest) {
       const result = await apiRes.json();
       const customers = result?.data || [];
 
-      return NextResponse.json({
+      return jsonResponse({
         success: true,
         tool: 'search_customers',
         query,
@@ -306,7 +317,7 @@ export async function GET(req: NextRequest) {
       const result = await apiRes.json();
       const items = result?.data || [];
 
-      return NextResponse.json({
+      return jsonResponse({
         success: true,
         tool: 'list_receivables',
         count: items.length,
@@ -343,7 +354,7 @@ export async function GET(req: NextRequest) {
         memoriesRes.json(),
       ]);
 
-      return NextResponse.json({
+      return jsonResponse({
         success: true,
         tool: 'get_customer_evidence',
         customer: cust?.data,
@@ -360,7 +371,7 @@ export async function GET(req: NextRequest) {
         headers: { Authorization: `Bearer ${token}` },
       });
       const result = await apiRes.json();
-      return NextResponse.json({
+      return jsonResponse({
         success: true,
         tool: 'get_customer_risk_profile',
         riskProfile: result?.data,
@@ -377,7 +388,7 @@ export async function GET(req: NextRequest) {
         headers: { Authorization: `Bearer ${token}` },
       });
       const result = await apiRes.json();
-      return NextResponse.json({
+      return jsonResponse({
         success: true,
         tool: 'get_daily_briefing',
         briefing: result?.data,
@@ -392,7 +403,7 @@ export async function GET(req: NextRequest) {
         headers: { Authorization: `Bearer ${token}` },
       });
       const result = await apiRes.json();
-      return NextResponse.json({
+      return jsonResponse({
         success: true,
         tool: 'list_notifications',
         data: result?.data,
@@ -406,7 +417,7 @@ export async function GET(req: NextRequest) {
         headers: { Authorization: `Bearer ${token}` },
       });
       const result = await apiRes.json();
-      return NextResponse.json({
+      return jsonResponse({
         success: true,
         tool: 'query_business_memory',
         memories: result?.data,
@@ -429,7 +440,7 @@ export async function GET(req: NextRequest) {
         body: JSON.stringify({ customerId, channel, tone }),
       });
       const result = await apiRes.json();
-      return NextResponse.json({
+      return jsonResponse({
         success: true,
         tool: 'draft_follow_up_message',
         draft: result?.data?.message || result?.data?.draft || 'Oga Alhaji, respectful reminder on your overdue invoice balance with Netify. Please settle soonest.',
@@ -439,13 +450,13 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({
+    return jsonResponse({
       success: true,
       tool,
       message: `Tool "${tool}" is active and authenticated via WebMCP Gateway.`,
     });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err?.message }, { status: 500 });
+    return jsonResponse({ success: false, error: err?.message }, { status: 500 });
   }
 }
 
@@ -459,7 +470,7 @@ export async function POST(req: NextRequest) {
 
     const authEval = await evaluateAgentAuthorization(req, tool, customerIdParam);
     if (!authEval.isAuthorized) {
-      return NextResponse.json(authEval.errorResponse, { status: authEval.errorStatus || 401 });
+      return jsonResponse(authEval.errorResponse, { status: authEval.errorStatus || 401 });
     }
 
     const token = authEval.token;
@@ -479,7 +490,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({ customerId, channel, tone }),
       });
       const result = await apiRes.json();
-      return NextResponse.json({
+      return jsonResponse({
         success: true,
         tool: 'draft_follow_up_message',
         draft: result?.data?.message || result?.data?.draft || 'Oga Alhaji, respectful reminder on your overdue invoice balance with Netify. Please settle soonest.',
@@ -496,7 +507,7 @@ export async function POST(req: NextRequest) {
         headers: { Authorization: `Bearer ${token}` },
       });
       const result = await apiRes.json();
-      return NextResponse.json({ success: true, tool, customers: result?.data || [] });
+      return jsonResponse({ success: true, tool, customers: result?.data || [] });
     }
 
     // 3. create_payment_commitment (Consequential write with Human-in-the-loop Safeguard)
@@ -509,7 +520,7 @@ export async function POST(req: NextRequest) {
 
       // Enforce Human-in-the-Loop Safeguard for delegated agents
       if (authEval.agentPayload && input.humanConfirmed !== true) {
-        return NextResponse.json({
+        return jsonResponse({
           success: true,
           requiresHumanApproval: true,
           status: 'AWAITING_HUMAN_CONFIRMATION',
@@ -540,7 +551,7 @@ export async function POST(req: NextRequest) {
         }),
       });
       const result = await apiRes.json();
-      return NextResponse.json({ 
+      return jsonResponse({ 
         success: true, 
         tool, 
         commitment: result?.data,
@@ -557,7 +568,7 @@ export async function POST(req: NextRequest) {
       const notes = input.notes || 'Collection follow-up logged via WebMCP agent.';
 
       if (authEval.agentPayload && input.humanConfirmed !== true) {
-        return NextResponse.json({
+        return jsonResponse({
           success: true,
           requiresHumanApproval: true,
           status: 'AWAITING_HUMAN_CONFIRMATION',
@@ -588,7 +599,7 @@ export async function POST(req: NextRequest) {
         }),
       });
       const result = await apiRes.json();
-      return NextResponse.json({ 
+      return jsonResponse({ 
         success: true, 
         tool, 
         activity: result?.data,
@@ -600,18 +611,18 @@ export async function POST(req: NextRequest) {
     if (tool === 'mark_notification_read') {
       const notificationId = input.notificationId;
       if (!notificationId) {
-        return NextResponse.json({ success: false, error: 'notificationId is required' }, { status: 400 });
+        return jsonResponse({ success: false, error: 'notificationId is required' }, { status: 400 });
       }
       const apiRes = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       });
       const result = await apiRes.json();
-      return NextResponse.json({ success: true, tool, result: result?.data });
+      return jsonResponse({ success: true, tool, result: result?.data });
     }
 
-    return NextResponse.json({ success: true, tool, message: `Tool "${tool}" executed successfully via WebMCP Gateway.` });
+    return jsonResponse({ success: true, tool, message: `Tool "${tool}" executed successfully via WebMCP Gateway.` });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err?.message }, { status: 500 });
+    return jsonResponse({ success: false, error: err?.message }, { status: 500 });
   }
 }

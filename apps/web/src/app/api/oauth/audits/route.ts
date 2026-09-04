@@ -1,5 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getAgentAudits } from '@/lib/oauth/store';
+import { handleCorsPreflight, jsonWithCors } from '@/lib/cors';
+
+export async function OPTIONS() {
+  return handleCorsPreflight();
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -7,13 +12,13 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const audits = getAgentAudits(limit);
 
-    return NextResponse.json({
+    return jsonWithCors({
       success: true,
       count: audits.length,
       audits,
     });
   } catch (err: any) {
-    return NextResponse.json(
+    return jsonWithCors(
       { error: 'server_error', error_description: err?.message || 'Failed to list agent audits' },
       { status: 500 }
     );
