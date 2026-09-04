@@ -3,7 +3,7 @@ import { verifyAgentToken, getAgentSession, createAgentSession } from '@/lib/oau
 import { fetchLiveWorkspaceData } from '@/lib/agent-live-data';
 import { handleCorsPreflight, jsonWithCors } from '@/lib/cors';
 
-export const ALL_12_WEBMCP_TOOLS = [
+const ALL_12_WEBMCP_TOOLS = [
   { name: 'get_collection_priority', label: '1. Collection Priorities', desc: 'Ranked debtor queue by urgency & balance', category: 'READ_ONLY' },
   { name: 'search_customers', label: '2. Search Customers', desc: 'Customer accounts directory search', category: 'READ_ONLY' },
   { name: 'list_receivables', label: '3. List Receivables', desc: 'Live invoices and overdue aging balances', category: 'READ_ONLY' },
