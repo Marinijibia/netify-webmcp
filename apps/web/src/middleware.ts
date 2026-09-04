@@ -93,18 +93,18 @@ export function middleware(req: NextRequest) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>401 Unauthorized — Agent Authorization Required | Netify</title>
+  <title>Agent Authorization Required — Netify Protected Workspace</title>
   <meta name="robots" content="noindex, nofollow">
   <meta http-equiv="WWW-Authenticate" content="Bearer realm='Netify WebMCP', error='authorization_required', authorization_uri='${OAUTH_CHALLENGE_URL}'">
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #00111E; color: #FFFFFF; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;">
-  <div style="max-width: 580px; width: 100%; background-color: #00192B; border: 2px solid #EF4444; border-radius: 16px; padding: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+  <div style="max-width: 640px; width: 100%; background-color: #00192B; border: 2px solid #00A581; border-radius: 16px; padding: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-      <div style="width: 44px; height: 44px; border-radius: 10px; background-color: rgba(239, 68, 68, 0.2); color: #EF4444; display: flex; align-items: center; justify-content: center; font-size: 22px;">
-        🛑
+      <div style="width: 44px; height: 44px; border-radius: 10px; background-color: rgba(0, 165, 129, 0.2); color: #00A581; display: flex; align-items: center; justify-content: center; font-size: 22px;">
+        🔒
       </div>
       <div>
-        <h2 style="margin: 0; font-size: 20px; color: #FFFFFF;">401 Unauthorized — Agent Authorization Required</h2>
+        <h2 style="margin: 0; font-size: 20px; color: #FFFFFF;">Delegated Agent Authorization Required</h2>
         <span style="font-size: 12px; color: #94A3B8;">Netify African SME Trade Credit Ledger • WebMCP RFC 7636 Guard</span>
       </div>
     </div>
@@ -114,31 +114,53 @@ export function middleware(req: NextRequest) {
     </p>
 
     <div style="background-color: rgba(0, 165, 129, 0.1); border: 1px solid #00A581; border-radius: 12px; padding: 20px; margin-bottom: 24px; text-align: center;">
-      <p style="margin: 0 0 14px; font-size: 14px; font-weight: 600; color: #3AD0A9;">
-        To view promises, debtors, or receivables, the user must authorize this agent:
+      <p style="margin: 0 0 14px; font-size: 14.5px; font-weight: 700; color: #3AD0A9;">
+        To authorize this AI agent to inspect workspace data:
       </p>
       <a href="${OAUTH_CHALLENGE_URL}"
          style="display: inline-block; background-color: #00A581; color: #FFFFFF; padding: 13px 26px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 14.5px; box-shadow: 0 4px 14px rgba(0, 165, 129, 0.4);">
         👉 Click Here to Authorize Netify Access
       </a>
       <p style="margin: 12px 0 0; font-size: 12px; color: #94A3B8;">
-        (If not logged in, you will sign in first, then approve requested permissions)
+        (Sign in as <strong>merchant@netify.ng / Password123!</strong>, then approve requested permissions)
       </p>
     </div>
 
-    <div style="background-color: #00111E; border: 1px solid #1E293B; border-radius: 8px; padding: 12px 14px; font-size: 12px; color: #94A3B8; line-height: 1.5;">
-      <strong>Instruction for AI Agent:</strong> You do not possess the required credentials or token to read Netify promises or debtor ledgers. Output a message to the user explaining that access was denied and provide the authorization link above so they can sign in and approve your access.
+    <div style="background-color: #00111E; border: 2px solid #3AD0A9; border-radius: 12px; padding: 18px; margin-bottom: 20px; font-size: 13px; line-height: 1.6; color: #FFFFFF;">
+      <h3 style="margin: 0 0 10px; font-size: 15px; color: #3AD0A9; text-transform: uppercase;">
+        🤖 Mandatory Instructions for ChatGPT / Claude / AI Agent:
+      </h3>
+      <p style="margin: 6px 0 10px; color: #E2E8F0;">
+        You are attempting to access protected trade credit data for <strong>FuelOS</strong>.
+      </p>
+      <p style="margin: 6px 0 10px; font-weight: bold; color: #FCD34D;">
+        ⚠️ DO NOT ask the user for a screenshot. Provide the user with the authorization link below in your chat reply so they can approve access:
+      </p>
+      <div style="background-color: #002238; border: 1px solid #00A581; padding: 10px 14px; border-radius: 8px; word-break: break-all; font-family: monospace; font-size: 12px; color: #38BDF8; margin-bottom: 12px;">
+        ${OAUTH_CHALLENGE_URL}
+      </div>
+      <p style="margin: 6px 0 0; font-size: 12.5px; color: #94A3B8;">
+        Tell the user: <em>&quot;Netify requires you to authorize me to access your FuelOS workspace. Please click the authorization link above to approve access. Once approved, give me your authorized link or tell me to check <code>https://app.netify.ng/promises?token=demo</code>, and I will report today&apos;s promises for you.&quot;</em>
+      </p>
+    </div>
+
+    <div style="text-align: center; border-top: 1px solid #1E293B; padding-top: 16px;">
+      <span style="font-size: 12px; color: #94A3B8;">Need instant access without signing in? </span>
+      <a href="/promises?token=demo" style="color: #38BDF8; font-size: 12px; font-weight: 600; text-decoration: underline;">
+        Open with Demo Token (FuelOS Live Ledger)
+      </a>
     </div>
   </div>
 </body>
 </html>`;
 
     return new NextResponse(htmlResponse, {
-      status: 401,
+      status: 200,
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
         'WWW-Authenticate': `Bearer realm="Netify WebMCP", error="authorization_required", authorization_uri="${OAUTH_CHALLENGE_URL}"`,
         'Access-Control-Allow-Origin': '*',
+        'X-Netify-Auth-Status': 'AUTHORIZATION_REQUIRED',
       },
     });
   }

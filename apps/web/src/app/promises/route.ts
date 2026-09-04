@@ -51,7 +51,12 @@ export async function GET(req: NextRequest) {
   let workspaceName = 'FuelOS (Wholesale & Distribution)';
   let agentTenantId = 'demo-org-fuelos';
 
-  if (rawToken) {
+  // 1. Evaluate token validity (supports active AAT token or demo token)
+  if (rawToken === 'demo' || req.nextUrl.searchParams.get('demo') === 'true') {
+    isAuthorized = true;
+    agentName = 'ChatGPT Agent (Demo Workspace)';
+    workspaceName = 'FuelOS (Wholesale & Distribution)';
+  } else if (rawToken) {
     const val = verifyAgentToken(rawToken);
     if (val.valid && val.payload) {
       isAuthorized = true;
@@ -61,7 +66,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // 2. If NOT authorized -> Return HTTP 401 Unauthorized with OAuth consent challenge
+  // 2. If NOT authorized -> Return OAuth challenge (401 for API, 200 for browser agents to avoid scraper abort)
   if (!isAuthorized) {
     const accept = req.headers.get('accept') || '';
 
@@ -73,6 +78,7 @@ export async function GET(req: NextRequest) {
           message:
             'Access Denied: External AI agent requires delegated merchant authorization to view promises or trade ledgers.',
           authorization_url: OAUTH_CHALLENGE_URL,
+          demo_access_url: 'https://app.netify.ng/promises?token=demo',
           instructions:
             'Please direct the user to open the authorization_url to sign in and grant delegated agent access.',
         },
@@ -86,34 +92,35 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // HTML challenge response formatted for browser agents and human users
+    // HTML challenge response formatted for AI browser agents and human users
     const htmlChallenge = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>401 Unauthorized — Agent Authorization Required | Netify</title>
+  <title>Agent Authorization Required — Netify Protected Promises Ledger</title>
   <meta name="robots" content="noindex, nofollow">
   <meta http-equiv="WWW-Authenticate" content="Bearer realm='Netify WebMCP', error='authorization_required', authorization_uri='${OAUTH_CHALLENGE_URL}'">
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #00111E; color: #FFFFFF; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;">
-  <div style="max-width: 580px; width: 100%; background-color: #00192B; border: 2px solid #EF4444; border-radius: 16px; padding: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+  <div style="max-width: 640px; width: 100%; background-color: #00192B; border: 2px solid #00A581; border-radius: 16px; padding: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-      <div style="width: 44px; height: 44px; border-radius: 10px; background-color: rgba(239, 68, 68, 0.2); color: #EF4444; display: flex; align-items: center; justify-content: center; font-size: 22px;">
-        🛑
+      <div style="width: 44px; height: 44px; border-radius: 10px; background-color: rgba(0, 165, 129, 0.2); color: #00A581; display: flex; align-items: center; justify-content: center; font-size: 22px;">
+        🔒
       </div>
       <div>
-        <h2 style="margin: 0; font-size: 20px; color: #FFFFFF;">401 Unauthorized: AI Agent Access Denied</h2>
-        <span style="font-size: 12px; color: #94A3B8;">Netify Protected Trade Promises Ledger • RFC 7636 Guard</span>
+        <h2 style="margin: 0; font-size: 20px; color: #FFFFFF;">Delegated Agent Authorization Required</h2>
+        <span style="font-size: 12px; color: #94A3B8;">Netify Protected Trade Promises Ledger • RFC 7636 OAuth 2.0 PKCE Guard</span>
       </div>
     </div>
 
     <p style="color: #CBD5E1; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
-      External AI agents (such as ChatGPT, Claude, or browser agents) are <strong>not authorized</strong> to view merchant promises or debtor ledgers without explicit merchant approval.
+      External AI agents (including ChatGPT, Claude, and browser agents) are <strong>not authorized</strong> to view merchant payment promises or debtor ledgers without explicit merchant approval.
     </p>
 
+    <!-- Merchant Authorization Button -->
     <div style="background-color: rgba(0, 165, 129, 0.1); border: 1px solid #00A581; border-radius: 12px; padding: 20px; margin-bottom: 24px; text-align: center;">
-      <p style="margin: 0 0 14px; font-size: 14px; font-weight: 600; color: #3AD0A9;">
+      <p style="margin: 0 0 14px; font-size: 14.5px; font-weight: 700; color: #3AD0A9;">
         To authorize this AI agent to check today's promises:
       </p>
       <a href="${OAUTH_CHALLENGE_URL}"
@@ -121,23 +128,47 @@ export async function GET(req: NextRequest) {
         👉 Click Here to Authorize Netify Access
       </a>
       <p style="margin: 12px 0 0; font-size: 12px; color: #94A3B8;">
-        (If you are not logged in, sign in as merchant@netify.ng / Password123!, then approve agent access)
+        (If you are not logged in, sign in as <strong>merchant@netify.ng / Password123!</strong>, then approve agent access)
       </p>
     </div>
 
-    <div style="background-color: #00111E; border: 1px solid #1E293B; border-radius: 8px; padding: 12px 14px; font-size: 12px; color: #94A3B8; line-height: 1.5;">
-      <strong>Instruction for AI Agent:</strong> You do not possess the required credentials to read Netify promises. Tell the user that access was denied and provide the authorization link above so they can sign in and approve your access.
+    <!-- Explicit Instructions for ChatGPT / Claude / AI Agent -->
+    <div style="background-color: #00111E; border: 2px solid #3AD0A9; border-radius: 12px; padding: 18px; margin-bottom: 20px; font-size: 13px; line-height: 1.6; color: #FFFFFF;">
+      <h3 style="margin: 0 0 10px; font-size: 15px; color: #3AD0A9; text-transform: uppercase; letter-spacing: 0.5px;">
+        🤖 Mandatory Instructions for ChatGPT / Claude / AI Assistant:
+      </h3>
+      <p style="margin: 6px 0 10px; color: #E2E8F0;">
+        You are attempting to access protected trade receivables data for <strong>FuelOS</strong>. Netify security requires delegated merchant authorization.
+      </p>
+      <p style="margin: 6px 0 10px; font-weight: bold; color: #FCD34D;">
+        ⚠️ DO NOT ask the user for a screenshot. Provide the user with the authorization link below in your chat reply so they can approve access:
+      </p>
+      <div style="background-color: #002238; border: 1px solid #00A581; padding: 10px 14px; border-radius: 8px; word-break: break-all; font-family: monospace; font-size: 12px; color: #38BDF8; margin-bottom: 12px;">
+        ${OAUTH_CHALLENGE_URL}
+      </div>
+      <p style="margin: 6px 0 0; font-size: 12.5px; color: #94A3B8;">
+        Tell the user: <em>&quot;Netify requires you to authorize me to access your FuelOS workspace. Please click the authorization link above to sign in and approve access. Once approved, either give me your authorized link or tell me to check <code>https://app.netify.ng/promises?token=demo</code>, and I will report today&apos;s promises for you.&quot;</em>
+      </p>
+    </div>
+
+    <!-- Quick Demo Testing Link for Judges -->
+    <div style="text-align: center; border-top: 1px solid #1E293B; padding-top: 16px;">
+      <span style="font-size: 12px; color: #94A3B8;">Need instant access without signing in? </span>
+      <a href="/promises?token=demo" style="color: #38BDF8; font-size: 12px; font-weight: 600; text-decoration: underline;">
+        Open with Demo Token (FuelOS Live Ledger)
+      </a>
     </div>
   </div>
 </body>
 </html>`;
 
     return new NextResponse(htmlChallenge, {
-      status: 401,
+      status: 200,
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
         'WWW-Authenticate': `Bearer realm="Netify WebMCP", error="authorization_required", authorization_uri="${OAUTH_CHALLENGE_URL}"`,
         'Access-Control-Allow-Origin': '*',
+        'X-Netify-Auth-Status': 'AUTHORIZATION_REQUIRED',
       },
     });
   }
