@@ -36,11 +36,11 @@ function AuthorizeConsentContent() {
 
   // Extract OAuth 2.0 query parameters
   const clientId = searchParams.get('client_id') || 'chatgpt-agent';
-  const redirectUri = searchParams.get('redirect_uri') || 'https://chatgpt.com/api/v1/auth/callback';
+  const redirectUri = searchParams.get('redirect_uri') || 'https://app.netify.ng/oauth/callback';
   const responseType = searchParams.get('response_type') || 'code';
   const requestedScopeStr = searchParams.get('scope') || 'receivables:read customers:read customer_evidence:read business_memory:read collection_messages:draft';
   const state = searchParams.get('state') || '';
-  const codeChallenge = searchParams.get('code_challenge') || 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk';
+  const codeChallenge = searchParams.get('code_challenge') || 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM';
   const codeChallengeMethod = (searchParams.get('code_challenge_method') || 'S256') as 'S256' | 'plain';
 
   // Client Details

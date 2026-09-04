@@ -19,7 +19,7 @@ const AI_AGENT_SIGNATURES = [
 ];
 
 const OAUTH_CHALLENGE_URL =
-  'https://app.netify.ng/oauth/authorize?client_id=chatgpt-agent&response_type=code&redirect_uri=https://app.netify.ng/oauth/callback&scope=receivables:read%20customers:read%20customer_evidence:read%20business_memory:read%20collection_messages:draft';
+  'https://app.netify.ng/oauth/authorize?client_id=chatgpt-agent&response_type=code&redirect_uri=https://app.netify.ng/oauth/callback&scope=receivables:read%20customers:read%20customer_evidence:read%20business_memory:read%20collection_messages:draft&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256';
 
 export function middleware(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl;
